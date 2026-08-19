@@ -170,22 +170,8 @@ float3 PerturbNormalLQ(float3 N, float3 P, float height)
 #endif
 
 #if NORMAL_MAP_TYPE == 3 || NORMAL_SUB_MAP_TYPE == 3
-float3 PerturbNormalHQ(sampler source, float2 coord, float center)
-{
-	float2 duv1 = ddx (coord);
-	float2 duv2 = ddy (coord);
-
-	float2 uv1 = coord + duv1;
-	float2 uv2 = coord + duv2;
-
-	float right = tex2D(source, uv1).x;
-	float bottom = tex2D(source, uv2).x;
-
-	float slope1 = right - center;
-	float slope2 = center - bottom;
-
-	return normalize(float3(slope1, slope2, 10.0));
-}
+#define PerturbNormalHQ(source, coord, center) \
+	normalize(float3(tex2D(source, (coord) + ddx(coord)).x - (center), (center) - tex2D(source, (coord) + ddy(coord)).x, 10.0))
 #endif
 #endif
 

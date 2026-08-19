@@ -221,7 +221,7 @@ float4 GenWaterNormal(float2 coord)
 	return float4(bumpNormal, h0);
 }
 
-float2 GetParalaxOffset(sampler source, float2 coord, float3 V)
+float2 GetParalaxOffset(float2 coord, float3 V)
 {
 	const float gradientScale = 0.5 * 0.01;
 	const float heightScale   = 0.5 * 0.01;
@@ -240,10 +240,8 @@ float3 GetWaveNormal(float2 coord, float3 N, float3 V, float3 P)
 	float3 bumpNormal = 0;
 
 #if WAVE_MAP_ENABLE
-	float4 wave = coord.xyxy * waveMapLoopNumLow.xyxy;
-	wave *= float4(1, 1, 2, 2);
-
-	float2 paralaxOffset = GetParalaxOffset(WaveNormalMapSamp, wave.xy, V);
+	float4 wave = GenWaveOffset(coord);
+	float2 paralaxOffset = GetParalaxOffset(wave.xy, V);
 
 	bumpNormal = GenWaterNormal(wave.xy + paralaxOffset.xy).xyz;
 	bumpNormal.xy *= waveMapScaleLow;

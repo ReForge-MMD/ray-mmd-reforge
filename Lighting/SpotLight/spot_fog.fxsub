@@ -174,14 +174,14 @@ float ComputeOpticalDepth(FogParams param, float depth)
 	return exp(-depth * param.FogDensity);
 }
 
-float HitShadowTest(FogParams param, sampler shadowMap, float2 shadowOffset, float4x4 matLightView, float4x4 matLightProject, float3 worldPosition)
+float HitShadowTest(FogParams param, float2 shadowOffset, float4x4 matLightView, float4x4 matLightProject, float3 worldPosition)
 {
 	float4 proj = mul(float4(worldPosition, 1), matLightProject);
 	proj.xy = PosToCoord(proj.xy / proj.w);
 	proj.xy += shadowOffset;
 
 	float linearDepth = length(mul(float4(worldPosition, 1), matLightView));
-	return tex2Dlod(shadowMap, float4(proj.xy, 0, 0)).r < linearDepth ? 0 : 1;
+	return tex2Dlod(VolumetricMapSamp, float4(proj.xy, 0, 0)).r < linearDepth ? 0 : 1;
 }
 
 float4 VolumetricFog(FogParams param, float3 V, float3 start, float3 end, float jitter, int stepNum = VOLUMETRIC_FOG_SAMPLES_LENGTH)
@@ -199,7 +199,7 @@ float4 VolumetricFog(FogParams param, float3 V, float3 start, float3 end, float 
 	{
 		float density = sampleLength;
 #if VOLUMETRIC_FOG_ENABLE
-		density *= HitShadowTest(param, VolumetricMapSamp, ShadowmapOffset, param.matLightView, param.matLightProject, sampleStart);
+		density *= HitShadowTest(param, ShadowmapOffset, param.matLightView, param.matLightProject, sampleStart);
 #endif
 		if (density > 0)
 		{

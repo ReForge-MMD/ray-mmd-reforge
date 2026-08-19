@@ -19,21 +19,29 @@
  * @param offset Directional texel step offset.
  * @return Filtered reflection radiance.
  */
-float4 SSR_FilterBlurPS(in float2 coord : TEXCOORD0, uniform sampler source, uniform float2 offset) : COLOR
-{
-	static float kWeightCenter = 0.2023600f;
-	static float kWeightInner  = 0.3030530f;
-	static float kWeightOuter  = 0.0957660f;
-	static float kOffsetInner  = 1.4091991f;
-	static float kOffsetOuter  = 3.2979345f;
-
-	float4 blurred = tex2Dlod(source, float4(coord, 0.0f, 0.0f)) * kWeightCenter;
-	blurred += tex2Dlod(source, float4(coord + offset * kOffsetInner, 0.0f, 0.0f)) * kWeightInner;
-	blurred += tex2Dlod(source, float4(coord - offset * kOffsetInner, 0.0f, 0.0f)) * kWeightInner;
-	blurred += tex2Dlod(source, float4(coord + offset * kOffsetOuter, 0.0f, 0.0f)) * kWeightOuter;
-	blurred += tex2Dlod(source, float4(coord - offset * kOffsetOuter, 0.0f, 0.0f)) * kWeightOuter;
-
-	return blurred;
+#define IMPLEMENT_SSR_FILTER_BLUR_PS(funcName, sourceSamp) \
+float4 funcName(in float2 coord : TEXCOORD0, uniform float2 offset) : COLOR \
+{ \
+	static float kWeightCenter = 0.2023600f; \
+	static float kWeightInner  = 0.3030530f; \
+	static float kWeightOuter  = 0.0957660f; \
+	static float kOffsetInner  = 1.4091991f; \
+	static float kOffsetOuter  = 3.2979345f; \
+	float4 blurred = tex2Dlod(sourceSamp, float4(coord, 0.0f, 0.0f)) * kWeightCenter; \
+	blurred += tex2Dlod(sourceSamp, float4(coord + offset * kOffsetInner, 0.0f, 0.0f)) * kWeightInner; \
+	blurred += tex2Dlod(sourceSamp, float4(coord - offset * kOffsetInner, 0.0f, 0.0f)) * kWeightInner; \
+	blurred += tex2Dlod(sourceSamp, float4(coord + offset * kOffsetOuter, 0.0f, 0.0f)) * kWeightOuter; \
+	blurred += tex2Dlod(sourceSamp, float4(coord - offset * kOffsetOuter, 0.0f, 0.0f)) * kWeightOuter; \
+	return blurred; \
 }
+
+IMPLEMENT_SSR_FILTER_BLUR_PS(SSR_FilterBlurX1_PS, SSRLightX1Samp)
+IMPLEMENT_SSR_FILTER_BLUR_PS(SSR_FilterBlurY1_PS, SSRLightX1SampTemp)
+IMPLEMENT_SSR_FILTER_BLUR_PS(SSR_FilterBlurX2_PS, SSRLightX1Samp)
+IMPLEMENT_SSR_FILTER_BLUR_PS(SSR_FilterBlurY2_PS, SSRLightX2SampTemp)
+IMPLEMENT_SSR_FILTER_BLUR_PS(SSR_FilterBlurX3_PS, SSRLightX2Samp)
+IMPLEMENT_SSR_FILTER_BLUR_PS(SSR_FilterBlurY3_PS, SSRLightX3SampTemp)
+IMPLEMENT_SSR_FILTER_BLUR_PS(SSR_FilterBlurX4_PS, SSRLightX3Samp)
+IMPLEMENT_SSR_FILTER_BLUR_PS(SSR_FilterBlurY4_PS, SSRLightX4SampTemp)
 
 #endif // RAY_MMD_SSR_FILTER_FXSUB

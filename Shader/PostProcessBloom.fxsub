@@ -117,53 +117,49 @@ float4 HDRDownsample4XPS(
 	in float2 coord1 : TEXCOORD0,
 	in float2 coord2 : TEXCOORD1,
 	in float2 coord3 : TEXCOORD2,
-	in float2 coord4 : TEXCOORD3,
-	uniform sampler source) : COLOR
+	in float2 coord4 : TEXCOORD3) : COLOR
 {
-	float4 color = tex2Dlod(source, float4(coord1, 0, 0));
-	color += tex2Dlod(source, float4(coord2, 0, 0));
-	color += tex2Dlod(source, float4(coord3, 0, 0));
-	color += tex2Dlod(source, float4(coord4, 0, 0));
+	float4 color = tex2Dlod(DownsampleSamp1st, float4(coord1, 0, 0));
+	color += tex2Dlod(DownsampleSamp1st, float4(coord2, 0, 0));
+	color += tex2Dlod(DownsampleSamp1st, float4(coord3, 0, 0));
+	color += tex2Dlod(DownsampleSamp1st, float4(coord4, 0, 0));
 	return color * 0.25;
 }
 
-float4 HDRDownsamplePS(in float2 coord : TEXCOORD0, uniform sampler source, uniform float2 step) : COLOR
-{
-	float2 d = step;
-
-	// Center 4 samples (bilinear box around center)
-	float3 j = tex2Dlod(source, float4(coord - d * 0.5f, 0, 0)).rgb;
-	float3 k = tex2Dlod(source, float4(coord + float2(d.x, -d.y) * 0.5f, 0, 0)).rgb;
-	float3 l = tex2Dlod(source, float4(coord + float2(-d.x, d.y) * 0.5f, 0, 0)).rgb;
-	float3 m = tex2Dlod(source, float4(coord + d * 0.5f, 0, 0)).rgb;
-
-	// Outer 8 corner & edge samples
-	float3 a = tex2Dlod(source, float4(coord - d, 0, 0)).rgb;
-	float3 b = tex2Dlod(source, float4(coord + float2(0.0f, -d.y), 0, 0)).rgb;
-	float3 c = tex2Dlod(source, float4(coord + float2(d.x, -d.y), 0, 0)).rgb;
-	float3 e = tex2Dlod(source, float4(coord + float2(-d.x, 0.0f), 0, 0)).rgb;
-	float3 f = tex2Dlod(source, float4(coord + float2(d.x, 0.0f), 0, 0)).rgb;
-	float3 g = tex2Dlod(source, float4(coord + float2(-d.x, d.y), 0, 0)).rgb;
-	float3 h = tex2Dlod(source, float4(coord + float2(0.0f, d.y), 0, 0)).rgb;
-	float3 i = tex2Dlod(source, float4(coord + d, 0, 0)).rgb;
-
-	// 5 overlapping 2x2 bilinear groups
-	float3 group0 = (j + k + l + m) * 0.25f;
-	float3 group1 = (a + b + e + j) * 0.25f;
-	float3 group2 = (b + c + k + f) * 0.25f;
-	float3 group3 = (e + l + g + h) * 0.25f;
-	float3 group4 = (m + f + h + i) * 0.25f;
-
-	// Karis firefly suppression weights based on partial luma
-	float w0 = 0.5f / (1.0f + luminance(group0));
-	float w1 = 0.125f / (1.0f + luminance(group1));
-	float w2 = 0.125f / (1.0f + luminance(group2));
-	float w3 = 0.125f / (1.0f + luminance(group3));
-	float w4 = 0.125f / (1.0f + luminance(group4));
-
-	float3 result = (group0 * w0 + group1 * w1 + group2 * w2 + group3 * w3 + group4 * w4) / max(w0 + w1 + w2 + w3 + w4, 1e-5f);
-	return float4(result, 0.0f);
+#define IMPLEMENT_HDR_DOWNSAMPLE_PS(funcName, sourceSamp) \
+float4 funcName(in float2 coord : TEXCOORD0, uniform float2 step) : COLOR \
+{ \
+	float2 d = step; \
+	float3 j = tex2Dlod(sourceSamp, float4(coord - d * 0.5f, 0, 0)).rgb; \
+	float3 k = tex2Dlod(sourceSamp, float4(coord + float2(d.x, -d.y) * 0.5f, 0, 0)).rgb; \
+	float3 l = tex2Dlod(sourceSamp, float4(coord + float2(-d.x, d.y) * 0.5f, 0, 0)).rgb; \
+	float3 m = tex2Dlod(sourceSamp, float4(coord + d * 0.5f, 0, 0)).rgb; \
+	float3 a = tex2Dlod(sourceSamp, float4(coord - d, 0, 0)).rgb; \
+	float3 b = tex2Dlod(sourceSamp, float4(coord + float2(0.0f, -d.y), 0, 0)).rgb; \
+	float3 c = tex2Dlod(sourceSamp, float4(coord + float2(d.x, -d.y), 0, 0)).rgb; \
+	float3 e = tex2Dlod(sourceSamp, float4(coord + float2(-d.x, 0.0f), 0, 0)).rgb; \
+	float3 f = tex2Dlod(sourceSamp, float4(coord + float2(d.x, 0.0f), 0, 0)).rgb; \
+	float3 g = tex2Dlod(sourceSamp, float4(coord + float2(-d.x, d.y), 0, 0)).rgb; \
+	float3 h = tex2Dlod(sourceSamp, float4(coord + float2(0.0f, d.y), 0, 0)).rgb; \
+	float3 i = tex2Dlod(sourceSamp, float4(coord + d, 0, 0)).rgb; \
+	float3 group0 = (j + k + l + m) * 0.25f; \
+	float3 group1 = (a + b + e + j) * 0.25f; \
+	float3 group2 = (b + c + k + f) * 0.25f; \
+	float3 group3 = (e + l + g + h) * 0.25f; \
+	float3 group4 = (m + f + h + i) * 0.25f; \
+	float w0 = 0.5f / (1.0f + luminance(group0)); \
+	float w1 = 0.125f / (1.0f + luminance(group1)); \
+	float w2 = 0.125f / (1.0f + luminance(group2)); \
+	float w3 = 0.125f / (1.0f + luminance(group3)); \
+	float w4 = 0.125f / (1.0f + luminance(group4)); \
+	float3 result = (group0 * w0 + group1 * w1 + group2 * w2 + group3 * w3 + group4 * w4) / max(w0 + w1 + w2 + w3 + w4, 1e-5f); \
+	return float4(result, 0.0f); \
 }
+
+IMPLEMENT_HDR_DOWNSAMPLE_PS(BloomDownsample2PS, BloomSamp1st)
+IMPLEMENT_HDR_DOWNSAMPLE_PS(BloomDownsample3PS, BloomSamp2nd)
+IMPLEMENT_HDR_DOWNSAMPLE_PS(BloomDownsample4PS, BloomSamp3rd)
+IMPLEMENT_HDR_DOWNSAMPLE_PS(BloomDownsample5PS, BloomSamp4th)
 
 void GlareDetectionVS(
 	in float4 Position : POSITION,
@@ -194,15 +190,14 @@ void GlareDetectionVS(
 float4 GlareDetectionPS(
 	in float4 coord1 : TEXCOORD0,
 	in float4 coord2 : TEXCOORD1,
-	in float4 coord3 : TEXCOORD2,
-	uniform sampler source) : COLOR
+	in float4 coord3 : TEXCOORD2) : COLOR
 {
 #if HDR_BLOOM_MODE > 0
-	float3 color = tex2Dlod(source, float4(coord1.xy, 0, 0)).rgb;
-	color = min(color, tex2Dlod(source, float4(coord2.xy, 0, 0)).rgb);
-	color = min(color, tex2Dlod(source, float4(coord2.zw, 0, 0)).rgb);
-	color = min(color, tex2Dlod(source, float4(coord3.xy, 0, 0)).rgb);
-	color = min(color, tex2Dlod(source, float4(coord3.zw, 0, 0)).rgb);
+	float3 color = tex2Dlod(ShadingMapPointSamp, float4(coord1.xy, 0, 0)).rgb;
+	color = min(color, tex2Dlod(ShadingMapPointSamp, float4(coord2.xy, 0, 0)).rgb);
+	color = min(color, tex2Dlod(ShadingMapPointSamp, float4(coord2.zw, 0, 0)).rgb);
+	color = min(color, tex2Dlod(ShadingMapPointSamp, float4(coord3.xy, 0, 0)).rgb);
+	color = min(color, tex2Dlod(ShadingMapPointSamp, float4(coord3.zw, 0, 0)).rgb);
 	color = clamp(color, 0, 65535);
 
 #if HDR_BLOOM_MODE == 1
@@ -241,22 +236,32 @@ float4 GlareDetectionPS(
 	return float4(bloom, 0);
 }
 
-float4 BloomBlurPS(in float2 coord : TEXCOORD0, uniform sampler source, uniform float2 offset) : COLOR
-{
-	static float w0 = 0.1707930f;
-	static float w12 = 0.2823770f;
-	static float w34 = 0.1322270f;
-	static float o12 = 1.4410699f;
-	static float o34 = 3.3652582f;
-
-	float4 color = tex2Dlod(source, float4(coord, 0, 0)) * w0;
-	color += tex2Dlod(source, float4(coord + offset * o12, 0, 0)) * w12;
-	color += tex2Dlod(source, float4(coord - offset * o12, 0, 0)) * w12;
-	color += tex2Dlod(source, float4(coord + offset * o34, 0, 0)) * w34;
-	color += tex2Dlod(source, float4(coord - offset * o34, 0, 0)) * w34;
-
-	return color;
+#define IMPLEMENT_BLOOM_BLUR_PS(funcName, sourceSamp) \
+float4 funcName(in float2 coord : TEXCOORD0, uniform float2 offset) : COLOR \
+{ \
+	static float w0 = 0.1707930f; \
+	static float w12 = 0.2823770f; \
+	static float w34 = 0.1322270f; \
+	static float o12 = 1.4410699f; \
+	static float o34 = 3.3652582f; \
+	float4 color = tex2Dlod(sourceSamp, float4(coord, 0, 0)) * w0; \
+	color += tex2Dlod(sourceSamp, float4(coord + offset * o12, 0, 0)) * w12; \
+	color += tex2Dlod(sourceSamp, float4(coord - offset * o12, 0, 0)) * w12; \
+	color += tex2Dlod(sourceSamp, float4(coord + offset * o34, 0, 0)) * w34; \
+	color += tex2Dlod(sourceSamp, float4(coord - offset * o34, 0, 0)) * w34; \
+	return color; \
 }
+
+IMPLEMENT_BLOOM_BLUR_PS(BloomBlurX1PS, DownsampleSamp1st)
+IMPLEMENT_BLOOM_BLUR_PS(BloomBlurY1PS, BloomSamp1stTemp)
+IMPLEMENT_BLOOM_BLUR_PS(BloomBlurX2PS, BloomSamp2nd)
+IMPLEMENT_BLOOM_BLUR_PS(BloomBlurY2PS, BloomSamp2ndTemp)
+IMPLEMENT_BLOOM_BLUR_PS(BloomBlurX3PS, BloomSamp3rd)
+IMPLEMENT_BLOOM_BLUR_PS(BloomBlurY3PS, BloomSamp3rdTemp)
+IMPLEMENT_BLOOM_BLUR_PS(BloomBlurX4PS, BloomSamp4th)
+IMPLEMENT_BLOOM_BLUR_PS(BloomBlurY4PS, BloomSamp4thTemp)
+IMPLEMENT_BLOOM_BLUR_PS(BloomBlurX5PS, BloomSamp5th)
+IMPLEMENT_BLOOM_BLUR_PS(BloomBlurY5PS, BloomSamp5thTemp)
 
 float4 GlareLightCompVS(
 	in float4 Position : POSITION,

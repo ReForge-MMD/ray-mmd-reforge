@@ -87,7 +87,7 @@ float3 SampleHistoryCatmullRom5Tap(float2 uv, float2 texelSize)
 	return max(color.rgb / max(color.a, 1e-4f), 0.0f);
 }
 
-float4 TAAPS(in float4 coord : TEXCOORD0, in float3 viewdir : TEXCOORD1, uniform sampler2D source) : COLOR
+float4 TAAPS(in float4 coord : TEXCOORD0, in float3 viewdir : TEXCOORD1) : COLOR
 {
 	float2 uv = coord.xy;
 
@@ -101,7 +101,7 @@ float4 TAAPS(in float4 coord : TEXCOORD0, in float3 viewdir : TEXCOORD1, uniform
 	float4 prevClipPos = mul(float4(worldPosition, 1.0), matViewProjectPrev);
 	float2 prevUV = (prevClipPos.xy / max(prevClipPos.w, 1e-5)) * float2(0.5, -0.5) + 0.5;
 
-	float3 currColor = tex2Dlod(source, float4(uv, 0, 0)).rgb;
+	float3 currColor = tex2Dlod(ShadingMapPointSamp, float4(uv, 0, 0)).rgb;
 
 	// Depth-aware spatial edge anti-aliasing fallback for model silhouettes
 	float dLeft  = tex2Dlod(Gbuffer8Map, float4(uv - float2(ViewportOffset2.x, 0), 0, 0)).r;

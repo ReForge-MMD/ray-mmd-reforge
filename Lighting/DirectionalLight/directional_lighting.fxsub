@@ -140,41 +140,39 @@ float2 RotateSample(float2 pos, float2 rotation)
 	return float2(pos.x * rotation.x - pos.y * rotation.y, pos.y * rotation.x + pos.x * rotation.y);
 }
 
-float2 ShadowPCF(sampler source, float2 coord, float receiverDepth) 
-{
-	float2 shadow = 0.0;
-
-	[unroll]
-	for (int x = -sampleRadius; x <= sampleRadius; x++) 
-	{
-		[unroll]
-		for (int y = -sampleRadius; y <= sampleRadius; y++)
-		{
-			float2 pos = coord + float2(x, y) * ShadowMapOffset2;
-			shadow += tex2Dlod(source, float4(pos, 0, 0)).rg * sampleKernel[sampleRadius + x] * sampleKernel[sampleRadius + y];
-		}
-	}
-
-	return shadow;
+#define DEFINE_SHADOW_PCF_FUNC(funcName, sourceSamp) \
+float funcName(float2 coord, float receiverDepth) \
+{ \
+	float2 shadow = 0.0; \
+	[unroll] \
+	for (int x = -sampleRadius; x <= sampleRadius; x++) \
+	{ \
+		[unroll] \
+		for (int y = -sampleRadius; y <= sampleRadius; y++) \
+		{ \
+			float2 pos = coord + float2(x, y) * ShadowMapOffset2; \
+			shadow += tex2Dlod(sourceSamp, float4(pos, 0, 0)).rg * sampleKernel[sampleRadius + x] * sampleKernel[sampleRadius + y]; \
+		} \
+	} \
+	return ChebyshevUpperBound(shadow, receiverDepth, 0.01, LightHardness); \
 }
 
-float SampleCascadeShadowSingle(sampler source, float2 coord, float receiverDepth, float2 rotation, float lightSize, int cascadeIndex)
-{
-	float2 shadow = ShadowPCF(source, coord, receiverDepth);
-	return ChebyshevUpperBound(shadow, receiverDepth, 0.01, LightHardness);
-}
+DEFINE_SHADOW_PCF_FUNC(SampleCascadeShadow1, PSSM1Samp)
+DEFINE_SHADOW_PCF_FUNC(SampleCascadeShadow2, PSSM2Samp)
+DEFINE_SHADOW_PCF_FUNC(SampleCascadeShadow3, PSSM3Samp)
+DEFINE_SHADOW_PCF_FUNC(SampleCascadeShadow4, PSSM4Samp)
 
 float SampleCascadeShadowMap(int index, float2 coord, float receiverDepth, float2 rotation)
 {
 	[branch]
 	if (index == 0)
-		return SampleCascadeShadowSingle(PSSM1Samp, coord, receiverDepth, rotation, 0.015, 0);
+		return SampleCascadeShadow1(coord, receiverDepth);
 	else if (index == 1)
-		return SampleCascadeShadowSingle(PSSM2Samp, coord, receiverDepth, rotation, 0.0075, 1);
+		return SampleCascadeShadow2(coord, receiverDepth);
 	else if (index == 2)
-		return SampleCascadeShadowSingle(PSSM3Samp, coord, receiverDepth, rotation, 0.003, 2);
+		return SampleCascadeShadow3(coord, receiverDepth);
 	else
-		return SampleCascadeShadowSingle(PSSM4Samp, coord, receiverDepth, rotation, 0.001, 3);
+		return SampleCascadeShadow4(coord, receiverDepth);
 }
 
 float ShadingShadow(MaterialParam material, float3 viewPosition, float2 screenUV)

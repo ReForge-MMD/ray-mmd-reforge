@@ -80,15 +80,15 @@ sampler SMAASearchMapSamp = sampler_state
 	AddressU = CLAMP; AddressV = CLAMP;
 };
 
-float3 SMAAGatherNeighbours(float2 coord, float4 offset[3], sampler source) 
+float3 SMAAGatherNeighbours(float2 coord, float4 offset[3]) 
 {
-	float P     = tex2Dlod(source, float4(coord, 0, 0)).r;
-	float Pleft = tex2Dlod(source, float4(offset[0].xy, 0, 0)).r;
-	float Ptop  = tex2Dlod(source, float4(offset[0].zw, 0, 0)).r;
+	float P     = tex2Dlod(ShadingMapTempPointSamp, float4(coord, 0, 0)).r;
+	float Pleft = tex2Dlod(ShadingMapTempPointSamp, float4(offset[0].xy, 0, 0)).r;
+	float Ptop  = tex2Dlod(ShadingMapTempPointSamp, float4(offset[0].zw, 0, 0)).r;
 	return float3(P, Pleft, Ptop);
 }
 
-float SMAASearchLength(sampler searchTex, float2 e, float offset) 
+float SMAASearchLength(float2 e, float offset) 
 {
 	float2 scale = SMAA_SEARCHTEX_SIZE * float2(0.5, -1.0);
 	scale += float2(-1.0,  1.0);
@@ -98,75 +98,75 @@ float SMAASearchLength(sampler searchTex, float2 e, float offset)
 	bias  += float2( 0.5, -0.5);
 	bias *= 1.0 / SMAA_SEARCHTEX_PACKED_SIZE;
 
-	return tex2Dlod(searchTex, float4(madd(scale, e, bias), 0, 0)).r;
+	return tex2Dlod(SMAASearchMapSamp, float4(madd(scale, e, bias), 0, 0)).r;
 }
 
-float SMAASearchXLeft(sampler edgesTex, sampler searchTex, float2 texcoord, float end) 
+float SMAASearchXLeft(float2 texcoord, float end) 
 {
 	float2 e = float2(0.0, 1.0);
 
 	for (int i = 0; i < SMAA_MAX_SEARCH_STEPS; i++)
 	{
-		e = tex2Dlod(edgesTex, float4(texcoord, 0, 0)).rg;
+		e = tex2Dlod(SMAAEdgeMapSamp, float4(texcoord, 0, 0)).rg;
 		texcoord -= ViewportOffset2 * float2(2.0, 0.0);
 		if (!(texcoord.x > end && e.g > 0.8281 && e.r == 0.0)) break;
 	}
 
-	float offset = madd(-(255.0 / 127.0), SMAASearchLength(searchTex, e, 0.0), 3.25);
+	float offset = madd(-(255.0 / 127.0), SMAASearchLength(e, 0.0), 3.25);
 	return madd(ViewportOffset2.x, offset, texcoord.x);
 }
 
-float SMAASearchXRight(sampler edgesTex, sampler searchTex, float2 texcoord, float end) 
+float SMAASearchXRight(float2 texcoord, float end) 
 {
 	float2 e = float2(0.0, 1.0);
 
 	for (int i = 0; i < SMAA_MAX_SEARCH_STEPS; i++)
 	{
-		e = tex2Dlod(edgesTex, float4(texcoord, 0, 0)).rg;
+		e = tex2Dlod(SMAAEdgeMapSamp, float4(texcoord, 0, 0)).rg;
 		texcoord += ViewportOffset2 * float2(2.0, 0.0);
 		if (!(texcoord.x < end &&  e.g > 0.8281 && e.r == 0.0)) break;
 	}
 
-	float offset = madd(-(255.0 / 127.0), SMAASearchLength(searchTex, e, 0.5), 3.25);
+	float offset = madd(-(255.0 / 127.0), SMAASearchLength(e, 0.5), 3.25);
 	return madd(-ViewportOffset2.x, offset, texcoord.x);
 }
 
-float SMAASearchYUp(sampler edgesTex, sampler searchTex, float2 texcoord, float end) 
+float SMAASearchYUp(float2 texcoord, float end) 
 {
 	float2 e = float2(1.0, 0.0);
 
 	for (int i = 0; i < SMAA_MAX_SEARCH_STEPS; i++)
 	{
-		e = tex2Dlod(edgesTex, float4(texcoord, 0, 0)).rg;
+		e = tex2Dlod(SMAAEdgeMapSamp, float4(texcoord, 0, 0)).rg;
 		texcoord -= ViewportOffset * float2(0.0, 2.0);
 		if (!(texcoord.y > end && e.r > 0.8281 && e.g == 0.0)) break;
 	}
 
-	float offset = madd(-(255.0 / 127.0), SMAASearchLength(searchTex, e.gr, 0.0), 3.25);
+	float offset = madd(-(255.0 / 127.0), SMAASearchLength(e.gr, 0.0), 3.25);
 	return madd(ViewportOffset.y, offset, texcoord.y);
 }
 
-float SMAASearchYDown(sampler edgesTex, sampler searchTex, float2 texcoord, float end) 
+float SMAASearchYDown(float2 texcoord, float end) 
 {
 	float2 e = float2(1.0, 0.0);
 
 	for (int i = 0; i < SMAA_MAX_SEARCH_STEPS; i++)
 	{
-		e = tex2Dlod(edgesTex, float4(texcoord, 0, 0)).rg;
+		e = tex2Dlod(SMAAEdgeMapSamp, float4(texcoord, 0, 0)).rg;
 		texcoord += ViewportOffset * float2(0.0, 2.0);
 		if (!(texcoord.y < end && e.r > 0.8281 && e.g == 0.0)) break;
 	}
 
-	float offset = madd(-(255.0 / 127.0), SMAASearchLength(searchTex, e.gr, 0.5), 3.25);
+	float offset = madd(-(255.0 / 127.0), SMAASearchLength(e.gr, 0.5), 3.25);
 	return madd(-ViewportOffset.y, offset, texcoord.y);
 }
 
-float2 SMAAArea(sampler areaTex, float2 dist, float e1, float e2, float offset) 
+float2 SMAAArea(float2 dist, float e1, float e2, float offset) 
 {
 	float2 texcoord = madd(float2(SMAA_AREATEX_MAX_DISTANCE, SMAA_AREATEX_MAX_DISTANCE), round(4.0 * float2(e1, e2)), dist);
 	texcoord = madd(SMAA_AREATEX_PIXEL_SIZE, texcoord, 0.5 * SMAA_AREATEX_PIXEL_SIZE);
 	texcoord.y = madd(SMAA_AREATEX_SUBTEX_SIZE, offset, texcoord.y);
-	return tex2Dlod(areaTex, float4(texcoord, 0, 0)).ra;
+	return tex2Dlod(SMAAAreaMapSamp, float4(texcoord, 0, 0)).ra;
 }
 
 void SMAAMovc(bool2 cond, inout float2 variable, float2 value) 
@@ -183,13 +183,13 @@ void SMAAMovc(bool4 cond, inout float4 variable, float4 value)
 
 #if SMAA_MAX_SEARCH_STEPS_DIAG
 
-float2 SMAAAreaDiag(sampler areaTex, float2 dist, float2 e, float offset) 
+float2 SMAAAreaDiag(float2 dist, float2 e, float offset) 
 {
 	float2 texcoord = madd(float2(SMAA_AREATEX_MAX_DISTANCE_DIAG, SMAA_AREATEX_MAX_DISTANCE_DIAG), e, dist);
 	texcoord = madd(SMAA_AREATEX_PIXEL_SIZE, texcoord, 0.5 * SMAA_AREATEX_PIXEL_SIZE);
 	texcoord.x += 0.5;
 	texcoord.y += SMAA_AREATEX_SUBTEX_SIZE * offset;
-	return tex2Dlod(areaTex, float4(texcoord, 0, 0)).ra;
+	return tex2Dlod(SMAAAreaMapSamp, float4(texcoord, 0, 0)).ra;
 }
 
 float2 SMAADecodeDiagBilinearAccess(float2 e) 
@@ -204,7 +204,7 @@ float4 SMAADecodeDiagBilinearAccess(float4 e)
 	return round(e);
 }
 
-float2 SMAASearchDiag1(sampler edgesTex, float2 texcoord, float2 dir, out float2 e) 
+float2 SMAASearchDiag1(float2 texcoord, float2 dir, out float2 e) 
 {
 	float4 coord = float4(texcoord, -1.0, 1.0);
 	float3 t = float3(ViewportOffset2.xy, 1.0);
@@ -213,14 +213,14 @@ float2 SMAASearchDiag1(sampler edgesTex, float2 texcoord, float2 dir, out float2
 	{
 		if (!(coord.z < float(SMAA_MAX_SEARCH_STEPS_DIAG - 1) && coord.w > 0.9)) break;
 		coord.xyz = madd(t, float3(dir, 1.0), coord.xyz);
-		e = tex2Dlod(edgesTex, float4(coord.xy, 0, 0)).rg;
+		e = tex2Dlod(SMAAEdgeMapSamp, float4(coord.xy, 0, 0)).rg;
 		coord.w = dot(e, float2(0.5, 0.5));
 	}
 
 	return coord.zw;
 }
 
-float2 SMAASearchDiag2(sampler edgesTex, float2 texcoord, float2 dir, out float2 e) 
+float2 SMAASearchDiag2(float2 texcoord, float2 dir, out float2 e) 
 {
 	float4 coord = float4(texcoord, -1.0, 1.0);
 	coord.x += 0.25 * ViewportOffset2.x;
@@ -230,7 +230,7 @@ float2 SMAASearchDiag2(sampler edgesTex, float2 texcoord, float2 dir, out float2
 	{
 		if (!(coord.z < float(SMAA_MAX_SEARCH_STEPS_DIAG - 1) && coord.w > 0.9)) break;
 		coord.xyz = madd(t, float3(dir, 1.0), coord.xyz);
-		e = tex2Dlod(edgesTex, float4(coord.xy, 0, 0)).rg;
+		e = tex2Dlod(SMAAEdgeMapSamp, float4(coord.xy, 0, 0)).rg;
 		e = SMAADecodeDiagBilinearAccess(e);
 		coord.w = dot(e, float2(0.5, 0.5));
 	}
@@ -238,7 +238,7 @@ float2 SMAASearchDiag2(sampler edgesTex, float2 texcoord, float2 dir, out float2
 	return coord.zw;
 }
 
-float2 SMAACalculateDiagWeights(sampler edgesTex, sampler areaTex, float2 texcoord, float2 e, float4 subsampleIndices) 
+float2 SMAACalculateDiagWeights(float2 texcoord, float2 e, float4 subsampleIndices) 
 {
 	float2 weights = float2(0.0, 0.0);
 
@@ -246,7 +246,7 @@ float2 SMAACalculateDiagWeights(sampler edgesTex, sampler areaTex, float2 texcoo
 	float2 end;
 	if (e.r > 0.0) 
 	{
-		d.xz = SMAASearchDiag1(edgesTex, texcoord, float2(-1.0,  1.0), end);
+		d.xz = SMAASearchDiag1(texcoord, float2(-1.0,  1.0), end);
 		d.x += float(end.y > 0.9);
 	}
 	else
@@ -254,7 +254,7 @@ float2 SMAACalculateDiagWeights(sampler edgesTex, sampler areaTex, float2 texcoo
 		d.xz = float2(0.0, 0.0);
 	}
 
-	d.yw = SMAASearchDiag1(edgesTex, texcoord, float2(1.0, -1.0), end);
+	d.yw = SMAASearchDiag1(texcoord, float2(1.0, -1.0), end);
 
 	[branch]
 	if (d.x + d.y > 2.0) 
@@ -262,20 +262,20 @@ float2 SMAACalculateDiagWeights(sampler edgesTex, sampler areaTex, float2 texcoo
 		float4 coords = madd(float4(-d.x + 0.25, d.x, d.y, -d.y - 0.25), ViewportOffset2.xyxy, texcoord.xyxy);
 		
 		float4 c;
-		c.xy = tex2Dlod(edgesTex, float4(coords.xy + float2(-1,  0) * ViewportOffset2, 0, 0)).rg;
-		c.zw = tex2Dlod(edgesTex, float4(coords.zw + float2( 1,  0) * ViewportOffset2, 0, 0)).rg;
+		c.xy = tex2Dlod(SMAAEdgeMapSamp, float4(coords.xy + float2(-1,  0) * ViewportOffset2, 0, 0)).rg;
+		c.zw = tex2Dlod(SMAAEdgeMapSamp, float4(coords.zw + float2( 1,  0) * ViewportOffset2, 0, 0)).rg;
 		c.yxwz = SMAADecodeDiagBilinearAccess(c.xyzw);
 		
 		float2 cc = madd(float2(2.0, 2.0), c.xz, c.yw);
 		SMAAMovc(bool2(step(0.9, d.zw)), cc, float2(0.0, 0.0));
 		
-		weights += SMAAAreaDiag(areaTex, d.xy, cc, subsampleIndices.z);
+		weights += SMAAAreaDiag(d.xy, cc, subsampleIndices.z);
 	}
 
-	d.xz = SMAASearchDiag2(edgesTex, texcoord, float2(-1.0, -1.0), end);
-	if (tex2Dlod(edgesTex, float4(texcoord + float2(1, 0) * ViewportOffset2, 0, 0)).r > 0.0) 
+	d.xz = SMAASearchDiag2(texcoord, float2(-1.0, -1.0), end);
+	if (tex2Dlod(SMAAEdgeMapSamp, float4(texcoord + float2(1, 0) * ViewportOffset2, 0, 0)).r > 0.0) 
 	{
-		d.yw = SMAASearchDiag2(edgesTex, texcoord, float2(1.0, 1.0), end);
+		d.yw = SMAASearchDiag2(texcoord, float2(1.0, 1.0), end);
 		d.y += float(end.y > 0.9);
 	}
 	else
@@ -288,21 +288,21 @@ float2 SMAACalculateDiagWeights(sampler edgesTex, sampler areaTex, float2 texcoo
 	{
 		float4 coords = madd(float4(-d.x, -d.x, d.y, d.y), ViewportOffset2.xyxy, texcoord.xyxy);
 		float4 c;
-		c.x  = tex2Dlod(edgesTex, float4(coords.xy + float2(-1,  0) * ViewportOffset2, 0, 0)).g;
-		c.y  = tex2Dlod(edgesTex, float4(coords.xy + float2( 0, -1) * ViewportOffset2, 0, 0)).r;
-		c.zw = tex2Dlod(edgesTex, float4(coords.zw + float2( 1,  0) * ViewportOffset2, 0, 0)).gr;
+		c.x  = tex2Dlod(SMAAEdgeMapSamp, float4(coords.xy + float2(-1,  0) * ViewportOffset2, 0, 0)).g;
+		c.y  = tex2Dlod(SMAAEdgeMapSamp, float4(coords.xy + float2( 0, -1) * ViewportOffset2, 0, 0)).r;
+		c.zw = tex2Dlod(SMAAEdgeMapSamp, float4(coords.zw + float2( 1,  0) * ViewportOffset2, 0, 0)).gr;
 		
 		float2 cc = madd(float2(2.0, 2.0), c.xz, c.yw);
 		SMAAMovc(bool2(step(0.9, d.zw)), cc, float2(0.0, 0.0));
 
-		weights += SMAAAreaDiag(areaTex, d.xy, cc, subsampleIndices.w).gr;
+		weights += SMAAAreaDiag(d.xy, cc, subsampleIndices.w).gr;
 	}
 
 	return weights;
 }
 #endif
 
-void SMAADetectHorizontalCornerPattern(sampler edgesTex, inout float2 weights, float4 texcoord, float2 d) 
+void SMAADetectHorizontalCornerPattern(inout float2 weights, float4 texcoord, float2 d) 
 {
 #if SMAA_CORNER_ROUNDING
 	float2 leftRight = step(d.xy, d.yx);
@@ -311,16 +311,16 @@ void SMAADetectHorizontalCornerPattern(sampler edgesTex, inout float2 weights, f
 	rounding /= leftRight.x + leftRight.y;
 
 	float2 factor = float2(1.0, 1.0);
-	factor.x -= rounding.x * tex2Dlod(edgesTex, float4(texcoord.xy + float2(0,  1) * ViewportOffset2, 0, 0)).r;
-	factor.x -= rounding.y * tex2Dlod(edgesTex, float4(texcoord.zw + float2(1,  1) * ViewportOffset2, 0, 0)).r;
-	factor.y -= rounding.x * tex2Dlod(edgesTex, float4(texcoord.xy + float2(0, -2) * ViewportOffset2, 0, 0)).r;
-	factor.y -= rounding.y * tex2Dlod(edgesTex, float4(texcoord.zw + float2(1, -2) * ViewportOffset2, 0, 0)).r;
+	factor.x -= rounding.x * tex2Dlod(SMAAEdgeMapSamp, float4(texcoord.xy + float2(0,  1) * ViewportOffset2, 0, 0)).r;
+	factor.x -= rounding.y * tex2Dlod(SMAAEdgeMapSamp, float4(texcoord.zw + float2(1,  1) * ViewportOffset2, 0, 0)).r;
+	factor.y -= rounding.x * tex2Dlod(SMAAEdgeMapSamp, float4(texcoord.xy + float2(0, -2) * ViewportOffset2, 0, 0)).r;
+	factor.y -= rounding.y * tex2Dlod(SMAAEdgeMapSamp, float4(texcoord.zw + float2(1, -2) * ViewportOffset2, 0, 0)).r;
 
 	weights *= saturate(factor);
 #endif
 }
 
-void SMAADetectVerticalCornerPattern(sampler edgesTex, inout float2 weights, float4 texcoord, float2 d) 
+void SMAADetectVerticalCornerPattern(inout float2 weights, float4 texcoord, float2 d) 
 {
 #if SMAA_CORNER_ROUNDING
 	float2 leftRight = step(d.xy, d.yx);
@@ -329,10 +329,10 @@ void SMAADetectVerticalCornerPattern(sampler edgesTex, inout float2 weights, flo
 	rounding /= leftRight.x + leftRight.y;
 
 	float2 factor = float2(1.0, 1.0);
-	factor.x -= rounding.x * tex2Dlod(edgesTex, float4(texcoord.xy + float2( 1, 0) * ViewportOffset2, 0, 0)).g;
-	factor.x -= rounding.y * tex2Dlod(edgesTex, float4(texcoord.zw + float2( 1, 1) * ViewportOffset2, 0, 0)).g;
-	factor.y -= rounding.x * tex2Dlod(edgesTex, float4(texcoord.xy + float2(-2, 0) * ViewportOffset2, 0, 0)).g;
-	factor.y -= rounding.y * tex2Dlod(edgesTex, float4(texcoord.zw + float2(-2, 1) * ViewportOffset2, 0, 0)).g;
+	factor.x -= rounding.x * tex2Dlod(SMAAEdgeMapSamp, float4(texcoord.xy + float2( 1, 0) * ViewportOffset2, 0, 0)).g;
+	factor.x -= rounding.y * tex2Dlod(SMAAEdgeMapSamp, float4(texcoord.zw + float2( 1, 1) * ViewportOffset2, 0, 0)).g;
+	factor.y -= rounding.x * tex2Dlod(SMAAEdgeMapSamp, float4(texcoord.xy + float2(-2, 0) * ViewportOffset2, 0, 0)).g;
+	factor.y -= rounding.y * tex2Dlod(SMAAEdgeMapSamp, float4(texcoord.zw + float2(-2, 1) * ViewportOffset2, 0, 0)).g;
 
 	weights *= saturate(factor);
 #endif
@@ -353,26 +353,53 @@ float4 SMAAEdgeDetectionVS(
 	return Position;
 }
 
-float4 SMAALumaEdgeDetectionPS(
+float4 SMAALumaEdgeDetectionTempPS(
 	in float4 coord0 : TEXCOORD0,
 	in float4 coord1 : TEXCOORD1,
 	in float4 coord2 : TEXCOORD2,
-	in float4 coord3 : TEXCOORD3,
-	uniform sampler source) : COLOR
+	in float4 coord3 : TEXCOORD3) : COLOR
 {
 	float4 offset[3] = { coord1, coord2, coord3 };
 	float2 threshold = float2(SMAA_THRESHOLD, SMAA_THRESHOLD);
 
-	float Lcenter   = tex2Dlod(source, float4(coord0.xy, 0, 0)).a;
-	float Lleft     = tex2Dlod(source, float4(offset[0].xy, 0, 0)).a;
-	float Ltop      = tex2Dlod(source, float4(offset[0].zw, 0, 0)).a;
-	float Lright    = tex2Dlod(source, float4(offset[1].xy, 0, 0)).a;
-	float Lbottom   = tex2Dlod(source, float4(offset[1].zw, 0, 0)).a;
-	float Lleftleft = tex2Dlod(source, float4(offset[2].xy, 0, 0)).a;
-	float Ltoptop   = tex2Dlod(source, float4(offset[2].zw, 0, 0)).a;
+	float Lcenter   = tex2Dlod(ShadingMapTempSamp, float4(coord0.xy, 0, 0)).a;
+	float Lleft     = tex2Dlod(ShadingMapTempSamp, float4(offset[0].xy, 0, 0)).a;
+	float Ltop      = tex2Dlod(ShadingMapTempSamp, float4(offset[0].zw, 0, 0)).a;
+	float Lright    = tex2Dlod(ShadingMapTempSamp, float4(offset[1].xy, 0, 0)).a;
+	float Lbottom   = tex2Dlod(ShadingMapTempSamp, float4(offset[1].zw, 0, 0)).a;
+	float Lleftleft = tex2Dlod(ShadingMapTempSamp, float4(offset[2].xy, 0, 0)).a;
+	float Ltoptop   = tex2Dlod(ShadingMapTempSamp, float4(offset[2].zw, 0, 0)).a;
 
 	float4 delta = abs(Lcenter - float4(Lleft, Ltop, Lright, Lbottom));
 
+	float2 edges = step(threshold, delta.xy);
+	clip(sum(edges) - EPSILON);
+
+	float2 maxDelta = max(delta.xy, delta.zw);
+	maxDelta = max(maxDelta.xx, maxDelta.yy);
+	maxDelta = max(maxDelta.xy, abs(float2(Lleft, Ltop) - float2(Lleftleft, Ltoptop)));
+
+	return float4(edges * step(maxDelta * 0.5, delta.xy), 0.0, 0.0);
+}
+
+float4 SMAALumaEdgeDetection2xPS(
+	in float4 coord0 : TEXCOORD0,
+	in float4 coord1 : TEXCOORD1,
+	in float4 coord2 : TEXCOORD2,
+	in float4 coord3 : TEXCOORD3) : COLOR
+{
+	float4 offset[3] = { coord1, coord2, coord3 };
+	float2 threshold = float2(SMAA_THRESHOLD, SMAA_THRESHOLD);
+
+	float Lcenter   = tex2Dlod(ShadingMapSamp, float4(coord0.xy, 0, 0)).a;
+	float Lleft     = tex2Dlod(ShadingMapSamp, float4(offset[0].xy, 0, 0)).a;
+	float Ltop      = tex2Dlod(ShadingMapSamp, float4(offset[0].zw, 0, 0)).a;
+	float Lright    = tex2Dlod(ShadingMapSamp, float4(offset[1].xy, 0, 0)).a;
+	float Lbottom   = tex2Dlod(ShadingMapSamp, float4(offset[1].zw, 0, 0)).a;
+	float Lleftleft = tex2Dlod(ShadingMapSamp, float4(offset[2].xy, 0, 0)).a;
+	float Ltoptop   = tex2Dlod(ShadingMapSamp, float4(offset[2].zw, 0, 0)).a;
+
+	float4 delta = abs(Lcenter - float4(Lleft, Ltop, Lright, Lbottom));
 
 	float2 edges = step(threshold, delta.xy);
 	clip(sum(edges) - EPSILON);
@@ -417,7 +444,7 @@ float4 SMAABlendingWeightCalculationPS(
 	if (edge.g > 0.0)
 	{
 #if SMAA_MAX_SEARCH_STEPS_DIAG
-		weights.rg = SMAACalculateDiagWeights(SMAAEdgeMapSamp, SMAAAreaMapSamp, coord0.xy, edge, subsampleIndices);
+		weights.rg = SMAACalculateDiagWeights(coord0.xy, edge, subsampleIndices);
 
 		[branch]
 		if (dot(weights.rg, 1.0) == 0.0) 
@@ -425,9 +452,9 @@ float4 SMAABlendingWeightCalculationPS(
 #endif
 		
 		float3 coords;
-		coords.x = SMAASearchXLeft(SMAAEdgeMapSamp, SMAASearchMapSamp, offset[0].xy, offset[2].x);
+		coords.x = SMAASearchXLeft(offset[0].xy, offset[2].x);
 		coords.y = offset[1].y;
-		coords.z = SMAASearchXRight(SMAAEdgeMapSamp, SMAASearchMapSamp, offset[0].zw, offset[2].y);
+		coords.z = SMAASearchXRight(offset[0].zw, offset[2].y);
 		
 		float2 d = coords.xz;
 		d = abs(round(madd(ViewportSize.xx, d, -coord0.zz)));
@@ -435,10 +462,10 @@ float4 SMAABlendingWeightCalculationPS(
 		float e1 = tex2Dlod(SMAAEdgeMapSamp, float4(coords.xy, 0, 0)).r;
 		float e2 = tex2Dlod(SMAAEdgeMapSamp, float4(coords.zy + float2(ViewportOffset2.x, 0), 0, 0)).r;
 		
-		weights.rg = SMAAArea(SMAAAreaMapSamp, sqrt(d), e1, e2, subsampleIndices.y);
+		weights.rg = SMAAArea(sqrt(d), e1, e2, subsampleIndices.y);
 		
 		coords.y = coord0.y;
-		SMAADetectHorizontalCornerPattern(SMAAEdgeMapSamp, weights.rg, coords.xyzy, d);
+		SMAADetectHorizontalCornerPattern(weights.rg, coords.xyzy, d);
 		
 #if SMAA_MAX_SEARCH_STEPS_DIAG
 		} 
@@ -453,9 +480,9 @@ float4 SMAABlendingWeightCalculationPS(
 	if (edge.r > 0.0)
 	{
 		float3 coords;
-		coords.y = SMAASearchYUp(SMAAEdgeMapSamp, SMAASearchMapSamp, offset[1].xy, offset[2].z);
+		coords.y = SMAASearchYUp(offset[1].xy, offset[2].z);
 		coords.x = offset[0].x;
-		coords.z = SMAASearchYDown(SMAAEdgeMapSamp, SMAASearchMapSamp, offset[1].zw, offset[2].w);
+		coords.z = SMAASearchYDown(offset[1].zw, offset[2].w);
 		
 		float2 d = coords.yz;
 		d = abs(round(madd(ViewportSize.yy, d, -coord0.ww)));
@@ -463,10 +490,10 @@ float4 SMAABlendingWeightCalculationPS(
 		float e1 = tex2Dlod(SMAAEdgeMapSamp, float4(coords.xy, 0, 0)).g;
 		float e2 = tex2Dlod(SMAAEdgeMapSamp, float4(coords.xz + float2(0, ViewportOffset2.y), 0, 0)).g;
 		
-		weights.ba = SMAAArea(SMAAAreaMapSamp, sqrt(d), e1, e2, subsampleIndices.x);
+		weights.ba = SMAAArea(sqrt(d), e1, e2, subsampleIndices.x);
 		
 		coords.x = coord0.x;
-		SMAADetectVerticalCornerPattern(SMAAEdgeMapSamp, weights.ba, coords.xyxz, d);
+		SMAADetectVerticalCornerPattern(weights.ba, coords.xyxz, d);
 	}
 
 	return weights;
@@ -484,10 +511,9 @@ float4 SMAANeighborhoodBlendingVS(
 	return Position;
 }
 
-float4 SMAANeighborhoodBlendingPS(
+float4 SMAANeighborhoodBlendingTempPS(
 	in float2 coord0 : TEXCOORD0,
 	in float4 coord1 : TEXCOORD1,
-	uniform sampler source,
 	uniform bool final) : COLOR
 {
 	float4 a;
@@ -498,7 +524,7 @@ float4 SMAANeighborhoodBlendingPS(
 	[branch]
 	if (sum(a) < EPSILON) 
 	{
-		float4 color = tex2Dlod(source, float4(coord0, 0, 0));
+		float4 color = tex2Dlod(ShadingMapTempSamp, float4(coord0, 0, 0));
 		return float4(color.rgb, final ? 1 : luminance(color.rgb));
 	}
 	else 
@@ -512,8 +538,42 @@ float4 SMAANeighborhoodBlendingPS(
 		blendingWeight /= sum(blendingWeight);
 
 		float4 color = 0;
-		color += blendingWeight.x * tex2Dlod(source, float4(coord0 + ViewportOffset2 * blendingOffset.xy, 0, 0));
-		color += blendingWeight.y * tex2Dlod(source, float4(coord0 - ViewportOffset2 * blendingOffset.zw, 0, 0));
+		color += blendingWeight.x * tex2Dlod(ShadingMapTempSamp, float4(coord0 + ViewportOffset2 * blendingOffset.xy, 0, 0));
+		color += blendingWeight.y * tex2Dlod(ShadingMapTempSamp, float4(coord0 - ViewportOffset2 * blendingOffset.zw, 0, 0));
+
+		return float4(color.rgb, final ? 1 : luminance(color.rgb));
+	}
+}
+
+float4 SMAANeighborhoodBlending2xPS(
+	in float2 coord0 : TEXCOORD0,
+	in float4 coord1 : TEXCOORD1,
+	uniform bool final) : COLOR
+{
+	float4 a;
+	a.x = tex2Dlod(SMAABlendMapSamp, float4(coord1.xy, 0, 0)).a;
+	a.y = tex2Dlod(SMAABlendMapSamp, float4(coord1.zw, 0, 0)).g;
+	a.wz = tex2Dlod(SMAABlendMapSamp, float4(coord0, 0, 0)).xz;
+
+	[branch]
+	if (sum(a) < EPSILON) 
+	{
+		float4 color = tex2Dlod(ShadingMapSamp, float4(coord0, 0, 0));
+		return float4(color.rgb, final ? 1 : luminance(color.rgb));
+	}
+	else 
+	{
+		bool h = max(a.x, a.z) > max(a.y, a.w);
+
+		float4 blendingOffset = float4(0.0, a.y, 0.0, a.w);
+		float2 blendingWeight = a.yw;
+		SMAAMovc(bool4(h, h, h, h), blendingOffset, float4(a.x, 0.0, a.z, 0.0));
+		SMAAMovc(bool2(h, h), blendingWeight, a.xz);
+		blendingWeight /= sum(blendingWeight);
+
+		float4 color = 0;
+		color += blendingWeight.x * tex2Dlod(ShadingMapSamp, float4(coord0 + ViewportOffset2 * blendingOffset.xy, 0, 0));
+		color += blendingWeight.y * tex2Dlod(ShadingMapSamp, float4(coord0 - ViewportOffset2 * blendingOffset.zw, 0, 0));
 
 		return float4(color.rgb, final ? 1 : luminance(color.rgb));
 	}

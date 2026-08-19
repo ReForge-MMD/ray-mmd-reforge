@@ -340,7 +340,7 @@ void LTC_InitPentagonPoints(float3 P, float3 Right, float3 Up, float LightWidth,
 		points[j] = P + mul(polygon[j], tbn);
 }
 
-float3 LTC_FetchTexture(sampler2D source, float3 points[4])
+float4 LTC_CalcTextureCoordAndLOD(float3 points[4])
 {
 	float3 V1 = points[1] - points[0];
 	float3 V2 = points[3] - points[0];
@@ -363,8 +363,10 @@ float3 LTC_FetchTexture(sampler2D source, float3 points[4])
 	float d = abs(planeDistxPlaneArea) / pow(planeAreaSquared, 0.75);
 	float lod = log(2048.0 * d) / log(3.0);
 
-	return tex2Dlod(source, float4(uv.yx, 0, lod)).rgb;
+	return float4(uv.yx, 0, lod);
 }
+
+#define LTC_FetchTexture(source, points) (tex2Dlod(source, LTC_CalcTextureCoordAndLOD(points)).rgb)
 
 float LTC_EvaluateRectangle(float3 N, float3 V, float3 P, float3 L, float3 points[4], bool twoSided = false)
 {
@@ -409,50 +411,11 @@ float3 LTC_EvaluateRectangle(float3 N, float3 V, float3 P, float3 L, float3 poin
 	}
 }
 
-float3 LTC_EvaluateRectangle(sampler source, float3 N, float3 V, float3 P, float3 L, float3 points[4], bool twoSided = false)
-{
-	bool face = step(0, dot(points[0] - P, L));
-	if (face && !twoSided)
-		return 0;
-	else
-	{
-		float3x3 invM = float3x3(
-			float3(1, 0, 0),
-			float3(0, 1, 0),
-			float3(0, 0, 1)
-		);
+#define LTC_EvaluateRectangle_Textured(source, N, V, P, L, points) \
+	(LTC_EvaluateRectangle(N, V, P, L, points) * LTC_FetchTexture(source, points))
 
-		float3 lighting = LTC_EvaluateRectangle(N, V, P, invM, L, points, face);
-		return lighting * LTC_FetchTexture(source, points);
-	}
-}
-
-float3 LTC_EvaluateRectangle(sampler source, float3 N, float3 V, float3 P, float3 L, float3 points[4], float smoothness, float3 specular, bool twoSided = false)
-{
-	bool face = step(0, dot(points[0] - P, L));
-	if (face && !twoSided)
-		return 0;
-	else
-	{
-		float2 uv = float2(1 - smoothness, sqrt(1.0 - saturate(dot(N, V))));
-		uv = uv * LUT_SCALE + LUT_BIAS;
-
-		float4 t1 = tex2Dlod(LTC1Samp, float4(uv, 0, 0));
-		float4 t2 = tex2Dlod(LTC2Samp, float4(uv, 0, 0));
-
-		float3x3 invM = float3x3(
-			float3(t1.x, 0, t1.z),
-			float3(  0,  1,    0),
-			float3(t1.y, 0, t1.w)
-		);
-
-		float3 f0 = specular;
-		float3 fresnel = f0 * t2.x + (1.0 - f0) * t2.y;
-
-		float3 lighting = LTC_EvaluateRectangle(N, V, P, invM, L, points, face) * fresnel;
-		return lighting * LTC_FetchTexture(source, points);
-	}
-}
+#define LTC_EvaluateRectangle_TexturedSpec(source, N, V, P, L, points, smoothness, specular) \
+	(LTC_EvaluateRectangle(N, V, P, L, points, smoothness, specular) * LTC_FetchTexture(source, points))
 
 float LTC_EvaluateDisk(float3 N, float3 V, float3 P, float3 L, float3 points[4], bool twoSided = false)
 {

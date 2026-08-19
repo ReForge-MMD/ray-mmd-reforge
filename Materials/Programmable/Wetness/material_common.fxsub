@@ -457,36 +457,22 @@ float3 PerturbNormalLQ(float3 N, float3 P, float height)
 #endif
 
 #if NORMAL_MAP_TYPE == 3 || NORMAL_SUB_MAP_TYPE == 3
-float3 PerturbNormalHQ(sampler source, float2 coord, float center)
-{
-	float2 duv1 = ddx (coord);
-	float2 duv2 = ddy (coord);
-
-	float2 uv1 = coord + duv1;
-	float2 uv2 = coord + duv2;
-
-	float right = tex2D(source, uv1).x;
-	float bottom = tex2D(source, uv2).x;
-
-	float slope1 = right - center;
-	float slope2 = center - bottom;
-	
-	return normalize(float3(slope1, slope2, 1.0));
-}
+#define PerturbNormalHQ(source, coord, center) \
+	normalize(float3(tex2D(source, (coord) + ddx(coord)).x - (center), (center) - tex2D(source, (coord) + ddy(coord)).x, 1.0))
 #endif
 #endif
 
 #if PARALLAX_MAP_FROM
-float GetParallaxOcclusionHeight(sampler heightMap, float2 coord)
+float GetParallaxOcclusionHeight(float2 coord)
 {
 #if PARALLAX_MAP_SWIZZLE == 1
-	return tex2D(heightMap, coord).g;
+	return tex2D(ParallaxMapSamp, coord).g;
 #elif PARALLAX_MAP_SWIZZLE == 2
-	return tex2D(heightMap, coord).b;
+	return tex2D(ParallaxMapSamp, coord).b;
 #elif PARALLAX_MAP_SWIZZLE == 3
-	return tex2D(heightMap, coord).a;
+	return tex2D(ParallaxMapSamp, coord).a;
 #else
-	return tex2D(heightMap, coord).r;
+	return tex2D(ParallaxMapSamp, coord).r;
 #endif
 }
 
@@ -514,13 +500,13 @@ float3 ParallaxOcclusionDirection(float3 normal, float3 worldPos, float2 coord)
 	return direction;
 }
 
-float2 ParallaxOcclusionMap(sampler heightMap, float2 coord, float3 V, int numSteps, float parallaxScale)
+float2 ParallaxOcclusionMap(float2 coord, float3 V, int numSteps, float parallaxScale)
 {
 	float step = 1.0 / numSteps;
 	float2 delta = parallaxScale * V.xy / (-V.z * numSteps);
 
 	float curLayerHeight = 0;
-	float curHeight = GetParallaxOcclusionHeight(heightMap, coord);
+	float curHeight = GetParallaxOcclusionHeight(coord);
 	float2 curTexcoord = coord;
 
 	[unroll]
@@ -531,7 +517,7 @@ float2 ParallaxOcclusionMap(sampler heightMap, float2 coord, float3 V, int numSt
 
 		curLayerHeight += step; 
 		curTexcoord -= delta;
-		curHeight = GetParallaxOcclusionHeight(heightMap, curTexcoord);
+		curHeight = GetParallaxOcclusionHeight(curTexcoord);
 	}
 
 	float2 deltaTexcoord = delta * 0.5;
@@ -546,7 +532,7 @@ float2 ParallaxOcclusionMap(sampler heightMap, float2 coord, float3 V, int numSt
 		deltaTexcoord *= 0.5;
 		deltaHeight *= 0.5;
 
-		curHeight = GetParallaxOcclusionHeight(heightMap, curTexcoord);
+		curHeight = GetParallaxOcclusionHeight(curTexcoord);
 
 		if (curHeight > curLayerHeight)
 		{
@@ -1321,7 +1307,7 @@ GbufferParam MaterialPS(
 		coord.y = 1 - coord.y;
 	#endif
 	float3 viewdir = ParallaxOcclusionDirection(normal, worldPos.xyz, coord * parallaxMapLoopNum);
-	float2 parallaxCoord = ParallaxOcclusionMap(ParallaxMapSamp, coord * parallaxMapLoopNum, viewdir, 15, parallaxMapScale);
+	float2 parallaxCoord = ParallaxOcclusionMap(coord * parallaxMapLoopNum, viewdir, 15, parallaxMapScale);
 	#if PARALLAX_MAP_UV_FLIP
 		coord.y = 1 - coord.y;
 	#endif
@@ -1383,7 +1369,7 @@ GbufferParam Material2PS(
 	#endif
 	float3 viewdir = ParallaxOcclusionDirection(normal, worldPos.xyz, coord);
 #if PARALLAX_MAP_TYPE
-	coord = ParallaxOcclusionMap(ParallaxMapSamp, coord * parallaxMapLoopNum, viewdir, 15, parallaxMapScale);
+	coord = ParallaxOcclusionMap(coord * parallaxMapLoopNum, viewdir, 15, parallaxMapScale);
 #else
 	coord *= parallaxMapLoopNum;
 #endif

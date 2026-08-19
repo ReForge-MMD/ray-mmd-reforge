@@ -94,16 +94,6 @@ void SphereVS(
 	oPosition = mul(float4(oTexcoord1.xyz * scale + translate, 1), matViewProject);
 }
 
-float4 SpherePS(
-	in float2 coord : TEXCOORD0,
-	in float3 normal : TEXCOORD1,
-	uniform sampler source) : COLOR
-{
-	float4 diffuse = pow(tex2D(source, coord + float2(time / 200, 0)), 2.2);
-	diffuse.rgb *= saturate(dot(normal, -SunDirection) + 0.15);
-	return diffuse;
-}
-
 void MoonVS(
 	in float4 Position : POSITION,
 	in float4 Texcoord : TEXCOORD0,
@@ -122,11 +112,10 @@ void MoonVS(
 float4 MoonPS(
 	in float2 coord : TEXCOORD0,
 	in float3 normal : TEXCOORD1,
-	in float3 viewdir : TEXCOORD2,
-	uniform sampler source) : COLOR
+	in float3 viewdir : TEXCOORD2) : COLOR
 {
 	float3 V = normalize(viewdir - CameraPosition);
-	float4 diffuse = tex2D(source, coord + float2(0.4, 0.0));
+	float4 diffuse = tex2D(MoonMapSamp, coord + float2(0.4, 0.0));
 	diffuse *= saturate(dot(normalize(normal), -SunDirection) + 0.1) * 1.5;	
 	diffuse *= (1 - mSunRadianceM) * (step(0, V.y) + exp2(-abs(V.y) * 500));
 	return diffuse;
@@ -181,7 +170,7 @@ float4 ScatteringPS(
 			ZEnable = false; ZWriteEnable = false;\
 			SrcBlend = ONE; DestBlend = INVSRCALPHA;\
 			VertexShader = compile vs_3_0 MoonVS(moonTranslate, moonScaling); \
-			PixelShader  = compile ps_3_0 MoonPS(MoonMapSamp); \
+			PixelShader  = compile ps_3_0 MoonPS(); \
 		} \
 		pass DrawScattering { \
 			AlphaBlendEnable = true; AlphaTestEnable = false;\

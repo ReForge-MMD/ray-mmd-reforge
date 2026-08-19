@@ -76,9 +76,9 @@ float4 HDRTonemappingVS(
 	return Position;
 }
 
-float4 HDRTonemappingPS(in float4 coord: TEXCOORD0, uniform sampler source) : COLOR
+float4 HDRTonemappingPS(in float4 coord: TEXCOORD0) : COLOR
 {
-	float3 color = ColorDispersion(source, coord.xy, mDispersionRadius, 1.0 + mDispersionRadius);
+	float3 color = ColorDispersion(ShadingMapPointSamp, coord.xy, mDispersionRadius, 1.0 + mDispersionRadius);
 
 	color *= coord.z;
 

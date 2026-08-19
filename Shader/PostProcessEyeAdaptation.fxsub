@@ -66,13 +66,12 @@ float4 EyeDownsamplePS(
 	in float2 coord1 : TEXCOORD0,
 	in float2 coord2 : TEXCOORD1,
 	in float2 coord3 : TEXCOORD2,
-	in float2 coord4 : TEXCOORD3,
-	uniform sampler source) : COLOR
+	in float2 coord4 : TEXCOORD3) : COLOR
 {
-	float l1 = clamp(luminance(tex2Dlod(source, float4(coord1, 0, 0)).rgb), 0.02, 100.0);
-	float l2 = clamp(luminance(tex2Dlod(source, float4(coord2, 0, 0)).rgb), 0.02, 100.0);
-	float l3 = clamp(luminance(tex2Dlod(source, float4(coord3, 0, 0)).rgb), 0.02, 100.0);
-	float l4 = clamp(luminance(tex2Dlod(source, float4(coord4, 0, 0)).rgb), 0.02, 100.0);
+	float l1 = clamp(luminance(tex2Dlod(ShadingMapPointSamp, float4(coord1, 0, 0)).rgb), 0.02, 100.0);
+	float l2 = clamp(luminance(tex2Dlod(ShadingMapPointSamp, float4(coord2, 0, 0)).rgb), 0.02, 100.0);
+	float l3 = clamp(luminance(tex2Dlod(ShadingMapPointSamp, float4(coord3, 0, 0)).rgb), 0.02, 100.0);
+	float l4 = clamp(luminance(tex2Dlod(ShadingMapPointSamp, float4(coord4, 0, 0)).rgb), 0.02, 100.0);
 
 	float color = log(l1 * l2 * l3 * l4) * 0.25f;
 

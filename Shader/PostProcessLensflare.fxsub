@@ -92,72 +92,41 @@ void StarStreakVS(
 	oPosition = Position;
 }
 
-float4 StarStreak1stPS(
-	in float2 coord0 : TEXCOORD0,
-	in float2 coord1 : TEXCOORD1,
-	in float2 coord2 : TEXCOORD2,
-	in float2 coord3 : TEXCOORD3,
-	uniform sampler source, uniform float threshold) : COLOR
-{
-	float4 color0 = tex2Dlod(source, float4(coord0, 0, 0)) * star_colorCoeff1st[0];
-	float4 color1 = tex2Dlod(source, float4(coord1, 0, 0)) * star_colorCoeff1st[1];
-	float4 color2 = tex2Dlod(source, float4(coord2, 0, 0)) * star_colorCoeff1st[2];
-	float4 color3 = tex2Dlod(source, float4(coord3, 0, 0)) * star_colorCoeff1st[3];
-	return max(0, (color0 + color1 + color2 + color3) - threshold / (1 - threshold + EPSILON) * 10);
+#define IMPLEMENT_STAR_STREAK_PS(funcName, sourceSamp, coeffArray) \
+float4 funcName( \
+	in float2 coord0 : TEXCOORD0, \
+	in float2 coord1 : TEXCOORD1, \
+	in float2 coord2 : TEXCOORD2, \
+	in float2 coord3 : TEXCOORD3, \
+	uniform float threshold) : COLOR \
+{ \
+	float4 color0 = tex2Dlod(sourceSamp, float4(coord0, 0, 0)) * coeffArray[0]; \
+	float4 color1 = tex2Dlod(sourceSamp, float4(coord1, 0, 0)) * coeffArray[1]; \
+	float4 color2 = tex2Dlod(sourceSamp, float4(coord2, 0, 0)) * coeffArray[2]; \
+	float4 color3 = tex2Dlod(sourceSamp, float4(coord3, 0, 0)) * coeffArray[3]; \
+	return max(0, (color0 + color1 + color2 + color3) - threshold / (1 - threshold + EPSILON) * 10); \
 }
 
-float4 StarStreak2ndPS(
-	in float2 coord0 : TEXCOORD0,
-	in float2 coord1 : TEXCOORD1,
-	in float2 coord2 : TEXCOORD2,
-	in float2 coord3 : TEXCOORD3,
-	uniform sampler source, uniform float threshold) : COLOR
-{
-	float4 color0 = tex2Dlod(source, float4(coord0, 0, 0)) * star_colorCoeff2nd[0];
-	float4 color1 = tex2Dlod(source, float4(coord1, 0, 0)) * star_colorCoeff2nd[1];
-	float4 color2 = tex2Dlod(source, float4(coord2, 0, 0)) * star_colorCoeff2nd[2];
-	float4 color3 = tex2Dlod(source, float4(coord3, 0, 0)) * star_colorCoeff2nd[3];
-	return max(0, (color0 + color1 + color2 + color3) - threshold / (1 - threshold + EPSILON) * 10);
-}
+IMPLEMENT_STAR_STREAK_PS(StarStreak1stPS, DownsampleSamp2nd, star_colorCoeff1st)
 
-float4 StarStreak3rdPS(
-	in float2 coord0 : TEXCOORD0,
-	in float2 coord1 : TEXCOORD1,
-	in float2 coord2 : TEXCOORD2,
-	in float2 coord3 : TEXCOORD3,
-	uniform sampler source, uniform float threshold) : COLOR
-{
-	float4 color0 = tex2Dlod(source, float4(coord0, 0, 0)) * star_colorCoeff3rd[0];
-	float4 color1 = tex2Dlod(source, float4(coord1, 0, 0)) * star_colorCoeff3rd[1];
-	float4 color2 = tex2Dlod(source, float4(coord2, 0, 0)) * star_colorCoeff3rd[2];
-	float4 color3 = tex2Dlod(source, float4(coord3, 0, 0)) * star_colorCoeff3rd[3];
-	return max(0, (color0 + color1 + color2 + color3) - threshold / (1 - threshold + EPSILON) * 10);
-}
+// Mode 1/2 (2-streak)
+IMPLEMENT_STAR_STREAK_PS(Star1stStreak2ndPS, StreakSamp1stTemp, star_colorCoeff2nd)
+IMPLEMENT_STAR_STREAK_PS(Star1stStreak3rdPS, StreakSamp1st, star_colorCoeff3rd)
+IMPLEMENT_STAR_STREAK_PS(Star1stStreak4thPS, StreakSamp1stTemp, star_colorCoeff4th)
 
-float4 StarStreak4thPS(
-	in float2 coord0 : TEXCOORD0,
-	in float2 coord1 : TEXCOORD1,
-	in float2 coord2 : TEXCOORD2,
-	in float2 coord3 : TEXCOORD3,
-	uniform sampler source, uniform float threshold) : COLOR
-{
-	float4 color0 = tex2Dlod(source, float4(coord0, 0, 0)) * star_colorCoeff4th[0];
-	float4 color1 = tex2Dlod(source, float4(coord1, 0, 0)) * star_colorCoeff4th[1];
-	float4 color2 = tex2Dlod(source, float4(coord2, 0, 0)) * star_colorCoeff4th[2];
-	float4 color3 = tex2Dlod(source, float4(coord3, 0, 0)) * star_colorCoeff4th[3];
-	return max(0, (color0 + color1 + color2 + color3) - threshold / (1 - threshold + EPSILON) * 10);
-}
+IMPLEMENT_STAR_STREAK_PS(Star2ndStreak2ndPS, StreakSamp2ndTemp, star_colorCoeff2nd)
+IMPLEMENT_STAR_STREAK_PS(Star2ndStreak3rdPS, StreakSamp2nd, star_colorCoeff3rd)
+IMPLEMENT_STAR_STREAK_PS(Star2ndStreak4thPS, StreakSamp2ndTemp, star_colorCoeff4th)
 
-float4 StarStreakPS(
-	in float2 coord0 : TEXCOORD0,
-	in float2 coord1 : TEXCOORD1,
-	in float2 coord2 : TEXCOORD2,
-	in float2 coord3 : TEXCOORD3,
-	uniform sampler source, uniform float4 colorCoeff[4], uniform float threshold) : COLOR
-{
-	float4 color0 = tex2Dlod(source, float4(coord0, 0, 0)) * colorCoeff[0];
-	float4 color1 = tex2Dlod(source, float4(coord1, 0, 0)) * colorCoeff[1];
-	float4 color2 = tex2Dlod(source, float4(coord2, 0, 0)) * colorCoeff[2];
-	float4 color3 = tex2Dlod(source, float4(coord3, 0, 0)) * colorCoeff[3];
-	return max(0, (color0 + color1 + color2 + color3) - threshold / (1 - threshold + EPSILON) * 10);
-}
+// Mode 3/4 (4-streak cross)
+IMPLEMENT_STAR_STREAK_PS(StarCross1stStreak2ndPS, StreakSamp1st, star_colorCoeff2nd)
+IMPLEMENT_STAR_STREAK_PS(StarCross1stStreak3rdPS, StreakSamp1stTemp, star_colorCoeff3rd)
+
+IMPLEMENT_STAR_STREAK_PS(StarCross2ndStreak2ndPS, StreakSamp2nd, star_colorCoeff2nd)
+IMPLEMENT_STAR_STREAK_PS(StarCross2ndStreak3rdPS, StreakSamp2ndTemp, star_colorCoeff3rd)
+
+IMPLEMENT_STAR_STREAK_PS(StarCross3rdStreak2ndPS, StreakSamp3rd, star_colorCoeff2nd)
+IMPLEMENT_STAR_STREAK_PS(StarCross3rdStreak3rdPS, StreakSamp3rdTemp, star_colorCoeff3rd)
+
+IMPLEMENT_STAR_STREAK_PS(StarCross4thStreak2ndPS, StreakSamp4th, star_colorCoeff2nd)
+IMPLEMENT_STAR_STREAK_PS(StarCross4thStreak3rdPS, StreakSamp4thTemp, star_colorCoeff3rd)

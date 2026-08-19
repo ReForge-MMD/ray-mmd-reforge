@@ -145,29 +145,6 @@ float ShadingShadow(MaterialParam material, float3 viewPosition)
 		ADDRESSU = CLAMP; ADDRESSV = CLAMP;
 	};
 
-	float4 FastBlur(sampler source, float2 uv, float2 offset, float level)
-	{
-		float sz = pow(2.0, level);
-		float mip = level + 1.0;
-
-		float4 a = tex2Dlod(source, float4(uv + sz * float2(-1.5, -0.5) * offset, 0, mip));
-		float4 b = tex2Dlod(source, float4(uv + sz * float2( 0.5, -1.5) * offset, 0, mip));
-		float4 c = tex2Dlod(source, float4(uv + sz * float2( 1.5,  0.5) * offset, 0, mip));
-		float4 d = tex2Dlod(source, float4(uv + sz * float2(-0.5,  1.5) * offset, 0, mip));
-		float4 e = tex2Dlod(source, float4(uv, 0, mip));
-
-		float gamma = 2.2;
-
-		float4 blurred = 0;
-		blurred += pow(a, gamma) * 4.0;
-		blurred += pow(b, gamma) * 4.0;
-		blurred += pow(c, gamma) * 4.0;
-		blurred += pow(d, gamma) * 4.0;
-		blurred += pow(e, gamma);
-		blurred /= 17;
-
-		return blurred;
-	}
 #endif
 
 void ShadingMaterial(MaterialParam material, float3 P, float3 V, inout float3 diffuse, inout float3 specular)
@@ -184,7 +161,7 @@ void ShadingMaterial(MaterialParam material, float3 P, float3 V, inout float3 di
 
 	diffuse = SubsurfaceShading(material, material.normal, L2, V);
 #if VIDEO_MAP_FROM
-	diffuse += LTC_EvaluateRectangle(VideoMapSamp, material.normal, V, P, viewLightDirection, points);
+	diffuse += LTC_EvaluateRectangle_Textured(VideoMapSamp, material.normal, V, P, viewLightDirection, points);
 #else
 	diffuse += LTC_EvaluateRectangle(material.normal, V, P, viewLightDirection, points);
 #endif
@@ -193,7 +170,7 @@ void ShadingMaterial(MaterialParam material, float3 P, float3 V, inout float3 di
 
 #if LIGHT_PARAMS_TYPE == 0
 	#if VIDEO_MAP_FROM
-		specular = LTC_EvaluateRectangle(VideoMapSamp, material.normal, V, P, viewLightDirection, points, material.smoothness, material.specular);
+		specular = LTC_EvaluateRectangle_TexturedSpec(VideoMapSamp, material.normal, V, P, viewLightDirection, points, material.smoothness, material.specular);
 	#else
 		specular = LTC_EvaluateRectangle(material.normal, V, P, viewLightDirection, points, material.smoothness, material.specular);
 	#endif

@@ -23,11 +23,9 @@ float4 SSSGaussBlurVS(
 	return Position;
 }
 
-float4 SSSGaussBlurPS(
+float4 SSSGaussBlurXPS(
 	in float2 coord : TEXCOORD0,
 	in float4 projConstant : TEXCOORD1,
-	uniform sampler source,
-	uniform sampler original,
 	uniform float2 direction) : COLOR
 {
 	const float offsets[6] = { 0.352, 0.719, 1.117, 1.579, 2.177, 3.213 };
@@ -56,7 +54,7 @@ float4 SSSGaussBlurPS(
 	float sssRadius = 0.0055 * profileSpikeRadArr[sssIndex].w * sssStrength * perspectiveScale / sssWidth;
 
 	float3 sampleWeight = 1;
-	float4 sampleColor = tex2Dlod(source, float4(coord, 0, 0));
+	float4 sampleColor = tex2Dlod(ShadingMapTempPointSamp, float4(coord, 0, 0));
 	float2 sampleStep = direction * sssRadius / linearDepth;
 
 	[unroll]
@@ -65,8 +63,8 @@ float4 SSSGaussBlurPS(
 		float2 offset1 = coord + offsets[i] / 5.5 * sampleStep;
 		float2 offset2 = coord - offsets[i] / 5.5 * sampleStep;
 
-		float4 sampleColor1 = tex2Dlod(source, float4(offset1, 0, 0));
-		float4 sampleColor2 = tex2Dlod(source, float4(offset2, 0, 0));
+		float4 sampleColor1 = tex2Dlod(ShadingMapTempPointSamp, float4(offset1, 0, 0));
+		float4 sampleColor2 = tex2Dlod(ShadingMapTempPointSamp, float4(offset2, 0, 0));
 
 		float depthDiff1 = (sampleColor1.a - linearDepth) * 1000 * mSSSSScale;
 		float depthDiff2 = (sampleColor2.a - linearDepth) * 1000 * mSSSSScale;
@@ -92,7 +90,80 @@ float4 SSSGaussBlurPS(
 
 	if (direction.y > 0.01)
 	{
-		sampleColor.rgb = lerp(sampleColor.rgb, tex2Dlod(original, float4(coord, 0, 0)).rgb, profileSpikeRadArr[sssIndex].xyz * (1 - sssAmount));
+		sampleColor.rgb = lerp(sampleColor.rgb, tex2Dlod(ShadingMapTempPointSamp, float4(coord, 0, 0)).rgb, profileSpikeRadArr[sssIndex].xyz * (1 - sssAmount));
+	}
+
+	return sampleColor;
+}
+
+float4 SSSGaussBlurYPS(
+	in float2 coord : TEXCOORD0,
+	in float4 projConstant : TEXCOORD1,
+	uniform float2 direction) : COLOR
+{
+	const float offsets[6] = { 0.352, 0.719, 1.117, 1.579, 2.177, 3.213 };
+
+	const float3 profileVarArr[2] = { float3(6.6, 5.6, 2.8), float3(9.6, 2.8, 2.2) };
+	const float4 profileSpikeRadArr[2] = { float4(0.30, 0.30, 0.80, 8.0 ), float4(0.35, 0.40, 0.50, 1.0) };
+
+	float4 MRT2 = tex2Dlod(Gbuffer2Map, float4(coord, 0, 0));
+	float4 MRT4 = tex2Dlod(Gbuffer4Map, float4(coord, 0, 0));
+
+	float3 N = DecodeNormal(MRT2.xyz);
+	float linearDepth = MRT4.x;
+	float customDataA = MRT2.w;
+	int lightModel = (int)floor(MRT4.w);
+
+	float3 P = GetViewPosition(projConstant, coord, linearDepth);
+
+	float perspectiveScaleX = dot(normalize(N.xz), normalize(-P.xz));
+	float perspectiveScaleY = dot(normalize(N.yz), normalize(-P.yz));
+	float perspectiveScale = max(dot(direction, float2(perspectiveScaleX, perspectiveScaleY)), 0.3);
+
+	float sssAmount = customDataA;
+	float sssIndex = (lightModel != SHADINGMODELID_SKIN) ? 0 : 1;
+	float sssStrength = (lightModel != SHADINGMODELID_SKIN) ? sssAmount : 1;
+	float sssWidth = (lightModel != SHADINGMODELID_SKIN) ? mSSSSScale * 3 : mSSSSScale;
+	float sssRadius = 0.0055 * profileSpikeRadArr[sssIndex].w * sssStrength * perspectiveScale / sssWidth;
+
+	float3 sampleWeight = 1;
+	float4 sampleColor = tex2Dlod(ShadingMapPointSamp, float4(coord, 0, 0));
+	float2 sampleStep = direction * sssRadius / linearDepth;
+
+	[unroll]
+	for (int i = 0; i < 6; i++)
+	{
+		float2 offset1 = coord + offsets[i] / 5.5 * sampleStep;
+		float2 offset2 = coord - offsets[i] / 5.5 * sampleStep;
+
+		float4 sampleColor1 = tex2Dlod(ShadingMapPointSamp, float4(offset1, 0, 0));
+		float4 sampleColor2 = tex2Dlod(ShadingMapPointSamp, float4(offset2, 0, 0));
+
+		float depthDiff1 = (sampleColor1.a - linearDepth) * 1000 * mSSSSScale;
+		float depthDiff2 = (sampleColor2.a - linearDepth) * 1000 * mSSSSScale;
+
+		float3 N1 = DecodeNormal(tex2Dlod(Gbuffer2Map, float4(offset1, 0, 0)).xyz);
+		float3 N2 = DecodeNormal(tex2Dlod(Gbuffer2Map, float4(offset2, 0, 0)).xyz);
+		float normalWeight1 = saturate(dot(N1, N));
+		float normalWeight2 = saturate(dot(N2, N));
+		float normalScale1 = normalWeight1 * normalWeight1;
+		float normalScale2 = normalWeight2 * normalWeight2;
+
+		float3 weight1 = exp(-(offsets[i] * offsets[i] + depthDiff1 * depthDiff1) / profileVarArr[sssIndex]) * normalScale1;
+		float3 weight2 = exp(-(offsets[i] * offsets[i] + depthDiff2 * depthDiff2) / profileVarArr[sssIndex]) * normalScale2;
+		
+		sampleWeight += weight1;
+		sampleWeight += weight2;
+
+		sampleColor.rgb += weight1 * sampleColor1.rgb;
+		sampleColor.rgb += weight2 * sampleColor2.rgb;
+	}
+
+	sampleColor.rgb /= max(sampleWeight, 1e-4f);
+
+	if (direction.y > 0.01)
+	{
+		sampleColor.rgb = lerp(sampleColor.rgb, tex2Dlod(ShadingMapTempPointSamp, float4(coord, 0, 0)).rgb, profileSpikeRadArr[sssIndex].xyz * (1 - sssAmount));
 	}
 
 	return sampleColor;

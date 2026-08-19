@@ -167,21 +167,56 @@ float4 ShadowMapGenPS(
 }
 
 #if SHADOW_BLUR_COUNT
-float4 ShadowMapBlurPS(float2 coord : TEXCOORD0, uniform sampler source, uniform float2 offset) : COLOR
+float4 ShadowMapBlurXPS(float2 coord : TEXCOORD0, uniform float2 offset) : COLOR
 {
 	float2 offset1 = coord + offset;
 	float2 offset2 = coord - offset;
 
 	float totalWeight = 1;
-	float totalColor = tex2Dlod(source, float4(coord, 0, 0)).r;
+	float totalColor = tex2Dlod(ShadowMapSamp, float4(coord, 0, 0)).r;
 
 	float center_d = tex2Dlod(Gbuffer8Map, float4(coord, 0, 0)).r;
 
 	[unroll]
 	for(int r = 1; r < SHADOW_BLUR_COUNT; r++)
 	{
-		float shadow1 = tex2Dlod(source, float4(offset1, 0, 0)).r;
-		float shadow2 = tex2Dlod(source, float4(offset2, 0, 0)).r;
+		float shadow1 = tex2Dlod(ShadowMapSamp, float4(offset1, 0, 0)).r;
+		float shadow2 = tex2Dlod(ShadowMapSamp, float4(offset2, 0, 0)).r;
+
+		float depth1 = tex2Dlod(Gbuffer8Map, float4(offset1, 0, 0)).r;
+		float depth2 = tex2Dlod(Gbuffer8Map, float4(offset2, 0, 0)).r;
+
+		float bilateralWeight1 = BilateralWeight(r, depth1, center_d, SHADOW_BLUR_COUNT, 10);
+		float bilateralWeight2 = BilateralWeight(r, depth2, center_d, SHADOW_BLUR_COUNT, 10);
+
+		totalColor += shadow1 * bilateralWeight1;
+		totalColor += shadow2 * bilateralWeight2;
+
+		totalWeight += bilateralWeight1;
+		totalWeight += bilateralWeight2;
+
+		offset1 += offset;
+		offset2 -= offset;
+	}
+
+	return totalColor / totalWeight;
+}
+
+float4 ShadowMapBlurYPS(float2 coord : TEXCOORD0, uniform float2 offset) : COLOR
+{
+	float2 offset1 = coord + offset;
+	float2 offset2 = coord - offset;
+
+	float totalWeight = 1;
+	float totalColor = tex2Dlod(ShadowMapSampTemp, float4(coord, 0, 0)).r;
+
+	float center_d = tex2Dlod(Gbuffer8Map, float4(coord, 0, 0)).r;
+
+	[unroll]
+	for(int r = 1; r < SHADOW_BLUR_COUNT; r++)
+	{
+		float shadow1 = tex2Dlod(ShadowMapSampTemp, float4(offset1, 0, 0)).r;
+		float shadow2 = tex2Dlod(ShadowMapSampTemp, float4(offset2, 0, 0)).r;
 
 		float depth1 = tex2Dlod(Gbuffer8Map, float4(offset1, 0, 0)).r;
 		float depth2 = tex2Dlod(Gbuffer8Map, float4(offset2, 0, 0)).r;

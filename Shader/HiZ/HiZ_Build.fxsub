@@ -14,39 +14,44 @@
 /**
  * Builds Mip Level 1 from full-resolution linear view depth.
  */
-float4 HiZ_BuildMip1_PS(in float2 pos : VPOS, in float2 coord : TEXCOORD0, uniform sampler source) : COLOR
+float4 HiZ_BuildMip1_PS(in float2 pos : VPOS, in float2 coord : TEXCOORD0) : COLOR
 {
 	float2 halfTexel = ViewportOffset * 0.5f;
 
-	float d00 = tex2Dlod(source, float4(coord + halfTexel * float2(1.0f, 1.0f), 0.0f, 0.0f)).r;
-	float d01 = tex2Dlod(source, float4(coord + halfTexel * float2(1.0f, 3.0f), 0.0f, 0.0f)).r;
-	float d10 = tex2Dlod(source, float4(coord + halfTexel * float2(3.0f, 1.0f), 0.0f, 0.0f)).r;
-	float d11 = tex2Dlod(source, float4(coord + halfTexel * float2(3.0f, 3.0f), 0.0f, 0.0f)).r;
+	float d00 = tex2Dlod(Gbuffer8Map, float4(coord + halfTexel * float2(1.0f, 1.0f), 0.0f, 0.0f)).r;
+	float d01 = tex2Dlod(Gbuffer8Map, float4(coord + halfTexel * float2(1.0f, 3.0f), 0.0f, 0.0f)).r;
+	float d10 = tex2Dlod(Gbuffer8Map, float4(coord + halfTexel * float2(3.0f, 1.0f), 0.0f, 0.0f)).r;
+	float d11 = tex2Dlod(Gbuffer8Map, float4(coord + halfTexel * float2(3.0f, 3.0f), 0.0f, 0.0f)).r;
 
 	float minDepth = min(min(d00, d01), min(d10, d11));
 	return float4(minDepth, minDepth, minDepth, 1.0f);
 }
 
-/**
- * Recursively downsamples Level (N-1) to Level N using conservative 4-tap min reduction.
- */
-float4 HiZ_BuildMipN_PS(
-	in float2 pos : VPOS,
-	in float2 coord : TEXCOORD0,
-	uniform sampler source,
-	uniform float2 targetLevelSize,
-	uniform float2 sourceLevelSize) : COLOR
-{
-	float2 invSourceHalf = 0.5f / sourceLevelSize;
-
-	float d00 = tex2Dlod(source, float4(coord + float2(1.0f, 1.0f) * invSourceHalf, 0.0f, 0.0f)).r;
-	float d01 = tex2Dlod(source, float4(coord + float2(1.0f, 3.0f) * invSourceHalf, 0.0f, 0.0f)).r;
-	float d10 = tex2Dlod(source, float4(coord + float2(3.0f, 1.0f) * invSourceHalf, 0.0f, 0.0f)).r;
-	float d11 = tex2Dlod(source, float4(coord + float2(3.0f, 3.0f) * invSourceHalf, 0.0f, 0.0f)).r;
-
-	float minDepth = min(min(d00, d01), min(d10, d11));
-	return float4(minDepth, minDepth, minDepth, 1.0f);
+#define IMPLEMENT_HIZ_BUILD_MIP_PS(funcName, sourceSamp) \
+float4 funcName( \
+	in float2 pos : VPOS, \
+	in float2 coord : TEXCOORD0, \
+	uniform float2 targetLevelSize, \
+	uniform float2 sourceLevelSize) : COLOR \
+{ \
+	float2 invSourceHalf = 0.5f / sourceLevelSize; \
+	float d00 = tex2Dlod(sourceSamp, float4(coord + float2(1.0f, 1.0f) * invSourceHalf, 0.0f, 0.0f)).r; \
+	float d01 = tex2Dlod(sourceSamp, float4(coord + float2(1.0f, 3.0f) * invSourceHalf, 0.0f, 0.0f)).r; \
+	float d10 = tex2Dlod(sourceSamp, float4(coord + float2(3.0f, 1.0f) * invSourceHalf, 0.0f, 0.0f)).r; \
+	float d11 = tex2Dlod(sourceSamp, float4(coord + float2(3.0f, 3.0f) * invSourceHalf, 0.0f, 0.0f)).r; \
+	float minDepth = min(min(d00, d01), min(d10, d11)); \
+	return float4(minDepth, minDepth, minDepth, 1.0f); \
 }
+
+IMPLEMENT_HIZ_BUILD_MIP_PS(HiZ_BuildMip2_PS, ZBufferMipmap1Samp)
+IMPLEMENT_HIZ_BUILD_MIP_PS(HiZ_BuildMip3_PS, ZBufferMipmap2Samp)
+IMPLEMENT_HIZ_BUILD_MIP_PS(HiZ_BuildMip4_PS, ZBufferMipmap3Samp)
+IMPLEMENT_HIZ_BUILD_MIP_PS(HiZ_BuildMip5_PS, ZBufferMipmap4Samp)
+IMPLEMENT_HIZ_BUILD_MIP_PS(HiZ_BuildMip6_PS, ZBufferMipmap5Samp)
+IMPLEMENT_HIZ_BUILD_MIP_PS(HiZ_BuildMip7_PS, ZBufferMipmap6Samp)
+IMPLEMENT_HIZ_BUILD_MIP_PS(HiZ_BuildMip8_PS, ZBufferMipmap7Samp)
+IMPLEMENT_HIZ_BUILD_MIP_PS(HiZ_BuildMip9_PS, ZBufferMipmap8Samp)
+IMPLEMENT_HIZ_BUILD_MIP_PS(HiZ_BuildMip10_PS, ZBufferMipmap9Samp)
 
 /**
  * Checks whether UV coordinate lies inside a 2D bounding rectangle [x, y, width, height].

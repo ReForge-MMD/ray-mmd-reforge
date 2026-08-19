@@ -20,10 +20,9 @@
  * @param stepSize Blur direction step factor (1.0 = horizontal, 2.0 = vertical).
  * @return Denoised GI irradiance color.
  */
-float4 SSGIBlurPS(
+float4 SSGIBlurXPS(
 	in float2 uvCoord : TEXCOORD0,
 	in float3 viewDir : TEXCOORD1,
-	uniform sampler source,
 	uniform float stepSize) : COLOR
 {
 	float zCenter = GetSSGILinearDepth(uvCoord);
@@ -34,7 +33,7 @@ float4 SSGIBlurPS(
 	float3 nCenter = GetSSGINormal(uvCoord);
 	float3 pCenter = GetViewPosition(projInfo, uvCoord, zCenter);
 
-	float4 cCenter = tex2Dlod(source, float4(uvCoord, 0.0f, 0.0f));
+	float4 cCenter = tex2Dlod(SSGIMapSamp, float4(uvCoord, 0.0f, 0.0f));
 	cCenter = clamp(cCenter, 0.0f, 100.0f);
 
 #if GI_ENABLE >= 2
@@ -79,8 +78,78 @@ float4 SSGIBlurPS(
 		float wA = spatialWeight * depthWeightA * (normalWeightA * normalWeightA);
 		float wB = spatialWeight * depthWeightB * (normalWeightB * normalWeightB);
 
-		float4 cA = tex2Dlod(source, float4(uvA, 0.0f, 0.0f));
-		float4 cB = tex2Dlod(source, float4(uvB, 0.0f, 0.0f));
+		float4 cA = tex2Dlod(SSGIMapSamp, float4(uvA, 0.0f, 0.0f));
+		float4 cB = tex2Dlod(SSGIMapSamp, float4(uvB, 0.0f, 0.0f));
+		cA = clamp(cA, 0.0f, 100.0f);
+		cB = clamp(cB, 0.0f, 100.0f);
+
+		totalC += cA * wA + cB * wB;
+		totalW += wA + wB;
+	}
+
+	return clamp(totalC / max(totalW, 1e-5f), 0.0f, 100.0f);
+}
+
+float4 SSGIBlurYPS(
+	in float2 uvCoord : TEXCOORD0,
+	in float3 viewDir : TEXCOORD1,
+	uniform float stepSize) : COLOR
+{
+	float zCenter = GetSSGILinearDepth(uvCoord);
+	if (!(zCenter > 0.0f && zCenter < 1000.0f))
+		return float4(0.0f, 0.0f, 0.0f, 0.0f);
+
+	float4 projInfo = GetProjConstant();
+	float3 nCenter = GetSSGINormal(uvCoord);
+	float3 pCenter = GetViewPosition(projInfo, uvCoord, zCenter);
+
+	float4 cCenter = tex2Dlod(SSGIMapSampTemp, float4(uvCoord, 0.0f, 0.0f));
+	cCenter = clamp(cCenter, 0.0f, 100.0f);
+
+#if GI_ENABLE >= 2
+	float2 blurDir = (stepSize < 2.0f ? float2(ViewportOffset2.x, 0.0f) : float2(0.0f, ViewportOffset2.y)) * 1.35f;
+#else
+	float2 blurDir = stepSize < 2.0f ? float2(ViewportOffset2.x, 0.0f) : float2(0.0f, ViewportOffset2.y);
+#endif
+	float planeThreshold = max(zCenter * 0.04f, 0.25f);
+
+	float totalW = 1.0f;
+	float4 totalC = cCenter;
+
+	[unroll]
+	for (int i = 1; i <= SSGI_RADIUS; ++i)
+	{
+		float2 shift = blurDir * (float)i;
+		float2 uvA = uvCoord + shift;
+		float2 uvB = uvCoord - shift;
+
+		float zA = GetSSGILinearDepth(uvA);
+		float zB = GetSSGILinearDepth(uvB);
+		zA = (zA > 0.0f && zA < 1000.0f) ? zA : (zCenter + 10000.0f);
+		zB = (zB > 0.0f && zB < 1000.0f) ? zB : (zCenter + 10000.0f);
+
+		float3 pA = GetViewPosition(projInfo, uvA, zA);
+		float3 pB = GetViewPosition(projInfo, uvB, zB);
+
+		float planeDistA = abs(dot(nCenter, pA - pCenter));
+		float planeDistB = abs(dot(nCenter, pB - pCenter));
+
+		float depthWeightA = saturate(1.0f - planeDistA / planeThreshold);
+		float depthWeightB = saturate(1.0f - planeDistB / planeThreshold);
+
+		float3 nA = GetSSGINormal(uvA);
+		float3 nB = GetSSGINormal(uvB);
+
+		float normalWeightA = saturate(dot(nA, nCenter));
+		float normalWeightB = saturate(dot(nB, nCenter));
+
+		float spatialWeight = exp(-i * i * 0.025f);
+
+		float wA = spatialWeight * depthWeightA * (normalWeightA * normalWeightA);
+		float wB = spatialWeight * depthWeightB * (normalWeightB * normalWeightB);
+
+		float4 cA = tex2Dlod(SSGIMapSampTemp, float4(uvA, 0.0f, 0.0f));
+		float4 cB = tex2Dlod(SSGIMapSampTemp, float4(uvB, 0.0f, 0.0f));
 		cA = clamp(cA, 0.0f, 100.0f);
 		cB = clamp(cB, 0.0f, 100.0f);
 

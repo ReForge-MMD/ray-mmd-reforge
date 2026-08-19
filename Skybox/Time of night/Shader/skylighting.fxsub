@@ -8,23 +8,16 @@ float2 SHKernel[6][9] =
 	float2(1,0.5),float2(0.921387,0.386182),float2(0.25,0.613818),float2(0.25,0.386182),float2(0.921387,0.613818),float2(0.97843,0.461711),float2(0.0215699,0.461711),float2(0.25,0.461711),float2(0.97843,0.538289),
 };
 
-float3 SHSamples(sampler tex, int i)
-{
-	const float diff0 = 0.35;
-	const float diff1 = 0.12;
-
-	float3 sh0 = DecodeRGBT(tex2Dlod(tex, float4(SHKernel[i][0], 0, 0)));
-	float3 sh1 = DecodeRGBT(tex2Dlod(tex, float4(SHKernel[i][1], 0, 0)));
-	float3 sh2 = DecodeRGBT(tex2Dlod(tex, float4(SHKernel[i][2], 0, 0)));
-	float3 sh3 = DecodeRGBT(tex2Dlod(tex, float4(SHKernel[i][3], 0, 0)));
-	float3 sh4 = DecodeRGBT(tex2Dlod(tex, float4(SHKernel[i][4], 0, 0)));
-	float3 sh5 = DecodeRGBT(tex2Dlod(tex, float4(SHKernel[i][5], 0, 0)));
-	float3 sh6 = DecodeRGBT(tex2Dlod(tex, float4(SHKernel[i][6], 0, 0)));
-	float3 sh7 = DecodeRGBT(tex2Dlod(tex, float4(SHKernel[i][7], 0, 0)));
-	float3 sh8 = DecodeRGBT(tex2Dlod(tex, float4(SHKernel[i][8], 0, 0)));
-
-	return (sh0 + sh1 + sh2 + sh3 + sh4 + sh5 + sh6 + sh7 + sh8) / 9;
-}
+#define SHSamples(tex, i) \
+	((DecodeRGBT(tex2Dlod(tex, float4(SHKernel[i][0], 0, 0))) + \
+	  DecodeRGBT(tex2Dlod(tex, float4(SHKernel[i][1], 0, 0))) + \
+	  DecodeRGBT(tex2Dlod(tex, float4(SHKernel[i][2], 0, 0))) + \
+	  DecodeRGBT(tex2Dlod(tex, float4(SHKernel[i][3], 0, 0))) + \
+	  DecodeRGBT(tex2Dlod(tex, float4(SHKernel[i][4], 0, 0))) + \
+	  DecodeRGBT(tex2Dlod(tex, float4(SHKernel[i][5], 0, 0))) + \
+	  DecodeRGBT(tex2Dlod(tex, float4(SHKernel[i][6], 0, 0))) + \
+	  DecodeRGBT(tex2Dlod(tex, float4(SHKernel[i][7], 0, 0))) + \
+	  DecodeRGBT(tex2Dlod(tex, float4(SHKernel[i][8], 0, 0)))) / 9.0)
 
 float3 SHCreateIrradiance(float3 n, float3 sh0, float3 sh1, float3 sh2, float3 sh3, float3 sh4, float3 sh5)
 {
