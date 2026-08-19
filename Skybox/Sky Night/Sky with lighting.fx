@@ -1,4 +1,4 @@
-﻿#include "Sky with box.conf"
+#include "Sky with box.conf"
 #include "../../shader/math.fxsub"
 #include "../../shader/common.fxsub"
 #include "../../shader/gbuffer.fxsub"

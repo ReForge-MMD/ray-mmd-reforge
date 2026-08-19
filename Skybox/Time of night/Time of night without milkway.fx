@@ -1,4 +1,4 @@
-﻿#include "Time of night.conf"
+#include "Time of night.conf"
 
 #include "../../shader/math.fxsub"
 #include "../../shader/common.fxsub"

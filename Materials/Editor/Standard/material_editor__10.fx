@@ -1,4 +1,4 @@
-﻿#define CONTROLLER_NAME "material_editor_10.pmx"
+#define CONTROLLER_NAME "material_editor_10.pmx"
 #include "material_editor.fxsub"
 
 #define ALBEDO_MAP_FROM 3

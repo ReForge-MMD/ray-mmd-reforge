@@ -1,4 +1,4 @@
-﻿#define CONTROLLER_NAME "material_skin_2.pmx"
+#define CONTROLLER_NAME "material_skin_2.pmx"
 #include "material_editor.fxsub"
 
 #define ALBEDO_MAP_FROM 0

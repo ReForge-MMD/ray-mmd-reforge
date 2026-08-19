@@ -1,4 +1,4 @@
-﻿#define CONTROLLER_NAME "material_glass_9.pmx"
+#define CONTROLLER_NAME "material_glass_9.pmx"
 #include "material_editor.fxsub"
 
 #define ALBEDO_MAP_FROM 0

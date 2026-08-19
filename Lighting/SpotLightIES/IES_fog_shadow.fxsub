@@ -1,4 +1,4 @@
-﻿#include "../../ray.conf"
+#include "../../ray.conf"
 #include "../../ray_advanced.conf"
 #include "../../shader/math.fxsub"
 #include "../../shader/common.fxsub"

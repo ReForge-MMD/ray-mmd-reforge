@@ -1,4 +1,4 @@
-﻿#define LIGHT_PARAMS_TYPE 1
+#define LIGHT_PARAMS_TYPE 1
 
 static float3 lightBlink = 0.0;
 static float3 lightColor = 1.0;

@@ -1,4 +1,4 @@
-﻿static float2 BloomOffset1 = ViewportOffset2 * 2;
+static float2 BloomOffset1 = ViewportOffset2 * 2;
 static float2 BloomOffset2 = ViewportOffset2 * 4;
 static float2 BloomOffset3 = ViewportOffset2 * 8;
 static float2 BloomOffset4 = ViewportOffset2 * 16;

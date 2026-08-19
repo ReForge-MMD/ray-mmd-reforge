@@ -1,4 +1,4 @@
-﻿#define LIGHT_PARAMS_TYPE 0
+#define LIGHT_PARAMS_TYPE 0
 
 static float3 lightRangeParams = float3(100.0, 0.0, 200.0);
 static float3 lightIntensityParams = float3(100.0, 0.0, 2000.0);

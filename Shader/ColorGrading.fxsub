@@ -1,4 +1,4 @@
-﻿float3 noise3(float2 seed)
+float3 noise3(float2 seed)
 {
 	return frac(sin(dot(seed.xy, float2(34.483, 89.637))) * float3(29156.4765, 38273.5639, 47843.7546));
 }

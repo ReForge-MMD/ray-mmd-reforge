@@ -1,4 +1,4 @@
-﻿float mAlbedoH : CONTROLOBJECT<string name=CONTROLLER_NAME; string item = "AlbedoH";>;
+float mAlbedoH : CONTROLOBJECT<string name=CONTROLLER_NAME; string item = "AlbedoH";>;
 float mAlbedoS : CONTROLOBJECT<string name=CONTROLLER_NAME; string item = "AlbedoS";>;
 float mAlbedoV : CONTROLOBJECT<string name=CONTROLLER_NAME; string item = "AlbedoV";>;
 float mAlbedoLoopsP : CONTROLOBJECT<string name=CONTROLLER_NAME; string item = "AlbedoLoops";>;

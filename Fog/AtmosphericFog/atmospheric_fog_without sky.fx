@@ -1,4 +1,4 @@
-﻿// ignore sky fog
+// ignore sky fog
 #define FOG_DISCARD_SKY 1
 
 #define FOG_WITH_GODRAY 0
