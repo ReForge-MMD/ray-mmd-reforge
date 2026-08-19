@@ -218,7 +218,7 @@ float4 ScreenSpaceDirOccBlurXPS(
 	float center_d = linearizeDepth(uv);
 
 	float total_w = 1.0f;
-	float4 total_c = tex2Dlod(SSDOMapPointSamp, float4(uv, 0, 0));
+	float4 total_c = tex2Dlod(SSDOMapSamp, float4(uv, 0, 0));
 
 	float3 normal = GetNormal(uv);
 	float3 center_pos = GetViewPosition(projConstant, uv, center_d);
@@ -246,8 +246,8 @@ float4 ScreenSpaceDirOccBlurXPS(
 		weight.x *= saturate(dot(GetNormal(offset1), normal));
 		weight.y *= saturate(dot(GetNormal(offset2), normal));
 
-		total_c += tex2Dlod(SSDOMapPointSamp, float4(offset1, 0, 0)) * weight.x;
-		total_c += tex2Dlod(SSDOMapPointSamp, float4(offset2, 0, 0)) * weight.y;
+		total_c += tex2Dlod(SSDOMapSamp, float4(offset1, 0, 0)) * weight.x;
+		total_c += tex2Dlod(SSDOMapSamp, float4(offset2, 0, 0)) * weight.y;
 
 		total_w += sum(weight);
 
@@ -267,7 +267,7 @@ float4 ScreenSpaceDirOccBlurYPS(
 	float center_d = linearizeDepth(uv);
 
 	float total_w = 1.0f;
-	float4 total_c = tex2Dlod(SSDOMapTempPointSamp, float4(uv, 0, 0));
+	float4 total_c = tex2Dlod(SSDOMapSampTemp, float4(uv, 0, 0));
 
 	float3 normal = GetNormal(uv);
 	float3 center_pos = GetViewPosition(projConstant, uv, center_d);
@@ -295,8 +295,8 @@ float4 ScreenSpaceDirOccBlurYPS(
 		weight.x *= saturate(dot(GetNormal(offset1), normal));
 		weight.y *= saturate(dot(GetNormal(offset2), normal));
 
-		total_c += tex2Dlod(SSDOMapTempPointSamp, float4(offset1, 0, 0)) * weight.x;
-		total_c += tex2Dlod(SSDOMapTempPointSamp, float4(offset2, 0, 0)) * weight.y;
+		total_c += tex2Dlod(SSDOMapSampTemp, float4(offset1, 0, 0)) * weight.x;
+		total_c += tex2Dlod(SSDOMapSampTemp, float4(offset2, 0, 0)) * weight.y;
 
 		total_w += sum(weight);
 
