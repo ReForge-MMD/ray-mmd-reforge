@@ -1,4 +1,4 @@
-#include "../../../ray.conf"
+﻿#include "../../../ray.conf"
 #include "../../../ray_advanced.conf"
 #include "../../../shader/math.fxsub"
 #include "../../../shader/common.fxsub"
@@ -33,17 +33,17 @@ float mMultiLightM : CONTROLOBJECT<string name = "ray_controller.pmx"; string it
 float3 mPosition : CONTROLOBJECT<string name = "(self)"; string item = "Position";>;
 float3 mDirection : CONTROLOBJECT<string name = "(self)"; string item = "Direction";>;
 
-static const float LightRange = lerp(lerp(1000, 2000, mRangeP), 0, mRangeM);
-static const float LightHardness = lerp(shadowHardness.x, shadowHardness.y, mHardnessP);
-static const float LightBlink = saturate(1 - SmoothTriangleWave(time * mBlink * 10));
-static const float LightIntensity = lerp(lerp(lightIntensityLimits.x, lightIntensityLimits.y, mIntensityP), 0, mIntensityM);
-static const float LightIntensity2 = lerp(lerp(mLightIntensityMin, mLightIntensityMax, mMultiLightP), 0, mMultiLightM);
+static float LightRange = lerp(lerp(1000, 2000, mRangeP), 0, mRangeM);
+static float LightHardness = lerp(shadowHardness.x, shadowHardness.y, mHardnessP);
+static float LightBlink = saturate(1 - SmoothTriangleWave(time * mBlink * 10));
+static float LightIntensity = lerp(lerp(lightIntensityLimits.x, lightIntensityLimits.y, mIntensityP), 0, mIntensityM);
+static float LightIntensity2 = lerp(lerp(mLightIntensityMin, mLightIntensityMax, mMultiLightP), 0, mMultiLightM);
 
-static const float3 LightPosition = mPosition;
-static const float3 LightDirection = normalize(mDirection - mPosition);
-static const float3 LightColor = float3(mR, mG, mB) * LightIntensity * LightIntensity2 * LightBlink;
+static float3 LightPosition = mPosition;
+static float3 LightDirection = normalize(mDirection - mPosition);
+static float3 LightColor = float3(mR, mG, mB) * LightIntensity * LightIntensity2 * LightBlink;
 
-static const float3 viewLightDirection = normalize(mul(-LightDirection, (float3x3)matView));
+static float3 viewLightDirection = normalize(mul(-LightDirection, (float3x3)matView));
 
 #if SHADOW_MAP_FROM >= 1
 #if SHADOW_QUALITY == 1
@@ -123,15 +123,15 @@ sampler PSSM2Samp = sampler_state { texture = <PSSM2>; MinFilter = LINEAR; MagFi
 sampler PSSM3Samp = sampler_state { texture = <PSSM3>; MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = NONE; AddressU = CLAMP; AddressV = CLAMP; };
 sampler PSSM4Samp = sampler_state { texture = <PSSM4>; MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = NONE; AddressU = CLAMP; AddressV = CLAMP; };
 
-static const float2 ShadowMapOffset  = 0.5 / SHADOW_MAP_SIZE;
-static const float2 ShadowMapOffset2 = 1.0 / SHADOW_MAP_SIZE;
+static float2 ShadowMapOffset  = 0.5 / SHADOW_MAP_SIZE;
+static float2 ShadowMapOffset2 = 1.0 / SHADOW_MAP_SIZE;
 
-static const float4x4 matLightProject = CreateOrthoProject(2, 2, mPSSMDepthZMin, mPSSMDepthZMax);
-static const float4x4 matLightView = CreateLightViewMatrix(LightDirection, -LightDirection, LightRange);
-static const float4x4 matLightViewProject = mul(matLightView, matLightProject);
-static const float4x4 matLightViewFromCameraView = mul(matViewInverse, matLightView);
-static const float4x4 matLightProjectFromCameraView = mul(matViewInverse, matLightViewProject);
-static const float4x4 lightCropParams = CreateLightCropParams(matLightViewFromCameraView, SHADOW_MAP_SIZE);
+static float4x4 matLightProject = CreateOrthoProject(2, 2, mPSSMDepthZMin, mPSSMDepthZMax);
+static float4x4 matLightView = CreateLightViewMatrix(LightDirection, -LightDirection, LightRange);
+static float4x4 matLightViewProject = mul(matLightView, matLightProject);
+static float4x4 matLightViewFromCameraView = mul(matViewInverse, matLightView);
+static float4x4 matLightProjectFromCameraView = mul(matViewInverse, matLightViewProject);
+static float4x4 lightCropParams = CreateLightCropParams(matLightViewFromCameraView, SHADOW_MAP_SIZE);
 
 
 

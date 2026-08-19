@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Ray-MMD ReForge: Screen-Space Reflections (SSR) Roughness Filter
  *
  * Module: SSR_Filter.fxsub
@@ -21,11 +21,11 @@
  */
 float4 SSR_FilterBlurPS(in float2 coord : TEXCOORD0, uniform sampler source, uniform float2 offset) : COLOR
 {
-	static const float kWeightCenter = 0.2023600f;
-	static const float kWeightInner  = 0.3030530f;
-	static const float kWeightOuter  = 0.0957660f;
-	static const float kOffsetInner  = 1.4091991f;
-	static const float kOffsetOuter  = 3.2979345f;
+	static float kWeightCenter = 0.2023600f;
+	static float kWeightInner  = 0.3030530f;
+	static float kWeightOuter  = 0.0957660f;
+	static float kOffsetInner  = 1.4091991f;
+	static float kOffsetOuter  = 3.2979345f;
 
 	float4 blurred = tex2Dlod(source, float4(coord, 0.0f, 0.0f)) * kWeightCenter;
 	blurred += tex2Dlod(source, float4(coord + offset * kOffsetInner, 0.0f, 0.0f)) * kWeightInner;

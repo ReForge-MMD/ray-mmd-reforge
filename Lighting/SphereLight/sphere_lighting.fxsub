@@ -1,4 +1,4 @@
-#include "../../../ray.conf"
+﻿#include "../../../ray.conf"
 #include "../../../ray_advanced.conf"
 #include "../../../shader/math.fxsub"
 #include "../../../shader/common.fxsub"
@@ -31,19 +31,19 @@ float mMultiLightM : CONTROLOBJECT<string name="ray_controller.pmx"; string item
 float3 mPosition : CONTROLOBJECT<string name="(self)"; string item = "Position";>;
 float3 mDirection : CONTROLOBJECT<string name="(self)"; string item = "Direction";>;
 
-static const float LightHardness = lerp(shadowHardness.x, shadowHardness.y, mHardnessP);
-static const float LightRadius = 1 + mSizeP * SPHERELIGHT_MAX_SIZE;
-static const float LightBlink = saturate(1 - SmoothTriangleWave(time * (mBlink * 10)));
-static const float LightRange = lerp(lerp(lightRangeParams.x, lightRangeParams.z, mRangeP), lightRangeParams.y, mRangeM);
-static const float LightAttenuationBulb = lerp(lerp(lightAttenuationBulbParams.x, lightAttenuationBulbParams.z, mAttenuationBulbP), lightAttenuationBulbParams.y, mAttenuationBulbM);
-static const float LightIntensity = lerp(lerp(lightIntensityParams.x, lightIntensityParams.z, mIntensityP), lightIntensityParams.y, mIntensityM);
-static const float LightIntensity2 = lerp(lerp(mLightIntensityMin, mLightIntensityMax, mMultiLightP), 0, mMultiLightM);
+static float LightHardness = lerp(shadowHardness.x, shadowHardness.y, mHardnessP);
+static float LightRadius = 1 + mSizeP * SPHERELIGHT_MAX_SIZE;
+static float LightBlink = saturate(1 - SmoothTriangleWave(time * (mBlink * 10)));
+static float LightRange = lerp(lerp(lightRangeParams.x, lightRangeParams.z, mRangeP), lightRangeParams.y, mRangeM);
+static float LightAttenuationBulb = lerp(lerp(lightAttenuationBulbParams.x, lightAttenuationBulbParams.z, mAttenuationBulbP), lightAttenuationBulbParams.y, mAttenuationBulbM);
+static float LightIntensity = lerp(lerp(lightIntensityParams.x, lightIntensityParams.z, mIntensityP), lightIntensityParams.y, mIntensityM);
+static float LightIntensity2 = lerp(lerp(mLightIntensityMin, mLightIntensityMax, mMultiLightP), 0, mMultiLightM);
 
-static const float3 LightPosition = mPosition;
-static const float3 LightDirection = normalize(mDirection - mPosition);
-static const float3 LightColor = float3(mR, mG, mB) * LightIntensity * LightIntensity2 * LightBlink;
+static float3 LightPosition = mPosition;
+static float3 LightDirection = normalize(mDirection - mPosition);
+static float3 LightColor = float3(mR, mG, mB) * LightIntensity * LightIntensity2 * LightBlink;
 
-static const float3 viewLightPosition = mul(float4(LightPosition, 1), matView).xyz;
+static float3 viewLightPosition = mul(float4(LightPosition, 1), matView).xyz;
 
 #if IBL_MAP_FROM
 texture DiffuseMap<string ResourceName = IBLDIFF_MAP_FILE; int Miplevels = 1;>; 
@@ -111,8 +111,8 @@ sampler ShadowMapSamp = sampler_state {
 	AddressU = CLAMP; AddressV = CLAMP;
 };
 
-static const float2 ShadowmapOffset  = 0.5 / float2(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT);
-static const float2 ShadowmapOffset2 = 1.0 / float2(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT);
+static float2 ShadowmapOffset  = 0.5 / float2(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT);
+static float2 ShadowmapOffset2 = 1.0 / float2(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT);
 
 float ShadingShadow(MaterialParam material, float3 viewPosition)
 {

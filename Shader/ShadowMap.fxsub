@@ -1,4 +1,4 @@
-#define SHADOW_BLUR_COUNT 6
+﻿#define SHADOW_BLUR_COUNT 6
 #define SHADOW_POISSON_COUNT 25
 
 #if CONTACT_SHADOW_QUALITY >= 1
@@ -14,7 +14,7 @@ static float4x4 matLightViewFromCameraView = mul(matViewInverse, matLightView);
 static float4x4 matLightProjectFromCameraView = mul(matViewInverse, matLightViewProject);
 static float4x4 lightCropParams = CreateLightCropParams(matLightViewFromCameraView, SHADOW_MAP_SIZE);
 
-static const float3 kVogelDisk[25] = {
+static float3 kVogelDisk[25] = {
 	float3(0.1414214f, 0.0000000f, 0.8585786f),
 	float3(-0.1806177f, 0.1654607f, 0.7550510f),
 	float3(0.0276464f, -0.3150169f, 0.6837722f),
@@ -41,7 +41,7 @@ static const float3 kVogelDisk[25] = {
 	float3(0.2127944f, -0.9458956f, 0.0304640f),
 	float3(0.4921846f, 0.8589263f, 0.0100505f),
 };
-static const float kInvWeightSum[4] = {
+static float kInvWeightSum[4] = {
 	0.1201636f, // 25 samples (cascade 0)
 	0.1341286f, // 16 samples (cascade 1)
 	0.1855560f, // 9 samples  (cascade 2)

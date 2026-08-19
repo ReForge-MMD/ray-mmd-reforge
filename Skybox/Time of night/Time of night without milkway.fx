@@ -1,4 +1,4 @@
-#include "Time of night.conf"
+﻿#include "Time of night.conf"
 
 #include "../../shader/math.fxsub"
 #include "../../shader/common.fxsub"
@@ -8,8 +8,8 @@
 #include "shader/stars.fxsub"
 #include "shader/atmospheric.fxsub"
 
-static const float3 moonScaling = 3800;
-static const float3 moonTranslate = 80000;
+static float3 moonScaling = 3800;
+static float3 moonTranslate = 80000;
 
 static float3x3 matTransformMoon = CreateRotate(float3(0.0, 0.0, time / 50));
 static float3x3 matTransformMilkWay = CreateRotate(float3(3.14 / 2,0.0, 0.0));

@@ -1,4 +1,4 @@
-float3 noise3(float2 seed)
+﻿float3 noise3(float2 seed)
 {
 	return frac(sin(dot(seed.xy, float2(34.483, 89.637))) * float3(29156.4765, 38273.5639, 47843.7546));
 }
@@ -198,12 +198,12 @@ float3 TonemapReinhardLumaBased(float3 color, float whitePt)
 // ponytail: ACES Fitted curve (Stephen Hill) provides accurate filmic response without color shifting in bright highlights
 float3 TonemapACESFitted(float3 color)
 {
-	static const float3x3 ACESInputMat = {
+	static float3x3 ACESInputMat = {
 		0.59719, 0.35458, 0.04823,
 		0.07600, 0.90834, 0.01566,
 		0.02840, 0.13383, 0.83777
 	};
-	static const float3x3 ACESOutputMat = {
+	static float3x3 ACESOutputMat = {
 		 1.60475, -0.53108, -0.07367,
 		-0.10208,  1.10813, -0.00605,
 		-0.00327, -0.07276,  1.07602
@@ -218,12 +218,12 @@ float3 TonemapACESFitted(float3 color)
 // AgX Tonemapping (Troy Sobotka / Blender 4.0 OCIO standard) - preserves chromatic purity and hue in extreme highlights
 float3 TonemapAgX(float3 val)
 {
-	static const float3x3 AgXInsetMat = {
+	static float3x3 AgXInsetMat = {
 		0.842479065f, 0.078433600f, 0.079223745f,
 		0.042328242f, 0.878468640f, 0.079166127f,
 		0.042375655f, 0.078433600f, 0.879142973f
 	};
-	static const float3x3 AgXOutMat = {
+	static float3x3 AgXOutMat = {
 		 1.1968790f, -0.05289685f, -0.05297164f,
 		-0.09802088f,  1.15190312f, -0.09804345f,
 		-0.09902975f, -0.07547978f,  1.15107314f

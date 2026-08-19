@@ -1,4 +1,4 @@
-#include "../../../ray.conf"
+﻿#include "../../../ray.conf"
 #include "../../../ray_advanced.conf"
 #include "../../../shader/math.fxsub"
 #include "../../../shader/common.fxsub"
@@ -25,16 +25,16 @@ float mMieDensityM : CONTROLOBJECT<string name="(self)"; string item = "MieDensi
 float3 mPosition : CONTROLOBJECT<string name="(self)"; string item="Position";>;
 float3 mDirection : CONTROLOBJECT<string name="(self)"; string item="Direction";>;
 
-static const float FogBlink = saturate(1 - SmoothTriangleWave(time * mBlink * 10));
-static const float FogMiePhase  = lerp(lerp(FogMieParams.x, FogMieParams.z, mMiePhaseP), FogMieParams.y, mMiePhaseM);
-static const float FogRange = lerp(lerp(FogRangeParams.x, FogRangeParams.z / 1.5, mRangeP), FogRangeParams.y, mRangeM);
-static const float FogDensity = lerp(lerp(FogDensityParams.x, FogDensityParams.y, mMieDensityP), FogDensityParams.z, mMieDensityM);
-static const float FogIntensity = lerp(lerp(FogIntensityParams.x, FogIntensityParams.z, mIntensityP), FogIntensityParams.y, mIntensityM);
-static const float FogAttenuationBulb = lerp(lerp(FogAttenuationBulbParams.x, FogAttenuationBulbParams.z, mAttenuationBulbP), FogAttenuationBulbParams.y, mAttenuationBulbM);
+static float FogBlink = saturate(1 - SmoothTriangleWave(time * mBlink * 10));
+static float FogMiePhase  = lerp(lerp(FogMieParams.x, FogMieParams.z, mMiePhaseP), FogMieParams.y, mMiePhaseM);
+static float FogRange = lerp(lerp(FogRangeParams.x, FogRangeParams.z / 1.5, mRangeP), FogRangeParams.y, mRangeM);
+static float FogDensity = lerp(lerp(FogDensityParams.x, FogDensityParams.y, mMieDensityP), FogDensityParams.z, mMieDensityM);
+static float FogIntensity = lerp(lerp(FogIntensityParams.x, FogIntensityParams.z, mIntensityP), FogIntensityParams.y, mIntensityM);
+static float FogAttenuationBulb = lerp(lerp(FogAttenuationBulbParams.x, FogAttenuationBulbParams.z, mAttenuationBulbP), FogAttenuationBulbParams.y, mAttenuationBulbM);
 
-static const float3 FogPosition = mPosition;
-static const float3 FogDirection = normalize(mDirection - mPosition);
-static const float3 FogColor = float3(mR, mG, mB) * FogIntensity * FogBlink;
+static float3 FogPosition = mPosition;
+static float3 FogDirection = normalize(mDirection - mPosition);
+static float3 FogColor = float3(mR, mG, mB) * FogIntensity * FogBlink;
 
 #if VOLUMETRIC_FOG_ENABLE
 #if VOLUMETRIC_FOG_QUALITY == 0

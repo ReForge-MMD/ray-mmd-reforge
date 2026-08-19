@@ -21,12 +21,12 @@ float mFogMipNearM : CONTROLOBJECT<string name="(self)"; string item = "FogMipNe
 float mFogMipFarP : CONTROLOBJECT<string name="(self)"; string item = "FogMipFar+";>;
 float mFogMipFarM : CONTROLOBJECT<string name="(self)"; string item = "FogMipFar-";>;
 
-static const float FogMipFar = lerp(lerp(mFogFarLimit.x, mFogFarLimit.z, mFogMipFarP), mFogFarLimit.y, mFogMipFarM);
-static const float FogMipNear = lerp(lerp(mFogNearLimit.x, mFogNearLimit.z, mFogMipNearP), mFogNearLimit.y, mFogMipNearM);
-static const float FogRange = lerp(lerp(mFogRangeLimit.x, mFogRangeLimit.y, mFogRangeP), mFogRangeLimit.z, mFogRangeM);
-static const float FogDensity = lerp(lerp(mFogDensityLimit.x, mFogDensityLimit.y, mFogDensityP), mFogDensityLimit.z, mFogDensityM);
-static const float3 FogColor = hsv2rgb(float3(mFogColorHP, mFogColorSP, lerp(lerp(1, 2, mFogColorVP), 0, mFogColorVM)));
-static const float3x3 matTransform = CreateRotate(float3(mEnvRotateX, mEnvRotateY, mEnvRotateZ) * PI_2);
+static float FogMipFar = lerp(lerp(mFogFarLimit.x, mFogFarLimit.z, mFogMipFarP), mFogFarLimit.y, mFogMipFarM);
+static float FogMipNear = lerp(lerp(mFogNearLimit.x, mFogNearLimit.z, mFogMipNearP), mFogNearLimit.y, mFogMipNearM);
+static float FogRange = lerp(lerp(mFogRangeLimit.x, mFogRangeLimit.y, mFogRangeP), mFogRangeLimit.z, mFogRangeM);
+static float FogDensity = lerp(lerp(mFogDensityLimit.x, mFogDensityLimit.y, mFogDensityP), mFogDensityLimit.z, mFogDensityM);
+static float3 FogColor = hsv2rgb(float3(mFogColorHP, mFogColorSP, lerp(lerp(1, 2, mFogColorVP), 0, mFogColorVM)));
+static float3x3 matTransform = CreateRotate(float3(mEnvRotateX, mEnvRotateY, mEnvRotateZ) * PI_2);
 
 #if SKYBOX_FOG_ENABLE
 texture SkyboxBlurMap<string ResourceName = SKYBOX_FOG_MAP_FILE;>;

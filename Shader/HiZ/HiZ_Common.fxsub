@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Ray-MMD ReForge: Hierarchical Z-Buffer (Hi-Z) Core Infrastructure
  *
  * Module: HiZ_Common.fxsub
@@ -12,7 +12,7 @@
 #define HIZ_MAX_MIP_LEVELS 10
 
 // Hierarchical downsampling dimensions
-static const float2 HiZMipDimensions[HIZ_MAX_MIP_LEVELS] = {
+static float2 HiZMipDimensions[HIZ_MAX_MIP_LEVELS] = {
 	floor(ViewportSize / 2.0f),
 	floor(ViewportSize / 4.0f),
 	floor(ViewportSize / 8.0f),
@@ -25,16 +25,16 @@ static const float2 HiZMipDimensions[HIZ_MAX_MIP_LEVELS] = {
 	floor(ViewportSize / 1024.0f)
 };
 
-static const float2 kHiZMip1Size  = HiZMipDimensions[0];
-static const float2 kHiZMip2Size  = HiZMipDimensions[1];
-static const float2 kHiZMip3Size  = HiZMipDimensions[2];
-static const float2 kHiZMip4Size  = HiZMipDimensions[3];
-static const float2 kHiZMip5Size  = HiZMipDimensions[4];
-static const float2 kHiZMip6Size  = HiZMipDimensions[5];
-static const float2 kHiZMip7Size  = HiZMipDimensions[6];
-static const float2 kHiZMip8Size  = HiZMipDimensions[7];
-static const float2 kHiZMip9Size  = HiZMipDimensions[8];
-static const float2 kHiZMip10Size = HiZMipDimensions[9];
+static float2 kHiZMip1Size  = HiZMipDimensions[0];
+static float2 kHiZMip2Size  = HiZMipDimensions[1];
+static float2 kHiZMip3Size  = HiZMipDimensions[2];
+static float2 kHiZMip4Size  = HiZMipDimensions[3];
+static float2 kHiZMip5Size  = HiZMipDimensions[4];
+static float2 kHiZMip6Size  = HiZMipDimensions[5];
+static float2 kHiZMip7Size  = HiZMipDimensions[6];
+static float2 kHiZMip8Size  = HiZMipDimensions[7];
+static float2 kHiZMip9Size  = HiZMipDimensions[8];
+static float2 kHiZMip10Size = HiZMipDimensions[9];
 
 // Intermediate pyramid level render targets
 shared texture ZBufferMipmap1 : RENDERCOLORTARGET<
@@ -149,18 +149,18 @@ sampler ZBufferMipmapSamp = sampler_state {
 };
 
 // Atlas tile placement boundaries
-static const float4 kAtlasMip2Rect  = float4(0.0f, 0.0f, kHiZMip2Size / ViewportSize);
-static const float4 kAtlasMip3Rect  = float4(0.0f, kAtlasMip2Rect.y + kAtlasMip2Rect.w, kHiZMip3Size / ViewportSize);
-static const float4 kAtlasMip4Rect  = float4(0.0f, kAtlasMip3Rect.y + kAtlasMip3Rect.w, kHiZMip4Size / ViewportSize);
-static const float4 kAtlasMip5Rect  = float4(0.0f, kAtlasMip4Rect.y + kAtlasMip4Rect.w, kHiZMip5Size / ViewportSize);
-static const float4 kAtlasMip6Rect  = float4(0.0f, kAtlasMip5Rect.y + kAtlasMip5Rect.w, kHiZMip6Size / ViewportSize);
-static const float4 kAtlasMip7Rect  = float4(0.0f, kAtlasMip6Rect.y + kAtlasMip6Rect.w, kHiZMip7Size / ViewportSize);
-static const float4 kAtlasMip8Rect  = float4(0.0f, kAtlasMip7Rect.y + kAtlasMip7Rect.w, kHiZMip8Size / ViewportSize);
-static const float4 kAtlasMip9Rect  = float4(0.0f, kAtlasMip8Rect.y + kAtlasMip8Rect.w, kHiZMip9Size / ViewportSize);
-static const float4 kAtlasMip10Rect = float4(0.0f, kAtlasMip9Rect.y + kAtlasMip9Rect.w, kHiZMip10Size / ViewportSize);
+static float4 kAtlasMip2Rect  = float4(0.0f, 0.0f, kHiZMip2Size / ViewportSize);
+static float4 kAtlasMip3Rect  = float4(0.0f, kAtlasMip2Rect.y + kAtlasMip2Rect.w, kHiZMip3Size / ViewportSize);
+static float4 kAtlasMip4Rect  = float4(0.0f, kAtlasMip3Rect.y + kAtlasMip3Rect.w, kHiZMip4Size / ViewportSize);
+static float4 kAtlasMip5Rect  = float4(0.0f, kAtlasMip4Rect.y + kAtlasMip4Rect.w, kHiZMip5Size / ViewportSize);
+static float4 kAtlasMip6Rect  = float4(0.0f, kAtlasMip5Rect.y + kAtlasMip5Rect.w, kHiZMip6Size / ViewportSize);
+static float4 kAtlasMip7Rect  = float4(0.0f, kAtlasMip6Rect.y + kAtlasMip6Rect.w, kHiZMip7Size / ViewportSize);
+static float4 kAtlasMip8Rect  = float4(0.0f, kAtlasMip7Rect.y + kAtlasMip7Rect.w, kHiZMip8Size / ViewportSize);
+static float4 kAtlasMip9Rect  = float4(0.0f, kAtlasMip8Rect.y + kAtlasMip8Rect.w, kHiZMip9Size / ViewportSize);
+static float4 kAtlasMip10Rect = float4(0.0f, kAtlasMip9Rect.y + kAtlasMip9Rect.w, kHiZMip10Size / ViewportSize);
 
 // Fast constant lookup arrays for direct indexed access (zero branching)
-static const float2 kAllMipDimensions[11] = {
+static float2 kAllMipDimensions[11] = {
 	ViewportSize,
 	kHiZMip1Size,
 	kHiZMip2Size,
@@ -174,7 +174,7 @@ static const float2 kAllMipDimensions[11] = {
 	kHiZMip10Size
 };
 
-static const float2 kAtlasOffsets[11] = {
+static float2 kAtlasOffsets[11] = {
 	float2(0.0f, 0.0f),
 	float2(0.0f, 0.0f),
 	kAtlasMip2Rect.xy,

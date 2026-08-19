@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Cinematic Bokeh Depth of Field
  * Clean Room Implementation for Ray-MMD
  * Reference: Tiago Sousa (2013) "CryEngine 3 Graphics Gems"
@@ -9,8 +9,8 @@
 #define DOF_POSSION_POINT_PER_RING 8
 #define DOF_POSSION_SAMPLES (DOF_POSSION_RINGS * (DOF_POSSION_RINGS - 1) * DOF_POSSION_POINT_PER_RING / 2)
 
-static const float4 _FocalCoCMap_TexelSize = float4(1.0f / ViewportSize, ViewportSize);
-static const float4 _FocalBokehMap_TexelSize = float4(2.0f / ViewportSize, ViewportSize * 0.5f);
+static float4 _FocalCoCMap_TexelSize = float4(1.0f / ViewportSize, ViewportSize);
+static float4 _FocalBokehMap_TexelSize = float4(2.0f / ViewportSize, ViewportSize * 0.5f);
 
 texture AutoFocalMap : RENDERCOLORTARGET<int2 Dimensions = {1, 1}; string Format="R16F";>;
 texture FocalCoCMap : RENDERCOLORTARGET<float2 ViewportRatio={1.0, 1.0}; string Format="R16F";>;
@@ -109,7 +109,7 @@ sampler FocalBokehNearBlurMapLinearSamp = sampler_state
 	AddressU = CLAMP; AddressV = CLAMP;
 };
 
-static const float2 Poisson48[48] = {
+static float2 Poisson48[48] = {
 	float2(0.36f, 0.0f),
 	float2(0.254558f, 0.254558f),
 	float2(-1.57361e-08f, 0.36f),

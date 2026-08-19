@@ -1,4 +1,4 @@
-#include "Sky with box.conf"
+﻿#include "Sky with box.conf"
 #include "../../shader/math.fxsub"
 #include "../../shader/common.fxsub"
 
@@ -21,29 +21,29 @@ float mMediumColorHP :  CONTROLOBJECT<string name="(self)"; string item = "Mediu
 float mMediumColorSP :  CONTROLOBJECT<string name="(self)"; string item = "MediumS+";>;
 float mMediumColorVP :  CONTROLOBJECT<string name="(self)"; string item = "MediumV+";>;
 
-static const float3 mTopColor    = srgb2linear_fast(hsv2rgb(float3(mTopColorHP, mTopColorSP, mTopColorVP * 2)));
-static const float3 mBottomColor = srgb2linear_fast(hsv2rgb(float3(mBottomColorHP, mBottomColorSP, mBottomColorVP * 2)));
-static const float3 mMediumColor = srgb2linear_fast(hsv2rgb(float3(mMediumColorHP, mMediumColorSP, mMediumColorVP * 2)));
+static float3 mTopColor    = srgb2linear_fast(hsv2rgb(float3(mTopColorHP, mTopColorSP, mTopColorVP * 2)));
+static float3 mBottomColor = srgb2linear_fast(hsv2rgb(float3(mBottomColorHP, mBottomColorSP, mBottomColorVP * 2)));
+static float3 mMediumColor = srgb2linear_fast(hsv2rgb(float3(mMediumColorHP, mMediumColorSP, mMediumColorVP * 2)));
 
-static const float mTopExponent = lerp(lerp(1, 4, mTopExponentP), 1e-5, mTopExponentM);
-static const float mBottomExponent = lerp(lerp(0.5, 4, mBottomExponentP), 1e-5, mBottomExponentM);
+static float mTopExponent = lerp(lerp(1, 4, mTopExponentP), 1e-5, mTopExponentM);
+static float mBottomExponent = lerp(lerp(0.5, 4, mBottomExponentP), 1e-5, mBottomExponentM);
 #else
 #if USE_RGB_COLORSPACE
-	static const float3 mTopColor = srgb2linear_fast(TopColor);
-	static const float3 mBottomColor = srgb2linear_fast(BottomColor);
-	static const float3 mMediumColor = srgb2linear_fast(MediumColor);
+	static float3 mTopColor = srgb2linear_fast(TopColor);
+	static float3 mBottomColor = srgb2linear_fast(BottomColor);
+	static float3 mMediumColor = srgb2linear_fast(MediumColor);
 #else
-	static const float3 mTopColor = srgb2linear_fast(hsv2rgb(TopColor));
-	static const float3 mBottomColor = srgb2linear_fast(hsv2rgb(BottomColor));
-	static const float3 mMediumColor = srgb2linear_fast(hsv2rgb(MediumColor));
+	static float3 mTopColor = srgb2linear_fast(hsv2rgb(TopColor));
+	static float3 mBottomColor = srgb2linear_fast(hsv2rgb(BottomColor));
+	static float3 mMediumColor = srgb2linear_fast(hsv2rgb(MediumColor));
 #endif
 
-static const float mTopExponent = TopExponent;
-static const float mBottomExponent = BottomExponent;
+static float mTopExponent = TopExponent;
+static float mBottomExponent = BottomExponent;
 #endif
 
-static const float3 moonScaling = 2500;
-static const float3 moonTranslate = 60000;
+static float3 moonScaling = 2500;
+static float3 moonTranslate = 60000;
 
 static float3x3 matTransform = CreateRotate(float3(mEnvRotateX, mEnvRotateY, mEnvRotateZ) * PI_2);
 static float3x3 matTransformMoon = CreateRotate(float3(0.0, 0.0, time / 50));

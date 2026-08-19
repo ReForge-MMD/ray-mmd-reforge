@@ -1,4 +1,4 @@
-#if SSDO_QUALITY == 1 || SSDO_QUALITY == 4
+﻿#if SSDO_QUALITY == 1 || SSDO_QUALITY == 4
 #	define SSDO_SAMPLER_COUNT 8
 #	define SSDO_BLUR_RADIUS 6
 #elif SSDO_QUALITY == 2 || SSDO_QUALITY == 5
@@ -47,7 +47,7 @@ float3 GetNormal(float2 uv)
 	return DecodeGBufferNormal(MRT6);
 }
 
-static const float2 SSDOKernel[16] = 
+static float2 SSDOKernel[16] = 
 {
 	float2( -0.14, -0.02 ),
 	float2( -0.04, 0.24 ),

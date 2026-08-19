@@ -41,16 +41,16 @@ sampler SSRLightX3SampTemp = sampler_state { texture = <SSRLightX3MapTemp>; MinF
 sampler SSRLightX4SampTemp = sampler_state { texture = <SSRLightX4MapTemp>; MinFilter = LINEAR; MagFilter = LINEAR; AddressU = CLAMP; AddressV = CLAMP; MipFilter = NONE; };
 
 // Roughness blur filter step offsets
-static const float2 SSRBlurKernelScale = mSSRBlur * float2(ViewportAspect, 1.0f);
+static float2 SSRBlurKernelScale = mSSRBlur * float2(ViewportAspect, 1.0f);
 
-static const float2 SSRBlurStepX1 = float2(1.0f / SSRBlurKernelScale.x, 0.0f);
-static const float2 SSRBlurStepX2 = float2(2.0f / SSRBlurKernelScale.x, 0.0f);
-static const float2 SSRBlurStepX3 = float2(4.0f / SSRBlurKernelScale.x, 0.0f);
-static const float2 SSRBlurStepX4 = float2(8.0f / SSRBlurKernelScale.x, 0.0f);
+static float2 SSRBlurStepX1 = float2(1.0f / SSRBlurKernelScale.x, 0.0f);
+static float2 SSRBlurStepX2 = float2(2.0f / SSRBlurKernelScale.x, 0.0f);
+static float2 SSRBlurStepX3 = float2(4.0f / SSRBlurKernelScale.x, 0.0f);
+static float2 SSRBlurStepX4 = float2(8.0f / SSRBlurKernelScale.x, 0.0f);
 
-static const float2 SSRBlurStepY1 = float2(0.0f, 1.0f / SSRBlurKernelScale.y);
-static const float2 SSRBlurStepY2 = float2(0.0f, 2.0f / SSRBlurKernelScale.y);
-static const float2 SSRBlurStepY3 = float2(0.0f, 4.0f / SSRBlurKernelScale.y);
-static const float2 SSRBlurStepY4 = float2(0.0f, 8.0f / SSRBlurKernelScale.y);
+static float2 SSRBlurStepY1 = float2(0.0f, 1.0f / SSRBlurKernelScale.y);
+static float2 SSRBlurStepY2 = float2(0.0f, 2.0f / SSRBlurKernelScale.y);
+static float2 SSRBlurStepY3 = float2(0.0f, 4.0f / SSRBlurKernelScale.y);
+static float2 SSRBlurStepY4 = float2(0.0f, 8.0f / SSRBlurKernelScale.y);
 
 #endif // RAY_MMD_SSR_COMMON_FXSUB

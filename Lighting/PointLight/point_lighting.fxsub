@@ -1,4 +1,4 @@
-#include "../../../ray.conf"
+﻿#include "../../../ray.conf"
 #include "../../../ray_advanced.conf"
 #include "../../../shader/math.fxsub"
 #include "../../../shader/common.fxsub"
@@ -27,17 +27,17 @@ float mMultiLightM : CONTROLOBJECT<string name = "ray_controller.pmx"; string it
 
 float3 mPosition : CONTROLOBJECT<string name = "(self)"; string item = "Position";>;
 
-static const float LightHardness = lerp(shadowHardness.x, shadowHardness.y, mHardnessP);
-static const float LightBlink = saturate(1 - SmoothTriangleWave(time * mBlink * 10));
-static const float LightRange = lerp(lerp(lightRangeParams.x, lightRangeParams.z, mRangeP), lightRangeParams.y, mRangeM);
-static const float LightAttenuationBulb = lerp(lerp(lightAttenuationBulbParams.x, lightAttenuationBulbParams.z, mAttenuationBulbP), lightAttenuationBulbParams.y, mAttenuationBulbM);
-static const float LightIntensity = lerp(lerp(lightIntensityParams.x, lightIntensityParams.z, mIntensityP), lightIntensityParams.y, mIntensityM);
-static const float LightIntensity2 = lerp(lerp(mLightIntensityMin, mLightIntensityMax, mMultiLightP), 0, mMultiLightM);
+static float LightHardness = lerp(shadowHardness.x, shadowHardness.y, mHardnessP);
+static float LightBlink = saturate(1 - SmoothTriangleWave(time * mBlink * 10));
+static float LightRange = lerp(lerp(lightRangeParams.x, lightRangeParams.z, mRangeP), lightRangeParams.y, mRangeM);
+static float LightAttenuationBulb = lerp(lerp(lightAttenuationBulbParams.x, lightAttenuationBulbParams.z, mAttenuationBulbP), lightAttenuationBulbParams.y, mAttenuationBulbM);
+static float LightIntensity = lerp(lerp(lightIntensityParams.x, lightIntensityParams.z, mIntensityP), lightIntensityParams.y, mIntensityM);
+static float LightIntensity2 = lerp(lerp(mLightIntensityMin, mLightIntensityMax, mMultiLightP), 0, mMultiLightM);
 
-static const float3 LightPosition = mPosition;
-static const float3 LightColor = float3(mR, mG, mB) * LightIntensity * LightIntensity2 * LightBlink;
+static float3 LightPosition = mPosition;
+static float3 LightColor = float3(mR, mG, mB) * LightIntensity * LightIntensity2 * LightBlink;
 
-static const float3 viewLightPosition = mul(float4(LightPosition, 1), matView).xyz;
+static float3 viewLightPosition = mul(float4(LightPosition, 1), matView).xyz;
 
 #if SHADOW_MAP_FROM > 0
 #if SHADOW_MAP_QUALITY == 0

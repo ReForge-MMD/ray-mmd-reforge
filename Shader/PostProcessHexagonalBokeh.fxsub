@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Hexagonal Bokeh Depth of Field
  * Clean Room Implementation for Ray-MMD
  * Reference: Colin Barré-Brisebois (2017) "Hexagonal Bokeh Blur Revisited"
@@ -11,10 +11,10 @@
 #define DOF_POSSION_POINT_PER_RING 8
 #define DOF_POSSION_SAMPLES 61
 
-static const float _HexagonalBokehAngle = 1.236f;
+static float _HexagonalBokehAngle = 1.236f;
 
-static const float4 _FocalCoCMap_TexelSize = float4(1.0f / ViewportSize, ViewportSize);
-static const float4 _FocalBokehMap_TexelSize = float4(2.0f / ViewportSize, ViewportSize * 0.5f);
+static float4 _FocalCoCMap_TexelSize = float4(1.0f / ViewportSize, ViewportSize);
+static float4 _FocalBokehMap_TexelSize = float4(2.0f / ViewportSize, ViewportSize * 0.5f);
 
 texture AutoFocalMap : RENDERCOLORTARGET<int2 Dimensions = {1, 1}; string Format="R16F";>;
 texture FocalCoCMap : RENDERCOLORTARGET<float2 ViewportRatio={1.0, 1.0}; string Format="R16F";>;
@@ -100,7 +100,7 @@ sampler FocalHexBokehMapLinearSamp = sampler_state
 	AddressU = CLAMP; AddressV = CLAMP;
 };
 
-static const float2 _HexagonalBokehKernel[DOF_POSSION_SAMPLES] = {
+static float2 _HexagonalBokehKernel[DOF_POSSION_SAMPLES] = {
 	float2(0.236189f, 0.0f),
 	float2(0.172902f, 0.172902f),
 	float2(-1.19213e-08f, 0.272727f),
@@ -164,7 +164,7 @@ static const float2 _HexagonalBokehKernel[DOF_POSSION_SAMPLES] = {
 	float2(-0.633975f, 0.633975f)
 };
 
-static const float2 Poisson48[48] = {
+static float2 Poisson48[48] = {
 	float2(0.36f, 0.0f),
 	float2(0.254558f, 0.254558f),
 	float2(-1.57361e-08f, 0.36f),

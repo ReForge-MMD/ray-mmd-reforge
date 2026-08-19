@@ -1,4 +1,4 @@
-static float2 BloomOffset1 = ViewportOffset2 * 2;
+﻿static float2 BloomOffset1 = ViewportOffset2 * 2;
 static float2 BloomOffset2 = ViewportOffset2 * 4;
 static float2 BloomOffset3 = ViewportOffset2 * 8;
 static float2 BloomOffset4 = ViewportOffset2 * 16;
@@ -243,11 +243,11 @@ float4 GlareDetectionPS(
 
 float4 BloomBlurPS(in float2 coord : TEXCOORD0, uniform sampler source, uniform float2 offset) : COLOR
 {
-	static const float w0 = 0.1707930f;
-	static const float w12 = 0.2823770f;
-	static const float w34 = 0.1322270f;
-	static const float o12 = 1.4410699f;
-	static const float o34 = 3.3652582f;
+	static float w0 = 0.1707930f;
+	static float w12 = 0.2823770f;
+	static float w34 = 0.1322270f;
+	static float o12 = 1.4410699f;
+	static float o34 = 3.3652582f;
 
 	float4 color = tex2Dlod(source, float4(coord, 0, 0)) * w0;
 	color += tex2Dlod(source, float4(coord + offset * o12, 0, 0)) * w12;

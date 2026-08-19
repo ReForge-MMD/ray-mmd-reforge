@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Ray-MMD ReForge: Hierarchical Z-Buffer (Hi-Z) Ray Traversal Engine
  *
  * Module: HiZ_Traversal.fxsub
@@ -118,7 +118,7 @@ HiZTraceResult HiZ_TraceRayDetailed(
 	float2 stepSign = sign(rayDelta.xy);
 
 	int currentMip = 0;
-	static const int kMaxMipLevel = 9;
+	static int kMaxMipLevel = 9;
 	float currentT = 0.0f;
 
 	[loop]

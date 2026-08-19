@@ -1,4 +1,4 @@
-#include "Sky with box.conf"
+﻿#include "Sky with box.conf"
 #include "../../shader/math.fxsub"
 #include "../../shader/common.fxsub"
 #include "../../shader/gbuffer.fxsub"
@@ -33,25 +33,25 @@ float mMediumColorSP :  CONTROLOBJECT<string name="(self)"; string item = "Mediu
 float mMediumColorVP :  CONTROLOBJECT<string name="(self)"; string item = "MediumV+";>;
 float mMediumColorVM :  CONTROLOBJECT<string name="(self)"; string item = "MediumV-";>;
 
-static const float3 mTopColor = srgb2linear_fast(hsv2rgb(float3(mTopColorHP, mTopColorSP, lerp(lerp(1, 2, mTopColorVP), 0, mTopColorVM))));
-static const float3 mBottomColor = srgb2linear_fast(hsv2rgb(float3(mBottomColorHP, mBottomColorSP, lerp(lerp(1, 2, mBottomColorVP), 0, mBottomColorVM))));
-static const float3 mMediumColor = srgb2linear_fast(hsv2rgb(float3(mMediumColorHP, mMediumColorSP, lerp(lerp(1, 2, mMediumColorVP), 0, mMediumColorVM))));
+static float3 mTopColor = srgb2linear_fast(hsv2rgb(float3(mTopColorHP, mTopColorSP, lerp(lerp(1, 2, mTopColorVP), 0, mTopColorVM))));
+static float3 mBottomColor = srgb2linear_fast(hsv2rgb(float3(mBottomColorHP, mBottomColorSP, lerp(lerp(1, 2, mBottomColorVP), 0, mBottomColorVM))));
+static float3 mMediumColor = srgb2linear_fast(hsv2rgb(float3(mMediumColorHP, mMediumColorSP, lerp(lerp(1, 2, mMediumColorVP), 0, mMediumColorVM))));
 
-static const float mTopExponent = lerp(lerp(1, 4, mTopExponentP), 1e-5, mTopExponentM);
-static const float mBottomExponent = lerp(lerp(0.5, 4, mBottomExponentP), 1e-5, mBottomExponentM);
+static float mTopExponent = lerp(lerp(1, 4, mTopExponentP), 1e-5, mTopExponentM);
+static float mBottomExponent = lerp(lerp(0.5, 4, mBottomExponentP), 1e-5, mBottomExponentM);
 #else
 #if USE_RGB_COLORSPACE
-	static const float3 mTopColor = srgb2linear_fast(TopColor);
-	static const float3 mBottomColor = srgb2linear_fast(BottomColor);
-	static const float3 mMediumColor = srgb2linear_fast(MediumColor);
+	static float3 mTopColor = srgb2linear_fast(TopColor);
+	static float3 mBottomColor = srgb2linear_fast(BottomColor);
+	static float3 mMediumColor = srgb2linear_fast(MediumColor);
 #else
-	static const float3 mTopColor = srgb2linear_fast(hsv2rgb(TopColor));
-	static const float3 mBottomColor = srgb2linear_fast(hsv2rgb(BottomColor));
-	static const float3 mMediumColor = srgb2linear_fast(hsv2rgb(MediumColor));
+	static float3 mTopColor = srgb2linear_fast(hsv2rgb(TopColor));
+	static float3 mBottomColor = srgb2linear_fast(hsv2rgb(BottomColor));
+	static float3 mMediumColor = srgb2linear_fast(hsv2rgb(MediumColor));
 #endif
 
-static const float mTopExponent = TopExponent;
-static const float mBottomExponent = BottomExponent;
+static float mTopExponent = TopExponent;
+static float mBottomExponent = BottomExponent;
 #endif
 
 static float mEnvIntensitySSS  = lerp(lerp(1, 5, mEnvSSSLightP),  0, mEnvSSSLightM);

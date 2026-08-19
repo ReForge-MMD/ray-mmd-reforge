@@ -1,9 +1,9 @@
 #define DIFFUSION_BLUR_RADIUS 3
 
-static const float2 mDiffusionScale = 512 * float2(ViewportAspect, 1);
+static float2 mDiffusionScale = 512 * float2(ViewportAspect, 1);
 
-static const float2 mDiffusionOffsetX = float2(2.0 / mDiffusionScale.x, 0.0);
-static const float2 mDiffusionOffsetY = float2(0.0, 2.0 / mDiffusionScale.y);
+static float2 mDiffusionOffsetX = float2(2.0 / mDiffusionScale.x, 0.0);
+static float2 mDiffusionOffsetY = float2(0.0, 2.0 / mDiffusionScale.y);
 
 float4 ScreenSpaceBilateralFilterPS(
 	in float2 coord   : TEXCOORD0,

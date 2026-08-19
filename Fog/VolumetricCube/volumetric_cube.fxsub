@@ -1,4 +1,4 @@
-#include "../../ray.conf"
+﻿#include "../../ray.conf"
 #include "../../ray_advanced.conf"
 #include "../../shader/math.fxsub"
 #include "../../shader/common.fxsub"
@@ -24,15 +24,15 @@ float mDepthP : CONTROLOBJECT<string name="(self)"; string item="Depth+";>;
 
 float3 mPosition : CONTROLOBJECT<string name="(self)"; string item = "Position";>;
 
-static const float FogWidth = lerp(FogRangeParams.x, FogRangeParams.z, mWidthP);
-static const float FogHeight = lerp(FogRangeParams.x, FogRangeParams.z, mHeightP);
-static const float FogDepth = lerp(FogRangeParams.x, FogRangeParams.z, mDepthP);
-static const float FogMiePhase  = lerp(lerp(FogMieParams.x, FogMieParams.z, mMiePhaseP), FogMieParams.y, mMiePhaseM);
-static const float FogDensity = lerp(lerp(FogDensityParams.x, FogDensityParams.z, mMieDensityP), FogDensityParams.y, mMieDensityM);
-static const float FogIntensity = lerp(lerp(FogIntensityParams.x, FogIntensityParams.z, mIntensityP), FogIntensityParams.y, mIntensityM);
+static float FogWidth = lerp(FogRangeParams.x, FogRangeParams.z, mWidthP);
+static float FogHeight = lerp(FogRangeParams.x, FogRangeParams.z, mHeightP);
+static float FogDepth = lerp(FogRangeParams.x, FogRangeParams.z, mDepthP);
+static float FogMiePhase  = lerp(lerp(FogMieParams.x, FogMieParams.z, mMiePhaseP), FogMieParams.y, mMiePhaseM);
+static float FogDensity = lerp(lerp(FogDensityParams.x, FogDensityParams.z, mMieDensityP), FogDensityParams.y, mMieDensityM);
+static float FogIntensity = lerp(lerp(FogIntensityParams.x, FogIntensityParams.z, mIntensityP), FogIntensityParams.y, mIntensityM);
 
-static const float3 FogPosition = mPosition;
-static const float3 FogColor = float3(mR, mG, mB) * FogIntensity;
+static float3 FogPosition = mPosition;
+static float3 FogColor = float3(mR, mG, mB) * FogIntensity;
 
 struct FogParams
 {

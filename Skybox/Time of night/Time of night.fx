@@ -1,4 +1,4 @@
-#include "Time of night.conf"
+﻿#include "Time of night.conf"
 
 #include "../../shader/math.fxsub"
 #include "../../shader/common.fxsub"
@@ -10,8 +10,8 @@
 
 #define MILKYWAY_ENABLE 1
 
-static const float3 moonScaling = 2800;
-static const float3 moonTranslate = 60000;
+static float3 moonScaling = 2800;
+static float3 moonTranslate = 60000;
 
 static float3x3 matTransformMoon = CreateRotate(float3(0.0, 0.0, time / 50));
 static float3x3 matTransformMilkWay = CreateRotate(float3(3.14 / 2,0.0, 0.0));
