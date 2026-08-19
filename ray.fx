@@ -1145,7 +1145,7 @@ technique DeferredLighting<
 		 AlphaBlendEnable = false; AlphaTestEnable = false;
 		ZEnable = false; ZWriteEnable = false;
 		VertexShader = compile vs_3_0 HDRTonemappingVS();
-		PixelShader  = compile ps_3_0 HDRTonemappingPS(ShadingMapPointSamp);
+		PixelShader  = compile ps_3_0 HDRTonemappingPS();
 	}
 #if AA_QUALITY == 1
 	pass FXAA<string Script= "Draw=Buffer;";>{
@@ -1238,7 +1238,7 @@ technique DeferredLighting<
 		AlphaBlendEnable = false; AlphaTestEnable = false;
 		ZEnable = false; ZWriteEnable = false;
 		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
-		PixelShader  = compile ps_3_0 PostProcessSharpenPS(ShadingMapTempSamp, ViewportOffset2);
+		PixelShader  = compile ps_3_0 PostProcessSharpenPS();
 	}
 #endif
 }

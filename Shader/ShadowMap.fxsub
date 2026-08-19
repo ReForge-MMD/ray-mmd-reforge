@@ -48,7 +48,7 @@ static float kInvWeightSum[4] = {
 	0.3420866f  // 4 samples  (cascade 3)
 };
 
-float ShadowPCF(sampler source, float2 coord, float radius, float receiverDepth, float noise, int cascadeIndex)
+float ShadowPCF(float2 coord, float radius, float receiverDepth, float noise, int cascadeIndex)
 {
 	float shadow = 0.0;
 	
@@ -68,7 +68,12 @@ float ShadowPCF(sampler source, float2 coord, float radius, float receiverDepth,
 		float2 vogel = mul(kVogelDisk[i].xy, rotMat);
 		float2 pos = coord + vogel * finalRadius;
 		
-		float zMap = tex2Dlod(source, float4(pos, 0, 0)).r;
+		float zMap = 0.0;
+		if (cascadeIndex == 0) zMap = tex2Dlod(PSSM1Samp, float4(pos, 0, 0)).r;
+		else if (cascadeIndex == 1) zMap = tex2Dlod(PSSM2Samp, float4(pos, 0, 0)).r;
+		else if (cascadeIndex == 2) zMap = tex2Dlod(PSSM3Samp, float4(pos, 0, 0)).r;
+		else zMap = tex2Dlod(PSSM4Samp, float4(pos, 0, 0)).r;
+
 		float diff = receiverDepth - zMap;
 		float sampleShadow = (diff <= 0.0f) ? 1.0f : saturate(exp(-20.0f * diff));
 		
@@ -112,22 +117,22 @@ float ShadingShadow(MaterialParam material, float3 viewPosition)
 	if (coord.w == 0)
 	{
 		clip(tex2Dlod(PSSM1Samp, float4(coord.xy, 0, 0)).r - 1e-5);
-		shadow = ShadowPCF(PSSM1Samp, coord.xy, radius, receiverDepth, noise, 0);
+		shadow = ShadowPCF(coord.xy, radius, receiverDepth, noise, 0);
 	}
 	else if (coord.w == 1)
 	{
 		clip(tex2Dlod(PSSM2Samp, float4(coord.xy, 0, 0)).r - 1e-5);
-		shadow = ShadowPCF(PSSM2Samp, coord.xy, radius, receiverDepth, noise, 1);
+		shadow = ShadowPCF(coord.xy, radius, receiverDepth, noise, 1);
 	}
 	else if (coord.w == 2)
 	{
 		clip(tex2Dlod(PSSM3Samp, float4(coord.xy, 0, 0)).r - 1e-5);
-		shadow = ShadowPCF(PSSM3Samp, coord.xy, radius, receiverDepth, noise, 2);
+		shadow = ShadowPCF(coord.xy, radius, receiverDepth, noise, 2);
 	}
 	else
 	{
 		clip(tex2Dlod(PSSM4Samp, float4(coord.xy, 0, 0)).r - 1e-5);
-		shadow = ShadowPCF(PSSM4Samp, coord.xy, radius, receiverDepth, noise, 3);
+		shadow = ShadowPCF(coord.xy, radius, receiverDepth, noise, 3);
 	}
 
 	return shadow;

@@ -42,10 +42,50 @@ void ShadingMaterial(MaterialParam material, float3 V, float3 L, float2 coord, o
 }
 #endif
 
-void ShadingImageBasedLighting(sampler source, MaterialParam material, float4 screenPosition, float2 coord, float3 V, float3 L, out float3 diffuse, out float3 specular)
+void ShadingImageBasedLightingOpaque(MaterialParam material, float4 screenPosition, float2 coord, float3 V, float3 L, out float3 diffuse, out float3 specular)
 {
 #if IBL_QUALITY
-	DecodeYcbcr(source, coord, screenPosition, ViewportOffset2, diffuse, specular);
+	DecodeYcbcrOpaque(coord, screenPosition, ViewportOffset2, diffuse, specular);
+
+#if SSDO_QUALITY
+	float4 ssdoData = tex2Dlod(SSDOMapSamp, float4(coord, 0, 0));
+	bool isEmissiveOrGlass = (material.lightModel == SHADINGMODELID_GLASS || material.lightModel == SHADINGMODELID_EMISSIVE);
+	float ssao = isEmissiveOrGlass ? 1.0f : ssdoData.w;
+	ssao = min(ssao, material.visibility);
+	bool isSkin = (material.lightModel == SHADINGMODELID_SKIN || material.lightModel == SHADINGMODELID_SUBSURFACE);
+	float skinAO = lerp(1.0f, ssao, 0.45f);
+	diffuse *= isSkin ? skinAO : (isEmissiveOrGlass ? 1.0f : ssao);
+
+	float3 bentNormal = normalize(ssdoData.xyz * 2.0f - 1.0f);
+	float3 R = EnvironmentReflect(material.normal, V);
+	float roughness = max(SmoothnessToRoughness(material.smoothness), 0.001f);
+	float specOcc = ComputeDirectionalSpecularOcclusion(R, bentNormal, isSkin ? skinAO : ssao, roughness);
+	specular *= isSkin ? lerp(1.0f, specOcc, 0.6f) : specOcc;
+#else
+	bool isSkin = (material.lightModel == SHADINGMODELID_SKIN || material.lightModel == SHADINGMODELID_SUBSURFACE);
+	float vis = isSkin ? lerp(1.0f, material.visibility, 0.5f) : material.visibility;
+	diffuse *= vis;
+	specular *= ComputeSpecularOcclusion(abs(dot(material.normal, V)) + 1e-5, vis, material.smoothness);
+#endif
+
+	float shadow = 1;
+	float envShadow = (material.lightModel == SHADINGMODELID_GLASS) ? 0 : mSunShadowVM;
+
+#if SUN_LIGHT_ENABLE && SUN_SHADOW_QUALITY
+	float shadowDepth = tex2Dlod(ShadowMapSamp, float4(coord, 0, 0)).r;
+	shadowDepth = min(shadowDepth, saturate(dot(material.normal, L) * 3));
+	shadow = lerp(shadow, shadowDepth, envShadow);
+#endif
+
+	diffuse *= shadow;
+	specular *= shadow * shadow * shadow;
+#endif
+}
+
+void ShadingImageBasedLightingTransparent(MaterialParam material, float4 screenPosition, float2 coord, float3 V, float3 L, out float3 diffuse, out float3 specular)
+{
+#if IBL_QUALITY
+	DecodeYcbcrTransparent(coord, screenPosition, ViewportOffset2, diffuse, specular);
 
 #if SSDO_QUALITY
 	float4 ssdoData = tex2Dlod(SSDOMapSamp, float4(coord, 0, 0));
@@ -118,7 +158,7 @@ void ShadingOpacityPS(
 
 #if IBL_QUALITY
 	float3 iblDiffuse, iblSpecular;
-	ShadingImageBasedLighting(EnvLightMapSamp, material, screenPosition, coord, V, L, iblDiffuse, iblSpecular);
+	ShadingImageBasedLightingOpaque(material, screenPosition, coord, V, L, iblDiffuse, iblSpecular);
 	diffuse += iblDiffuse;
 	specular += iblSpecular;
 #endif
@@ -179,7 +219,7 @@ float4 ShadingTransparentPS(
 
 #if IBL_QUALITY
 	float3 iblDiffuse, iblSpecular;
-	ShadingImageBasedLighting(EnvLightAlphaMapSamp, material, screenPosition, coord, V, L, iblDiffuse, iblSpecular);
+	ShadingImageBasedLightingTransparent(material, screenPosition, coord, V, L, iblDiffuse, iblSpecular);
 	lighting += (material.lightModel == SHADINGMODELID_GLASS ? 0.0f : iblDiffuse * material.albedo) + iblSpecular;
 #endif
 
