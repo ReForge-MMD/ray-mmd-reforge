@@ -165,16 +165,16 @@ static float3 mColorBalanceM = float3(mColBalanceRM, mColBalanceGM, mColBalanceB
 #	include "shader/PostProcessEyeAdaptation.fxsub"
 #endif
 
+#if HDR_BLOOM_MODE
+#	include "shader/PostProcessBloom.fxsub"
+#endif
+
 #if HDR_STAR_MODE
 #	include "shader/PostProcessLensflare.fxsub"
 #endif
 
 #if HDR_FLARE_MODE
 #	include "shader/PostProcessGhost.fxsub"
-#endif
-
-#if HDR_BLOOM_MODE
-#	include "shader/PostProcessBloom.fxsub"
 #endif
 
 #include "shader/PostProcessHDR.fxsub"
