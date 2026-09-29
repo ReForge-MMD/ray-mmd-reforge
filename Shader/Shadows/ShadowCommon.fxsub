@@ -119,14 +119,12 @@ float4x4 CreateOrthoProject(float width, float height, float nearZ, float farZ)
 {
 	float cx = 2.0f / width;
 	float cy = 2.0f / height;
-	float cz = 1.0f / (farZ - nearZ);
-	float tz = nearZ / (nearZ - farZ);
 
 	float4x4 m;
 	m[0] = float4(cx,   0,  0, 0);
 	m[1] = float4( 0,  cy,  0, 0);
-	m[2] = float4( 0,   0, cz, 0);
-	m[3] = float4( 0,   0, tz, 1);
+	m[2] = float4( 0,   0,  1, 0);
+	m[3] = float4( 0,   0,  0, 1);
 
 	return m;
 }

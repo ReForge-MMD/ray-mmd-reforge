@@ -336,7 +336,7 @@ shared texture PSSM1 : OFFSCREENRENDERTARGET<
 	string Description = "Cascade shadow map for ray";
 	int2 Dimensions = { SHADOW_MAP_SIZE, SHADOW_MAP_SIZE };
 	string Format = "G32R32F";
-	float4 ClearColor = { 1.0f, 1.0f, 0.0f, 0.0f };
+	float4 ClearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
 	float ClearDepth = 1.0f;
 	string DefaultEffect =
 		"self = hide;"
@@ -352,7 +352,7 @@ shared texture PSSM2 : OFFSCREENRENDERTARGET<
 	string Description = "Cascade shadow map for ray";
 	int2 Dimensions = { SHADOW_MAP_SIZE, SHADOW_MAP_SIZE };
 	string Format = "G32R32F";
-	float4 ClearColor = { 1.0f, 1.0f, 0.0f, 0.0f };
+	float4 ClearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
 	float ClearDepth = 1.0f;
 	string DefaultEffect =
 		"self = hide;"
@@ -368,7 +368,7 @@ shared texture PSSM3 : OFFSCREENRENDERTARGET<
 	string Description = "Cascade shadow map for ray";
 	int2 Dimensions = { SHADOW_MAP_SIZE, SHADOW_MAP_SIZE };
 	string Format = "G32R32F";
-	float4 ClearColor = { 1.0f, 1.0f, 0.0f, 0.0f };
+	float4 ClearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
 	float ClearDepth = 1.0f;
 	string DefaultEffect =
 		"self = hide;"
@@ -384,7 +384,7 @@ shared texture PSSM4 : OFFSCREENRENDERTARGET<
 	string Description = "Cascade shadow map for ray";
 	int2 Dimensions = { SHADOW_MAP_SIZE, SHADOW_MAP_SIZE };
 	string Format = "G32R32F";
-	float4 ClearColor = { 1.0f, 1.0f, 0.0f, 0.0f };
+	float4 ClearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
 	float ClearDepth = 1.0f;
 	string DefaultEffect =
 		"self = hide;"

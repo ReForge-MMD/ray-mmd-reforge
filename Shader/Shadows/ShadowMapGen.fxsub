@@ -8,17 +8,20 @@ float4 ShadowMapGenPS(
 	in float2 coord : TEXCOORD0,
 	in float3 viewdir : TEXCOORD1) : COLOR
 {
-	float4 MRT8 = tex2Dlod(Gbuffer8Map, float4(coord, 0.0f, 0.0f));
-	clip(MRT8.x - 1e-5f);
+	// Read opaque G-buffer layer (Gbuffer4.x = linearDepth, Gbuffer4.z = visibility).
+	// Gbuffer8 is the alpha-layer; opaque geometry has Gbuffer8.x=0 and would clip.
+	float4 MRT4 = tex2Dlod(Gbuffer4Map, float4(coord, 0.0f, 0.0f));
+	clip(MRT4.x - 1e-5f);
 
 	MaterialParam material;
-	material.linearDepth = MRT8.x;
-	material.visibility = MRT8.z;
+	material.linearDepth = MRT4.x;
+	material.visibility  = MRT4.z;
 
 	clip(any(material.visibility) - 1e-5f);
 
-	float4 MRT6 = tex2Dlod(Gbuffer6Map, float4(coord, 0.0f, 0.0f));
-	material.normal = DecodeNormal(MRT6.xyz);
+	// Opaque normals are in Gbuffer2 (same layout as Gbuffer6 for alpha layer)
+	float4 MRT2 = tex2Dlod(Gbuffer2Map, float4(coord, 0.0f, 0.0f));
+	material.normal = DecodeNormal(MRT2.xyz);
 
 	float3 viewPosition = viewdir * (material.linearDepth / max(viewdir.z, 1e-5f));
 

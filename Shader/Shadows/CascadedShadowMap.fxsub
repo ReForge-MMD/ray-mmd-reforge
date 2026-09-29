@@ -172,10 +172,10 @@ float EvaluateCascadedShadow(MaterialParam material, float3 viewPosition, float2
 	}
 	else
 	{
-		return 0.0f;
+		return 1.0f;
 	}
 
-	return shadow * terminator;
+	return shadow;
 }
 
 #endif // _SHADOWS_CASCADED_SHADOW_MAP_FXSUB_
