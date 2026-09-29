@@ -45,7 +45,8 @@ void CascadeShadowMapVS(
 {
 	oTexcoord0 = Texcoord;
 
-	oTexcoord1 = mul(Position, matLightViewProject);
+	float4 worldPosition = mul(Position, matWorld);
+	oTexcoord1 = mul(worldPosition, matLightViewProject);
 	oTexcoord1.xy = oTexcoord1.xy * lightCropParams[PSSM_LAYERED_NUM].xy + lightCropParams[PSSM_LAYERED_NUM].zw;
 
 	oPosition = oTexcoord1;
