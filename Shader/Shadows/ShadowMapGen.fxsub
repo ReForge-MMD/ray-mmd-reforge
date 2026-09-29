@@ -23,7 +23,8 @@ float4 ShadowMapGenPS(
 	float4 MRT2 = tex2Dlod(Gbuffer2Map, float4(coord, 0.0f, 0.0f));
 	material.normal = DecodeNormal(MRT2.xyz);
 
-	float3 viewPosition = viewdir * (material.linearDepth / max(viewdir.z, 1e-5f));
+	float4 projConstant = GetProjConstant();
+	float3 viewPosition = GetViewPosition(projConstant, coord, material.linearDepth);
 
 	// 1. Cascaded PCSS Shadow
 	float shadow = EvaluateCascadedShadow(material, viewPosition, coord);

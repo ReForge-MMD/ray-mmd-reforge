@@ -42,7 +42,7 @@ float2 FindBlocker(
 		if (shadowDepth <= 1e-5f)
 			continue;
 
-		float planeBias = clamp(dot(offset, receiverPlaneBias), -0.005f, 0.005f);
+		float planeBias = clamp(dot(offset, receiverPlaneBias), -0.00005f, 0.00005f);
 		float biasedDepth = receiverDepth - planeBias;
 
 		if (shadowDepth < biasedDepth)
@@ -88,7 +88,7 @@ float PCF_Filter(
 			continue;
 		}
 
-		float planeBias = clamp(dot(offset, receiverPlaneBias), -0.005f, 0.005f);
+		float planeBias = clamp(dot(offset, receiverPlaneBias), -0.00005f, 0.00005f);
 		float biasedDepth = receiverDepth - planeBias;
 
 		shadowSum += (shadowDepth >= biasedDepth) ? 1.0f : 0.0f;
@@ -162,7 +162,7 @@ float PCF_Standard(
 			continue;
 		}
 
-		float planeBias = clamp(dot(offset, receiverPlaneBias), -0.005f, 0.005f);
+		float planeBias = clamp(dot(offset, receiverPlaneBias), -0.00005f, 0.00005f);
 		float biasedDepth = receiverDepth - planeBias;
 
 		shadowSum += (shadowDepth >= biasedDepth) ? 1.0f : 0.0f;
