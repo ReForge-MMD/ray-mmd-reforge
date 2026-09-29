@@ -134,21 +134,70 @@ float ShadingShadow(MaterialParam material, float3 viewPosition)
 	float4 lightPPos2 = float4(lightCoord23.xy, min2(float2(1, 1) - abs(lightPPos23.xy)), 2);
 	float4 lightPPos3 = float4(lightCoord23.zw, min2(float2(1, 1) - abs(lightPPos23.zw)), 3);
 
-	float4 coord = lightPPos3;
-	if (lightPPos2.z > 0) { coord = lightPPos2; }
-	if (lightPPos1.z > 0) { coord = lightPPos1; }
-	if (lightPPos0.z > 0) { coord = lightPPos0; }
-	clip(coord.z);
-
 	float depthSlope = ShadowSlopeScaledBias(proj.z / mPSSMDepthZMax) * mPSSMDepthZMax;
 	float receiverDepth = dot(float4(viewPosition, 1), matLightViewFromCameraView._13_23_33_43);
 	float baseBias = (material.linearDepth + depthSlope * (1.0f + normalBias * 2.0f)) * 0.0035f + max(0.0f, material.linearDepth - 100.0f) * 0.007f;
 	receiverDepth -= baseBias;
 
-	float angle = InterleavedGradientNoise(coord.xy * SHADOW_MAP_SIZE) * PI_2;
+	float angle = InterleavedGradientNoise(lightCoord01.xy * SHADOW_MAP_SIZE) * PI_2;
 	float2 rotation = float2(cos(angle), sin(angle));
 
-	float shadow = SampleCascadeShadowMap(int(coord.w), coord.xy + ShadowMapOffset, receiverDepth, rotation);
+	// Seamless cross-cascade edge blending (eliminates hard boundary seams between cascade resolutions)
+	static const float kCascadeBlendThreshold = 0.12f;
+	float shadow = 1.0f;
+
+	[branch]
+	if (lightPPos0.z > 0.0f)
+	{
+		float shadow0 = SampleCascadeShadowMap(0, lightPPos0.xy + ShadowMapOffset, receiverDepth, rotation);
+		[branch]
+		if (lightPPos0.z < kCascadeBlendThreshold && lightPPos1.z > 0.0f)
+		{
+			float shadow1 = SampleCascadeShadowMap(1, lightPPos1.xy + ShadowMapOffset, receiverDepth, rotation);
+			shadow = lerp(shadow1, shadow0, saturate(lightPPos0.z / kCascadeBlendThreshold));
+		}
+		else
+		{
+			shadow = shadow0;
+		}
+	}
+	else if (lightPPos1.z > 0.0f)
+	{
+		float shadow1 = SampleCascadeShadowMap(1, lightPPos1.xy + ShadowMapOffset, receiverDepth, rotation);
+		[branch]
+		if (lightPPos1.z < kCascadeBlendThreshold && lightPPos2.z > 0.0f)
+		{
+			float shadow2 = SampleCascadeShadowMap(2, lightPPos2.xy + ShadowMapOffset, receiverDepth, rotation);
+			shadow = lerp(shadow2, shadow1, saturate(lightPPos1.z / kCascadeBlendThreshold));
+		}
+		else
+		{
+			shadow = shadow1;
+		}
+	}
+	else if (lightPPos2.z > 0.0f)
+	{
+		float shadow2 = SampleCascadeShadowMap(2, lightPPos2.xy + ShadowMapOffset, receiverDepth, rotation);
+		[branch]
+		if (lightPPos2.z < kCascadeBlendThreshold && lightPPos3.z > 0.0f)
+		{
+			float shadow3 = SampleCascadeShadowMap(3, lightPPos3.xy + ShadowMapOffset, receiverDepth, rotation);
+			shadow = lerp(shadow3, shadow2, saturate(lightPPos2.z / kCascadeBlendThreshold));
+		}
+		else
+		{
+			shadow = shadow2;
+		}
+	}
+	else if (lightPPos3.z > 0.0f)
+	{
+		shadow = SampleCascadeShadowMap(3, lightPPos3.xy + ShadowMapOffset, receiverDepth, rotation);
+	}
+	else
+	{
+		clip(lightPPos3.z);
+		return 0.0f;
+	}
 
 	return shadow * terminator;
 }
@@ -194,10 +243,16 @@ float4 ShadowMapBlurPS(float2 coord : TEXCOORD0, uniform sampler source, uniform
 	float2 offset1 = coord + offset;
 	float2 offset2 = coord - offset;
 
-	float totalWeight = 1;
+	float totalWeight = 1.0f;
 	float totalColor = tex2Dlod(source, float4(coord, 0, 0)).r;
 
 	float center_d = tex2Dlod(Gbuffer8Map, float4(coord, 0, 0)).r;
+	if (center_d <= 1e-4f)
+		return totalColor;
+
+	const float blurSigma = float(SHADOW_BLUR_COUNT) * 0.5f;
+	const float blurFalloff = 1.0f / (2.0f * blurSigma * blurSigma);
+	float depthTolerance = max(center_d * 0.06f, 0.25f);
 
 	[unroll]
 	for(int r = 1; r < SHADOW_BLUR_COUNT; r++)
@@ -208,19 +263,19 @@ float4 ShadowMapBlurPS(float2 coord : TEXCOORD0, uniform sampler source, uniform
 		float depth1 = tex2Dlod(Gbuffer8Map, float4(offset1, 0, 0)).r;
 		float depth2 = tex2Dlod(Gbuffer8Map, float4(offset2, 0, 0)).r;
 
-		float bilateralWeight1 = BilateralWeight(r, depth1, center_d, SHADOW_BLUR_COUNT, 10);
-		float bilateralWeight2 = BilateralWeight(r, depth2, center_d, SHADOW_BLUR_COUNT, 10);
+		float ddiff1 = abs(depth1 - center_d) / depthTolerance;
+		float ddiff2 = abs(depth2 - center_d) / depthTolerance;
 
-		totalColor += shadow1 * bilateralWeight1;
-		totalColor += shadow2 * bilateralWeight2;
+		float bilateralWeight1 = exp(-float(r * r) * blurFalloff - ddiff1 * ddiff1);
+		float bilateralWeight2 = exp(-float(r * r) * blurFalloff - ddiff2 * ddiff2);
 
-		totalWeight += bilateralWeight1;
-		totalWeight += bilateralWeight2;
+		totalColor += shadow1 * bilateralWeight1 + shadow2 * bilateralWeight2;
+		totalWeight += bilateralWeight1 + bilateralWeight2;
 
 		offset1 += offset;
 		offset2 -= offset;
 	}
 
-	return totalColor / totalWeight;
+	return totalColor / max(totalWeight, 1e-5f);
 }
 #endif

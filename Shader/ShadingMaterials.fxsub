@@ -169,16 +169,21 @@ void ShadingMaterial(MaterialParam material, float3 V, float3 L, float2 coord, o
 #endif
 
 #if SSDO_QUALITY
+#if SSAO_TYPE == 0
+	// Legacy SSDO: directional screen-space occlusion along sun vector L
 	float4 ssdoData = tex2Dlod(SSDOMapSamp, float4(coord, 0, 0));
-	float3 bentNormal = ssdoData.xyz * 2 - 1;
-	float ssdo = pow(saturate(1.0f - dot(bentNormal, L) * 0.85f), max(mSSDOScale, 0.1f));
+	float3 bentNormal = normalize(ssdoData.xyz * 2.0f - 1.0f);
+	float ssdo = pow(saturate(dot(bentNormal, L)), max(mSSDOScale, 0.1f));
 	float ssao = min(ssdoData.w, material.visibility);
 	bool isSkin = (material.lightModel == SHADINGMODELID_SKIN || material.lightModel == SHADINGMODELID_SUBSURFACE);
-	// Toon ramps drive their terminator from the geometry shadow alone;
-	// screen-space AO would smear the band edges
 	bool isToonMat = (material.lightModel == SHADINGMODELID_CEL || material.lightModel == SHADINGMODELID_TONEBASED);
 	float occTerm = min(ssdo, ssao);
 	shadow *= isSkin ? lerp(1.0f, occTerm, SKIN_AO_STRENGTH) : (isToonMat ? 1.0f : lerp(1.0f, occTerm, 0.85f));
+#else
+	// Modern GTAO (SSAO_TYPE == 2) and HBAO (SSAO_TYPE == 1) compute ambient occlusion for ambient light (IBL / GI),
+	// which is fully modulated with multi-bounce color bleeding in ShadingImageBasedLighting and SSPT_Resolve.
+	// Direct sunlight remains clean and physically correct, shaded by ShadowMap, ContactShadow, and SSGS.
+#endif
 #endif
 
 	float3 lightColor = SunColor * mSunIntensity * any(material.visibility);
