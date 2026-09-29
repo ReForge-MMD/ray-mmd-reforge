@@ -25,29 +25,12 @@
 #	define CONTACT_SHADOW_STEP_COUNT 16
 #endif
 
-// Gbuffer8Map is point sampled by default.  The point tap preserves silhouette
-// discontinuities while this filtered tap reconstructs the local surface.  A
-// ray must pass behind both before it can be considered occluded.
-sampler ContactShadowDepthLinear = sampler_state
-{
-	texture = <Gbuffer8RT>;
-	MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = NONE;
-	AddressU = CLAMP; AddressV = CLAMP;
-};
-
-float2 ContactShadowProject(float3 viewPosition)
-{
-	float4 clipPosition = mul(float4(viewPosition, 1.0f), matProject);
-	return clipPosition.xy / clipPosition.w * float2(0.5f, -0.5f) + 0.5f;
-}
-
-float2 ContactShadowSampleDepth(float2 screenUV)
+float ContactShadowSampleDepth(float2 screenUV)
 {
 	// Gbuffer8.x is the positive linear view-space depth.
-	float pointDepth = abs(tex2Dlod(Gbuffer8Map, float4(screenUV, 0.0f, 0.0f)).x);
-	float linearDepth = abs(tex2Dlod(ContactShadowDepthLinear, float4(screenUV, 0.0f, 0.0f)).x);
-	return float2(pointDepth, linearDepth);
+	return abs(tex2Dlod(Gbuffer8Map, float4(screenUV, 0.0f, 0.0f)).x);
 }
+
 
 /**
  * Reconstructs geometric normal vector from screen-space view position partial derivatives.
@@ -102,12 +85,13 @@ float TraceScreenSpaceShadow(
 	// A footprint-aware, slope-scaled bias stays valid at different resolutions
 	// and depths.  Offset only along the geometric normal, never a normal map.
 	float pixelFootprint = max(length(viewPositionDx), length(viewPositionDy));
+	pixelFootprint = min(pixelFootprint, max(0.01f, viewPosition.z * 0.01f));
 	float slopeScale = 1.0f - saturate(nDotL);
 	float normalBias = max(0.0025f, pixelFootprint * 0.5f) * (1.0f + 2.0f * slopeScale);
 	float3 rayOrigin = viewPosition + geometricNormal * normalBias;
 
 	float stepLength = maxDistance / (float)CONTACT_SHADOW_STEP_COUNT;
-	float thickness = max(stepLength * 1.5f, normalBias * 2.0f);
+	float thickness = max(stepLength * 2.0f, normalBias * 2.5f);
 	float occlusion = 0.0f;
 	float hitT = 1.0f;
 
@@ -124,25 +108,25 @@ float TraceScreenSpaceShadow(
 			(float)CONTACT_SHADOW_STEP_COUNT;
 		float rayZ = rayOrigin.z + lightDirection.z * (rayT * maxDistance);
 		float4 clipPos = lerp(clipStart, clipEnd, rayT);
+
+		if (clipPos.w <= 0.0f)
+			break;
+
 		float2 sampleUV = clipPos.xy / clipPos.w * float2(0.5f, -0.5f) + 0.5f;
 
 		if (any(sampleUV < 0.0f) || any(sampleUV > 1.0f))
 			break;
 
-		float2 sceneDepth = ContactShadowSampleDepth(sampleUV);
-		float nearestDepth = min(sceneDepth.x, sceneDepth.y);
-		float farthestDepth = max(sceneDepth.x, sceneDepth.y);
+		float sceneDepth = ContactShadowSampleDepth(sampleUV);
+		float penetration = rayZ - sceneDepth;
 
-		// The ray has to descend below both the discrete and reconstructed depth
-		// surfaces.  Its penetration is then limited by the thickness heuristic;
-		// overly deep samples are skipped so foreground silhouettes do not become
-		// 2.5D "false walls" on the background.
-		float behindSurface = rayZ - farthestDepth;
-		float penetration = rayZ - nearestDepth;
-		if (behindSurface > 0.0f && penetration <= thickness)
+		// The ray has to descend below the depth surface.  Its penetration is then
+		// limited by the thickness heuristic; overly deep samples are skipped so
+		// foreground silhouettes do not become 2.5D "false walls" on the background.
+		if (penetration > 0.0f && penetration <= thickness)
 		{
 			// Fractional occlusion by penetration depth gives the edge a real
-			// penumbra.  A binary hit here turns the static step jitter into a
+			// penumbra.  A binary hit here turns the step jitter into a
 			// frozen diagonal dither line along every shadow boundary.
 			occlusion = max(occlusion, saturate(penetration / (thickness * 0.5f)));
 			hitT = rayT;
@@ -176,11 +160,16 @@ float GetContactShadow(
 	// Scale the micro-shadow range near the camera, then cap it before distant
 	// occluders can turn screen-space depth discontinuities into long shadows.
 	float maxDistance = min(1.5f, max(0.05f, linearDepth * 0.06f));
-	float jitter = InterleavedGradientNoise(screenCoord * ViewportSize);
-	// High-exponent visibility keeps contact shadows plainly readable and near
-	// sun-shadow darkness at typical MMD camera distances instead of washing
-	// out into the ambient shading; full hit/miss endpoints are unchanged.
-	return pow(TraceScreenSpaceShadow(viewPosition, shadingNormal, L, maxDistance, jitter), 8.0f);
+#if AA_QUALITY == 6
+	int frameCounter = (int)fmod(time * 60.0f, 16.0f);
+#else
+	int frameCounter = 0;
+#endif
+	float jitter = InterleavedGradientNoise(screenCoord * ViewportSize, frameCounter);
+	float shadow = TraceScreenSpaceShadow(viewPosition, shadingNormal, L, maxDistance, jitter);
+	// Quadratic curve keeps contact shadows crisp and readable without crushing
+	// soft penumbrae or amplifying stochastic dither noise into harsh banding.
+	return shadow * shadow;
 }
 
 // -----------------------------------------------------------------------
@@ -234,6 +223,7 @@ float TraceScreenSpaceGlobalShadow(
 	float terminatorFade = smoothstep(0.0f, 0.2f, nDotL);
 
 	float pixelFootprint = max(length(viewPositionDx), length(viewPositionDy));
+	pixelFootprint = min(pixelFootprint, max(0.01f, viewPosition.z * 0.01f));
 	float slopeScale = 1.0f - saturate(nDotL);
 	float normalBias = max(0.05f, pixelFootprint * 1.5f) * (1.0f + 2.0f * slopeScale);
 	float3 rayOrigin = viewPosition + geometricNormal * normalBias;
@@ -253,6 +243,10 @@ float TraceScreenSpaceGlobalShadow(
 			(float)SSGS_STEP_COUNT;
 		float rayZ = rayOrigin.z + lightDirection.z * (rayT * SSGS_MAX_DISTANCE);
 		float4 clipPos = lerp(clipStart, clipEnd, rayT);
+
+		if (clipPos.w <= 0.0f)
+			break;
+
 		float2 sampleUV = clipPos.xy / clipPos.w * float2(0.5f, -0.5f) + 0.5f;
 
 		if (any(sampleUV < 0.0f) || any(sampleUV > 1.0f))
@@ -263,21 +257,20 @@ float TraceScreenSpaceGlobalShadow(
 		float travelDist = rayT * SSGS_MAX_DISTANCE;
 		float thickness = max(stepLength * 2.0f, travelDist * 0.08f + normalBias);
 
-		float2 sceneDepth = ContactShadowSampleDepth(sampleUV);
-		float nearestDepth = min(sceneDepth.x, sceneDepth.y);
-		float farthestDepth = max(sceneDepth.x, sceneDepth.y);
+		float sceneDepth = ContactShadowSampleDepth(sampleUV);
+		float penetration = rayZ - sceneDepth;
 
-		float behindSurface = rayZ - farthestDepth;
-		float penetration = rayZ - nearestDepth;
-		if (behindSurface > 0.0f && penetration <= thickness)
+		if (penetration > 0.0f && penetration <= thickness)
 		{
-			// Soft penumbra: occlusion ramps from 0 to 1 across the thickness band,
-			// then fades back out at the far end of the ray.
-			float softOcclusion = saturate(penetration / (thickness * 0.5f));
-			// Penumbra also widens at grazing angles.
-			softOcclusion *= terminatorFade;
-			occlusion = max(occlusion, softOcclusion);
-			hitT = rayT;
+			// Soft penumbra: occlusion ramps from 0 to 1 across the thickness band.
+			float softOcclusion = saturate(penetration / (thickness * 0.5f)) * terminatorFade;
+			if (softOcclusion > occlusion)
+			{
+				occlusion = softOcclusion;
+				hitT = rayT;
+			}
+			if (occlusion >= 1.0f)
+				break;
 		}
 	}
 
@@ -301,7 +294,12 @@ float GetGlobalShadow(
 	float3 L,
 	float2 screenCoord)
 {
-	float jitter = InterleavedGradientNoise(screenCoord * ViewportSize + float2(7.3f, 5.1f));
+#if AA_QUALITY == 6
+	int frameCounter = (int)fmod(time * 60.0f, 16.0f);
+#else
+	int frameCounter = 0;
+#endif
+	float jitter = InterleavedGradientNoise(screenCoord * ViewportSize + float2(7.3f, 5.1f), frameCounter);
 	float shadow = TraceScreenSpaceGlobalShadow(viewPosition, shadingNormal, L, jitter);
 	// Moderate contrast curve: SSGS is a soft complement to the shadow map,
 	// not a hard binary occluder.  A linear-to-sqrt remap gives visible
