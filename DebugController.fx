@@ -32,7 +32,6 @@ float showDepthAlpha : CONTROLOBJECT<string name="(self)"; string item = "DepthA
 float showSSAO : CONTROLOBJECT<string name="(self)"; string item = "SSAO";>;
 float showSSDO : CONTROLOBJECT<string name="(self)"; string item = "SSDO";>;
 float showSSR : CONTROLOBJECT<string name="(self)"; string item = "SSR";>;
-float showPSSM : CONTROLOBJECT<string name="(self)"; string item = "PSSM";>;
 float showContactShadow : CONTROLOBJECT<string name="(self)"; string item = "ContactShadow";>;
 float showOutline : CONTROLOBJECT<string name="(self)"; string item = "Outline";>;
 float showSSGI : CONTROLOBJECT<string name="(self)"; string item = "SSGI";>;
@@ -78,14 +77,6 @@ sampler SSGIMapSamp = sampler_state {
 };
 #endif
 
-#if SUN_SHADOW_QUALITY && SUN_LIGHT_ENABLE
-shared texture VSM1 : OFFSCREENRENDERTARGET;
-sampler VSM1Samp = sampler_state {
-	texture = <VSM1>;
-	MinFilter = NONE; MagFilter = NONE; MipFilter = NONE;
-	AddressU = BORDER; AddressV = BORDER; BorderColor = 0.0;
-};
-#endif
 #if OUTLINE_QUALITY
 shared texture OutlineMap : OFFSCREENRENDERTARGET;
 sampler OutlineMapSamp = sampler_state {
@@ -127,7 +118,7 @@ float4 DebugControllerPS(in float2 coord : TEXCOORD0, in float3 viewdir : TEXCOO
 
 	float showTotal = showAlbedo + showNormal + showSpecular + showSmoothness + showVisibility + showCustomID + showCustomDataB + showCustomDataA;
 	showTotal += showAlpha + showAlbedoAlpha + showSpecularAlpha + showNormalAlpha + showSmoothnessAlpha + showVisibilityAlpha + showCustomIDAlpha + showCustomDataAlphaB + showCustomDataAlphaA;
-	showTotal += showDepth + showDepthAlpha + showSSAO + showSSDO + showSSR + showPSSM + showOutline + showSSGI;
+	showTotal += showDepth + showDepthAlpha + showSSAO + showSSDO + showSSR + showOutline + showSSGI;
 
 	float3 result = srgb2linear_fast(tex2Dlod(ScnSamp, float4(coord, 0, 0)).rgb) * !any(showTotal);
 	result += material.albedo * showAlbedo;
@@ -183,10 +174,6 @@ float4 DebugControllerPS(in float2 coord : TEXCOORD0, in float3 viewdir : TEXCOO
 		result += giDebug * showSSGI;
 	#endif
 
-	#if SUN_SHADOW_QUALITY && SUN_LIGHT_ENABLE
-		float depth1 = tex2Dlod(VSM1Samp, float4(coord * 2.0, 0, 0)).r;		
-		result += pow(saturate(depth1 / 1500), 2) * showPSSM;
-	#endif
 	
 	#if CONTACT_SHADOW_QUALITY >= 1
 		float3 view = normalize(viewdir);

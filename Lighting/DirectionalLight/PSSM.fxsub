@@ -3,7 +3,6 @@
 #include "../../shader/math.fxsub"
 #include "../../shader/common.fxsub"
 #include "../../shader/ShadowCommon.fxsub"
-#include "../../shader/ShadowMapCascaded.fxsub"
 
 #if SHADOW_QUALITY == 1
 #	define SHADOW_MAP_SIZE 1024

@@ -8,7 +8,6 @@
 
 #if SHADOW_MAP_FROM >= 1
 #	include "../../../shader/ShadowCommon.fxsub"
-#	include "../../../shader/ShadowMapCascaded.fxsub"
 #endif
 
 #if CONTACT_SHADOW_QUALITY >= 1

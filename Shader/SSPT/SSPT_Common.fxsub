@@ -59,10 +59,6 @@
 #	define SSPT_AO_AMOUNT 1.0f
 #endif
 
-#ifndef SSPT_SHADOW_RETENTION
-#	define SSPT_SHADOW_RETENTION 0.40f
-#endif
-
 #ifndef SSPT_SKY_LIGHT_AMOUNT
 #	define SSPT_SKY_LIGHT_AMOUNT 0.05f
 #endif

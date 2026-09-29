@@ -68,7 +68,6 @@ float3 ComputeSunIntensity(float zenithAngleCos, float EE = 10.0f)
  * - Multi-harmonic Gerstner wave curvature and Jacobian determinant calculation.
  * - Tri-band chromatic dispersion (wavelength-dependent focal divergence for R/G/B).
  * - Exponential Beer-Lambert depth absorption (denser absorption of red wavelengths in water).
- * - Direct solar shadow gating from ShadowMapSamp.
  *
  * @param worldPos      Reconstructed fragment position in World Space.
  * @param normalVS      Surface normal in View Space.
@@ -163,10 +162,7 @@ float3 ComputeWaterCaustics(float3 worldPos, float3 normalVS, float shadow, floa
 
 void ShadingMaterial(MaterialParam material, float3 V, float3 L, float2 coord, out float3 diffuse, out float3 specular, float4 uvSunBase = float4(0, 0, 0, 0))
 {
-	float shadow = 1;
-#if SUN_SHADOW_QUALITY
-	shadow = tex2Dlod(ShadowMapSamp, float4(coord, 0, 0)).r;
-#endif
+	float shadow = 1.0f;
 
 #if SSDO_QUALITY
 #if SSAO_TYPE == 0
@@ -243,12 +239,6 @@ void ShadingMaterial(MaterialParam material, float3 V, float3 L, float2 coord, o
 
 	specular = energy[1] * lightColor;
 
-#if SUN_SHADOW_QUALITY
-	// Toon ramps encode their own shadow color (customDataB); MMD's shadow
-	// tint on top would double-darken and shift the band hue
-	if (material.lightModel != SHADINGMODELID_CEL && material.lightModel != SHADINGMODELID_TONEBASED)
-		diffuse += mColorShadowSunP * (1 - shadow);
-#endif
 }
 #endif
 
@@ -297,17 +287,6 @@ void ShadingImageBasedLighting(sampler source, MaterialParam material, float4 sc
 	specular *= ComputeSpecularOcclusion(abs(dot(material.normal, V)) + 1e-5f, vis, material.smoothness);
 #endif
 
-	float shadow = 1;
-	float envShadow = (material.lightModel == SHADINGMODELID_GLASS) ? 0 : mSunShadowVM;
-
-#if SUN_LIGHT_ENABLE && SUN_SHADOW_QUALITY
-	float shadowDepth = tex2Dlod(ShadowMapSamp, float4(coord, 0, 0)).r;
-	shadowDepth = min(shadowDepth, saturate(dot(material.normal, L) * 3));
-	shadow = lerp(shadow, shadowDepth, envShadow);
-#endif
-
-	diffuse *= shadow;
-	specular *= shadow * shadow * shadow;
 
 #if SKY_VISIBILITY_ENABLE
 	if (material.lightModel != SHADINGMODELID_EMISSIVE)
@@ -364,7 +343,7 @@ void ShadingOpacityPS(
 #if SUN_LIGHT_ENABLE
 	float3 uvSunBase = 0;
 	float uvSunValid = 0;
-#if SSSS_QUALITY && SSSS_TEXSPACE && SUN_SHADOW_QUALITY
+#if SSSS_QUALITY && SSSS_TEXSPACE
 	// Texture-space SSS: sample the convolved UV field at the packed skin UV
 	// and validate it against this pixel's raw G-buffer albedo. Stale or
 	// colliding islands (other models, changed materials) fail the match and

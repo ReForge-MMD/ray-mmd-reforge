@@ -91,19 +91,6 @@ float4 SSPTFinalCombinePS(in float2 uvCoord : TEXCOORD0, in float3 viewDir : TEX
 	}
 #endif
 
-#if SUN_SHADOW_QUALITY && SUN_LIGHT_ENABLE
-	float directShadow = tex2Dlod(ShadowMapSamp, float4(uvCoord, 0.0f, 0.0f)).r;
-	// Direct solar shadow retention: prevents SSPT from overriding shadows from ShadowMap.
-	// In direct sunlight (directShadow == 1.0), 100% of GI bounce is retained.
-	// Inside deep cast shadows (directShadow == 0.0), GI is scaled by SSPT_SHADOW_RETENTION,
-	// keeping shadows deep, crisp, and high-contrast while still catching warm/cool bounced light.
-	float shadowRetention = lerp(SSPT_SHADOW_RETENTION, 1.0f, directShadow * directShadow);
-	rawGi *= shadowRetention;
-#if SSGI_SPECULAR_GI
-	specGi *= shadowRetention;
-#endif
-#endif
-
 	float receiverVis = tex2Dlod(SSGIVisibilityMapSamp, float4(uvCoord, 0.0f, 0.0f)).a;
 #if SSGI_SPECULAR_GI
 	return float4(clamp((rawGi + specGi) * mSSGIIntensity * occlusion * receiverVis, 0.0f, 100.0f), 0.0f);

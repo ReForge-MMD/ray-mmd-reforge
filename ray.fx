@@ -8,10 +8,6 @@ const int ClearStencil = 0;
 
 float mSunLightP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunLight+";>;
 float mSunLightM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunLight-";>;
-float mSunShadowRP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunShadowR+";>;
-float mSunShadowGP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunShadowG+";>;
-float mSunShadowBP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunShadowB+";>;
-float mSunShadowVM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunShadowV-";>;
 float mSSAOP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSAO+";>;
 float mSSAOM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSAO-";>;
 float mSSAORadiusP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSAORadius+";>;
@@ -398,7 +394,6 @@ static float mFstop = lerp(lerp(5.6, 32.0, mFstopP), 1.0, mFstopM);
 static float mFocalDistance = lerp(lerp(1, 10.0, mFocalDistanceP), -10.0, mFocalDistanceM);
 static float mFocalRegion = lerp(0.0, 10.0, mFocalRegionP);
 static float mBladeCount = lerp(10, 5, mBladeCountM);
-static float3 mColorShadowSunP = pow(float3(mSunShadowRP, mSunShadowGP, mSunShadowBP), 2);
 static float3 mColorBalanceP = float3(mColBalanceRP_Comb, mColBalanceGP_Comb, mColBalanceBP_Comb);
 static float3 mColorBalanceM = float3(mColBalanceRM_Comb, mColBalanceGM_Comb, mColBalanceBM_Comb);
 #if WATER_CAUSTICS_ENABLE
@@ -434,12 +429,6 @@ static float mCausticsDispScale  = lerp(lerp(1.0f, 3.0f, mCstDispersionP), 0.0f,
 #include "shader/ShadingMaterials.fxsub"
 
 
-
-#if SUN_SHADOW_QUALITY && SUN_LIGHT_ENABLE
-#	include "shader/ShadowCommon.fxsub"
-#	include "shader/ShadowMapCascaded.fxsub"
-#	include "shader/ShadowMap.fxsub"
-#endif
 
 #if SSDO_QUALITY && (IBL_QUALITY || SUN_LIGHT_ENABLE)
 #if SSAO_TYPE == 0
@@ -567,18 +556,6 @@ technique DeferredLighting<
 	"Clear=Depth;"
 	"ScriptExternal=Color;"
 
-
-#if SUN_SHADOW_QUALITY && SUN_LIGHT_ENABLE
-	"RenderColorTarget=ShadowMap;"
-	"ClearSetColor=WhiteColor;"
-	"Clear=Color;"
-	"Pass=ShadowMapGen;"
-	"ClearSetColor=BackColor;"
-#if SHADOW_BLUR_COUNT
-	"RenderColorTarget=ShadowMapTemp; Pass=ShadowBlurX;"
-	"RenderColorTarget=ShadowMap;	  Pass=ShadowBlurY;"
-#endif
-#endif
 #if !GI_ENABLE
 // GI disabled: SSDO runs before shading (classic path, AO applied in ShadingMaterials).
 #if SSDO_QUALITY && (IBL_QUALITY || SUN_LIGHT_ENABLE)
@@ -823,28 +800,6 @@ technique DeferredLighting<
 
 ;>
 {
-#if SUN_LIGHT_ENABLE && SUN_SHADOW_QUALITY
-	pass ShadowMapGen<string Script= "Draw=Buffer;";>{
-		AlphaBlendEnable = false; AlphaTestEnable = false;
-		ZEnable = false; ZWriteEnable = false;
-		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
-		PixelShader  = compile ps_3_0 ShadowMapGenPS();
-	}
-#if SHADOW_BLUR_COUNT
-	pass ShadowBlurX<string Script= "Draw=Buffer;";>{
-		AlphaBlendEnable = false; AlphaTestEnable = false;
-		ZEnable = false; ZWriteEnable = false;
-		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
-		PixelShader  = compile ps_3_0 ShadowMapBlurPS(ShadowMapSamp, float2(ViewportOffset2.x, 0.0f));
-	}
-	pass ShadowBlurY<string Script= "Draw=Buffer;";>{
-		AlphaBlendEnable = false; AlphaTestEnable = false;
-		ZEnable = false; ZWriteEnable = false;
-		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
-		PixelShader  = compile ps_3_0 ShadowMapBlurPS(ShadowMapSampTemp, float2(0.0f, ViewportOffset2.y));
-	}
-#endif
-#endif
 #if !GI_ENABLE
 #if SSDO_QUALITY && (IBL_QUALITY || SUN_LIGHT_ENABLE)
 	// GI disabled: classic SSDO before shading
