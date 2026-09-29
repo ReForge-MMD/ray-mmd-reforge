@@ -1,0 +1,181 @@
+#ifndef _SHADOWS_CASCADED_SHADOW_MAP_FXSUB_
+#define _SHADOWS_CASCADED_SHADOW_MAP_FXSUB_
+
+#include "shader/Shadows/PCSS.fxsub"
+
+// -----------------------------------------------------------------------------
+// Matrices and Cascade Projection Setup
+// -----------------------------------------------------------------------------
+static float4x4 matLightProject = CreateOrthoProject(2.0f, 2.0f, mPSSMDepthZMin, mPSSMDepthZMax);
+static float4x4 matLightView = CreateLightViewMatrix(SunDirection, -SunDirection, mLightDistance);
+static float4x4 matLightViewProject = mul(matLightView, matLightProject);
+static float4x4 matLightViewFromCameraView = mul(matViewInverse, matLightView);
+static float4x4 matLightProjectFromCameraView = mul(matViewInverse, matLightViewProject);
+static float4x4 lightCropParams = CreateLightCropParams(matLightViewFromCameraView, SHADOW_MAP_SIZE);
+
+static const float2 ShadowMapTexelSize = 1.0f / float(SHADOW_MAP_SIZE);
+static const float2 ShadowMapOffset    = 0.5f / float(SHADOW_MAP_SIZE);
+
+#ifndef SUN_SHADOW_PCSS
+#	define SUN_SHADOW_PCSS 1
+#endif
+
+#ifndef SUN_LIGHT_RADIUS
+#	define SUN_LIGHT_RADIUS 0.015f
+#endif
+
+// -----------------------------------------------------------------------------
+// Cascade Single Sampler Dispatch
+// -----------------------------------------------------------------------------
+float SampleCascadeSingle(
+	sampler source,
+	float2 coord,
+	float receiverDepth,
+	float lightSizeUV,
+	float2 receiverPlaneBias,
+	float2 rotation)
+{
+#if SUN_SHADOW_PCSS
+	return PCSS_Evaluate(source, coord, receiverDepth, lightSizeUV, receiverPlaneBias, rotation, ShadowMapTexelSize.x);
+#else
+	return PCF_Standard(source, coord, receiverDepth, receiverPlaneBias, rotation, lightSizeUV);
+#endif
+}
+
+float SampleCascadeMap(
+	int cascadeIndex,
+	float2 coord,
+	float receiverDepth,
+	float lightSizeUV,
+	float2 receiverPlaneBias,
+	float2 rotation)
+{
+	[branch]
+	if (cascadeIndex == 0)
+		return SampleCascadeSingle(PSSM1Samp, coord, receiverDepth, lightSizeUV, receiverPlaneBias, rotation);
+	else if (cascadeIndex == 1)
+		return SampleCascadeSingle(PSSM2Samp, coord, receiverDepth, lightSizeUV, receiverPlaneBias, rotation);
+	else if (cascadeIndex == 2)
+		return SampleCascadeSingle(PSSM3Samp, coord, receiverDepth, lightSizeUV, receiverPlaneBias, rotation);
+	else
+		return SampleCascadeSingle(PSSM4Samp, coord, receiverDepth, lightSizeUV, receiverPlaneBias, rotation);
+}
+
+// -----------------------------------------------------------------------------
+// Evaluate Cascaded Sun Shadows
+// -----------------------------------------------------------------------------
+float EvaluateCascadedShadow(MaterialParam material, float3 viewPosition, float2 screenUV)
+{
+	float3 L = mul(-SunDirection, (float3x3)matView);
+	float cosTheta = dot(material.normal, L);
+
+	// Light terminator: smooth transition on surfaces facing away from sunlight
+	float terminator = saturate(cosTheta * 8.0f);
+	[branch]
+	if (terminator <= 0.0f)
+	{
+		return 0.0f;
+	}
+
+	float normalBiasScale = saturate(1.0f - saturate(cosTheta));
+
+	// Normal offset bias in view space to eliminate acne on curved surfaces
+	float3 biasedViewPosition = viewPosition + material.normal * (0.02f + 0.05f * normalBiasScale);
+
+	float4 proj = mul(float4(biasedViewPosition, 1.0f), matLightProjectFromCameraView);
+
+	float4 lightPPos01 = proj.xyxy * float4(lightCropParams[0].xy, lightCropParams[1].xy) + float4(lightCropParams[0].zw, lightCropParams[1].zw);
+	float4 lightPPos23 = proj.xyxy * float4(lightCropParams[2].xy, lightCropParams[3].xy) + float4(lightCropParams[2].zw, lightCropParams[3].zw);
+
+	float4 lightCoord01 = PosToCoord(lightPPos01);
+	float4 lightCoord23 = PosToCoord(lightPPos23);
+
+	float4 lightPPos0 = float4(lightCoord01.xy, min2(float2(1.0f, 1.0f) - abs(lightPPos01.xy)), 0.0f);
+	float4 lightPPos1 = float4(lightCoord01.zw, min2(float2(1.0f, 1.0f) - abs(lightPPos01.zw)), 1.0f);
+	float4 lightPPos2 = float4(lightCoord23.xy, min2(float2(1.0f, 1.0f) - abs(lightPPos23.xy)), 2.0f);
+	float4 lightPPos3 = float4(lightCoord23.zw, min2(float2(1.0f, 1.0f) - abs(lightPPos23.zw)), 3.0f);
+
+	// Depth calculations
+	float depthSlope = ShadowSlopeScaledBias(proj.z / mPSSMDepthZMax) * mPSSMDepthZMax;
+	float receiverDepth = dot(float4(viewPosition, 1.0f), matLightViewFromCameraView._13_23_33_43);
+	float baseBias = (material.linearDepth + depthSlope * (1.0f + normalBiasScale * 2.0f)) * 0.003f + max(0.0f, material.linearDepth - 100.0f) * 0.005f;
+	receiverDepth -= baseBias;
+	float normalizedReceiverDepth = saturate(receiverDepth / mPSSMDepthZMax);
+
+	// Analytical receiver plane gradient bias
+	float2 receiverPlaneBias = GetReceiverPlaneDepthBias(float3(lightCoord01.xy, normalizedReceiverDepth));
+
+	// Random rotation from Interleaved Gradient Noise
+	float angle = InterleavedGradientNoise(screenUV * ViewportSize) * PI_2;
+	float2 rotation = float2(cos(angle), sin(angle));
+
+	// Seamless cross-cascade blending threshold
+	static const float kCascadeBlendThreshold = 0.15f;
+	float shadow = 1.0f;
+
+	[branch]
+	if (lightPPos0.z > 0.0f)
+	{
+		float lightSize0 = SUN_LIGHT_RADIUS * lightCropParams[0].x * 0.5f;
+		float shadow0 = SampleCascadeMap(0, lightPPos0.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize0, receiverPlaneBias, rotation);
+
+		[branch]
+		if (lightPPos0.z < kCascadeBlendThreshold && lightPPos1.z > 0.0f)
+		{
+			float lightSize1 = SUN_LIGHT_RADIUS * lightCropParams[1].x * 0.5f;
+			float shadow1 = SampleCascadeMap(1, lightPPos1.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize1, receiverPlaneBias, rotation);
+			shadow = lerp(shadow1, shadow0, saturate(lightPPos0.z / kCascadeBlendThreshold));
+		}
+		else
+		{
+			shadow = shadow0;
+		}
+	}
+	else if (lightPPos1.z > 0.0f)
+	{
+		float lightSize1 = SUN_LIGHT_RADIUS * lightCropParams[1].x * 0.5f;
+		float shadow1 = SampleCascadeMap(1, lightPPos1.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize1, receiverPlaneBias, rotation);
+
+		[branch]
+		if (lightPPos1.z < kCascadeBlendThreshold && lightPPos2.z > 0.0f)
+		{
+			float lightSize2 = SUN_LIGHT_RADIUS * lightCropParams[2].x * 0.5f;
+			float shadow2 = SampleCascadeMap(2, lightPPos2.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize2, receiverPlaneBias, rotation);
+			shadow = lerp(shadow2, shadow1, saturate(lightPPos1.z / kCascadeBlendThreshold));
+		}
+		else
+		{
+			shadow = shadow1;
+		}
+	}
+	else if (lightPPos2.z > 0.0f)
+	{
+		float lightSize2 = SUN_LIGHT_RADIUS * lightCropParams[2].x * 0.5f;
+		float shadow2 = SampleCascadeMap(2, lightPPos2.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize2, receiverPlaneBias, rotation);
+
+		[branch]
+		if (lightPPos2.z < kCascadeBlendThreshold && lightPPos3.z > 0.0f)
+		{
+			float lightSize3 = SUN_LIGHT_RADIUS * lightCropParams[3].x * 0.5f;
+			float shadow3 = SampleCascadeMap(3, lightPPos3.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize3, receiverPlaneBias, rotation);
+			shadow = lerp(shadow3, shadow2, saturate(lightPPos2.z / kCascadeBlendThreshold));
+		}
+		else
+		{
+			shadow = shadow2;
+		}
+	}
+	else if (lightPPos3.z > 0.0f)
+	{
+		float lightSize3 = SUN_LIGHT_RADIUS * lightCropParams[3].x * 0.5f;
+		shadow = SampleCascadeMap(3, lightPPos3.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize3, receiverPlaneBias, rotation);
+	}
+	else
+	{
+		return 0.0f;
+	}
+
+	return shadow * terminator;
+}
+
+#endif // _SHADOWS_CASCADED_SHADOW_MAP_FXSUB_

@@ -426,6 +426,10 @@ static float mCausticsDispScale  = lerp(lerp(1.0f, 3.0f, mCstDispersionP), 0.0f,
 #include "shader/ibl.fxsub"
 #include "shader/BRDF.fxsub"
 #include "shader/ColorGrading.fxsub"
+#if SUN_SHADOW_QUALITY && SUN_LIGHT_ENABLE
+#	include "shader/Shadows/ShadowMapGen.fxsub"
+#	include "shader/Shadows/ShadowBilateralBlur.fxsub"
+#endif
 #include "shader/ShadingMaterials.fxsub"
 
 
@@ -555,6 +559,18 @@ technique DeferredLighting<
 	"Clear=Color;"
 	"Clear=Depth;"
 	"ScriptExternal=Color;"
+
+#if SUN_SHADOW_QUALITY && SUN_LIGHT_ENABLE
+	"RenderColorTarget=ShadowMap;"
+	"ClearSetColor=WhiteColor;"
+	"Clear=Color;"
+	"Pass=ShadowMapGen;"
+	"ClearSetColor=BackColor;"
+#if SUN_SHADOW_BLUR
+	"RenderColorTarget=ShadowMapTemp; Pass=ShadowBlurX;"
+	"RenderColorTarget=ShadowMap;     Pass=ShadowBlurY;"
+#endif
+#endif
 
 #if !GI_ENABLE
 // GI disabled: SSDO runs before shading (classic path, AO applied in ShadingMaterials).
@@ -820,6 +836,28 @@ technique DeferredLighting<
 		ZEnable = false; ZWriteEnable = false;
 		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
 		PixelShader  = compile ps_3_0 ScreenSpaceDirOccBlurPS(SSDOMapSampTemp, float2(0.0f, ViewportOffset2.y));
+	}
+#endif
+#endif
+#if SUN_LIGHT_ENABLE && SUN_SHADOW_QUALITY
+	pass ShadowMapGen<string Script= "Draw=Buffer;";>{
+		AlphaBlendEnable = false; AlphaTestEnable = false;
+		ZEnable = false; ZWriteEnable = false;
+		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
+		PixelShader  = compile ps_3_0 ShadowMapGenPS();
+	}
+#if SUN_SHADOW_BLUR
+	pass ShadowBlurX<string Script= "Draw=Buffer;";>{
+		AlphaBlendEnable = false; AlphaTestEnable = false;
+		ZEnable = false; ZWriteEnable = false;
+		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
+		PixelShader  = compile ps_3_0 ShadowMapBlurPS(ShadowMapSamp, float2(ViewportOffset2.x, 0.0f));
+	}
+	pass ShadowBlurY<string Script= "Draw=Buffer;";>{
+		AlphaBlendEnable = false; AlphaTestEnable = false;
+		ZEnable = false; ZWriteEnable = false;
+		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
+		PixelShader  = compile ps_3_0 ShadowMapBlurPS(ShadowMapSampTemp, float2(0.0f, ViewportOffset2.y));
 	}
 #endif
 #endif

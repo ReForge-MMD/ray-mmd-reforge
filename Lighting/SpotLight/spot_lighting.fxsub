@@ -8,11 +8,11 @@
 #include "../../../shader/arealight.fxsub"
 
 #if SHADOW_MAP_FROM > 0
-#	include "../../../shader/shadowcommon.fxsub"
+#	include "../../../shader/Shadows/ShadowCommon.fxsub"
 #endif
 
 #if CONTACT_SHADOW_QUALITY >= 1
-#	include "../../../shader/ContactShadow.fxsub"
+#	include "../../../shader/Shadows/ContactShadow.fxsub"
 #endif
 
 float mR : CONTROLOBJECT<string name = "(self)"; string item = "R+";>;

@@ -5,7 +5,7 @@
 #include "shader/gbuffer_sampler.fxsub"
 
 #if CONTACT_SHADOW_QUALITY >= 1
-#include "shader/ContactShadow.fxsub"
+#include "shader/Shadows/ContactShadow.fxsub"
 #endif
 
 float showAlbedo : CONTROLOBJECT<string name="(self)"; string item = "Albedo";>;

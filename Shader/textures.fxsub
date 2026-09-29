@@ -319,6 +319,124 @@ sampler SkyVisibilityMapSamp = sampler_state {
 	AddressU = CLAMP; AddressV = CLAMP;
 };
 #endif
+#if SUN_LIGHT_ENABLE && SUN_SHADOW_QUALITY
+#if SUN_SHADOW_QUALITY == 1
+#	define SHADOW_MAP_SIZE 1024
+#elif SUN_SHADOW_QUALITY == 2
+#	define SHADOW_MAP_SIZE 2048
+#elif SUN_SHADOW_QUALITY == 3
+#	define SHADOW_MAP_SIZE 4096
+#elif SUN_SHADOW_QUALITY == 4
+#	define SHADOW_MAP_SIZE 8192
+#else
+#	define SHADOW_MAP_SIZE 2048
+#endif
+
+shared texture PSSM1 : OFFSCREENRENDERTARGET<
+	string Description = "Cascade shadow map for ray";
+	int2 Dimensions = { SHADOW_MAP_SIZE, SHADOW_MAP_SIZE };
+	string Format = "G32R32F";
+	float4 ClearColor = { 1.0f, 1.0f, 0.0f, 0.0f };
+	float ClearDepth = 1.0f;
+	string DefaultEffect =
+		"self = hide;"
+		"*fog.pmx=hide;"
+		"*controller*.pmx=hide;"
+		"*editor*.pmx=hide;"
+		"Volumetric*.pmx=hide;"
+		"*.pmx=shadow/PSSM1.fx;"
+		"*.pmd=shadow/PSSM1.fx;"
+		"*.x=hide;";
+>;
+shared texture PSSM2 : OFFSCREENRENDERTARGET<
+	string Description = "Cascade shadow map for ray";
+	int2 Dimensions = { SHADOW_MAP_SIZE, SHADOW_MAP_SIZE };
+	string Format = "G32R32F";
+	float4 ClearColor = { 1.0f, 1.0f, 0.0f, 0.0f };
+	float ClearDepth = 1.0f;
+	string DefaultEffect =
+		"self = hide;"
+		"*fog.pmx=hide;"
+		"*controller*.pmx=hide;"
+		"*editor*.pmx=hide;"
+		"Volumetric*.pmx=hide;"
+		"*.pmx=shadow/PSSM2.fx;"
+		"*.pmd=shadow/PSSM2.fx;"
+		"*.x=hide;";
+>;
+shared texture PSSM3 : OFFSCREENRENDERTARGET<
+	string Description = "Cascade shadow map for ray";
+	int2 Dimensions = { SHADOW_MAP_SIZE, SHADOW_MAP_SIZE };
+	string Format = "G32R32F";
+	float4 ClearColor = { 1.0f, 1.0f, 0.0f, 0.0f };
+	float ClearDepth = 1.0f;
+	string DefaultEffect =
+		"self = hide;"
+		"*fog.pmx=hide;"
+		"*controller*.pmx=hide;"
+		"*editor*.pmx=hide;"
+		"Volumetric*.pmx=hide;"
+		"*.pmx=shadow/PSSM3.fx;"
+		"*.pmd=shadow/PSSM3.fx;"
+		"*.x=hide;";
+>;
+shared texture PSSM4 : OFFSCREENRENDERTARGET<
+	string Description = "Cascade shadow map for ray";
+	int2 Dimensions = { SHADOW_MAP_SIZE, SHADOW_MAP_SIZE };
+	string Format = "G32R32F";
+	float4 ClearColor = { 1.0f, 1.0f, 0.0f, 0.0f };
+	float ClearDepth = 1.0f;
+	string DefaultEffect =
+		"self = hide;"
+		"*fog.pmx=hide;"
+		"*controller*.pmx=hide;"
+		"*editor*.pmx=hide;"
+		"Volumetric*.pmx=hide;"
+		"*.pmx=shadow/PSSM4.fx;"
+		"*.pmd=shadow/PSSM4.fx;"
+		"*.x=hide;";
+>;
+
+sampler PSSM1Samp = sampler_state {
+	texture = <PSSM1>;
+	MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = NONE;
+	AddressU = CLAMP; AddressV = CLAMP;
+};
+sampler PSSM2Samp = sampler_state {
+	texture = <PSSM2>;
+	MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = NONE;
+	AddressU = CLAMP; AddressV = CLAMP;
+};
+sampler PSSM3Samp = sampler_state {
+	texture = <PSSM3>;
+	MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = NONE;
+	AddressU = CLAMP; AddressV = CLAMP;
+};
+sampler PSSM4Samp = sampler_state {
+	texture = <PSSM4>;
+	MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = NONE;
+	AddressU = CLAMP; AddressV = CLAMP;
+};
+
+shared texture ShadowMap : RENDERCOLORTARGET<
+	float2 ViewportRatio = {1.0, 1.0};
+	string Format = "R16F";
+>;
+texture ShadowMapTemp : RENDERCOLORTARGET<
+	float2 ViewportRatio = {1.0, 1.0};
+	string Format = "R16F";
+>;
+sampler ShadowMapSamp = sampler_state {
+	texture = <ShadowMap>;
+	MinFilter = POINT; MagFilter = POINT; MipFilter = NONE;
+	AddressU = CLAMP; AddressV = CLAMP;
+};
+sampler ShadowMapSampTemp = sampler_state {
+	texture = <ShadowMapTemp>;
+	MinFilter = POINT; MagFilter = POINT; MipFilter = NONE;
+	AddressU = CLAMP; AddressV = CLAMP;
+};
+#endif
 #if GI_ENABLE
 texture SSGIVisibilityMap : OFFSCREENRENDERTARGET<
 	string Description = "SSGI visibility for ray";

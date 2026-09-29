@@ -2,7 +2,7 @@
 #include "../../../ray_advanced.conf"
 #include "../../../shader/math.fxsub"
 #include "../../../shader/common.fxsub"
-#include "../../../shader/shadowcommon.fxsub"
+#include "../../../shader/Shadows/ShadowCommon.fxsub"
 #include "../../../shader/gbuffer.fxsub"
 #include "../../../shader/gbuffer_sampler.fxsub"
 #include "../../../shader/PhaseFunctions.fxsub"

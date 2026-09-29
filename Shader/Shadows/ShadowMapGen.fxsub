@@ -1,0 +1,44 @@
+#ifndef _SHADOWS_SHADOW_MAP_GEN_FXSUB_
+#define _SHADOWS_SHADOW_MAP_GEN_FXSUB_
+
+#include "shader/Shadows/CascadedShadowMap.fxsub"
+#include "shader/Shadows/ContactShadow.fxsub"
+
+float4 ShadowMapGenPS(
+	in float2 coord : TEXCOORD0,
+	in float3 viewdir : TEXCOORD1) : COLOR
+{
+	float4 MRT8 = tex2Dlod(Gbuffer8Map, float4(coord, 0.0f, 0.0f));
+	clip(MRT8.x - 1e-5f);
+
+	MaterialParam material;
+	material.linearDepth = MRT8.x;
+	material.visibility = MRT8.z;
+
+	clip(any(material.visibility) - 1e-5f);
+
+	float4 MRT6 = tex2Dlod(Gbuffer6Map, float4(coord, 0.0f, 0.0f));
+	material.normal = DecodeNormal(MRT6.xyz);
+
+	float3 viewPosition = viewdir * (material.linearDepth / max(viewdir.z, 1e-5f));
+
+	// 1. Cascaded PCSS Shadow
+	float shadow = EvaluateCascadedShadow(material, viewPosition, coord);
+
+	float3 L = mul(-SunDirection, (float3x3)matView);
+
+	// 2. Micro Contact Shadows (SSCS)
+#if CONTACT_SHADOW_QUALITY >= 1
+	float contactShadow = GetContactShadow(viewPosition, material.normal, L, coord, material.linearDepth);
+	shadow *= contactShadow;
+#endif
+
+	// 3. Screen-Space Global Shadows (SSGS)
+#if SSGS_QUALITY >= 1
+	shadow *= GetGlobalShadow(viewPosition, material.normal, L, coord);
+#endif
+
+	return shadow;
+}
+
+#endif // _SHADOWS_SHADOW_MAP_GEN_FXSUB_

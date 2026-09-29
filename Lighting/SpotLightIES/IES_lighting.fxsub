@@ -8,7 +8,7 @@
 #include "../../../shader/arealight.fxsub"
 
 #if SHADOW_MAP_FROM > 0
-#	include "../../../shader/shadowcommon.fxsub"
+#	include "../../../shader/Shadows/ShadowCommon.fxsub"
 #endif
 
 float mR : CONTROLOBJECT<string name = "(self)"; string item = "R+";>;

@@ -1,0 +1,58 @@
+#ifndef _SHADOWS_BILATERAL_BLUR_FXSUB_
+#define _SHADOWS_BILATERAL_BLUR_FXSUB_
+
+#ifndef SHADOW_BLUR_COUNT
+#	define SHADOW_BLUR_COUNT 6
+#endif
+
+float4 ShadowMapBlurPS(float2 coord : TEXCOORD0, uniform sampler source, uniform float2 offset) : COLOR
+{
+	float totalColor = tex2Dlod(source, float4(coord, 0.0f, 0.0f)).r;
+	float centerDepth = tex2Dlod(Gbuffer8Map, float4(coord, 0.0f, 0.0f)).r;
+
+	if (centerDepth <= 1e-4f)
+		return totalColor;
+
+	float3 centerNormal = DecodeNormal(tex2Dlod(Gbuffer6Map, float4(coord, 0.0f, 0.0f)).xyz);
+
+	float totalWeight = 1.0f;
+	const float blurSigma = float(SHADOW_BLUR_COUNT) * 0.5f;
+	const float blurFalloff = 1.0f / (2.0f * blurSigma * blurSigma);
+	float depthTolerance = max(centerDepth * 0.05f, 0.2f);
+
+	float2 offset1 = coord + offset;
+	float2 offset2 = coord - offset;
+
+	[unroll]
+	for (int r = 1; r < SHADOW_BLUR_COUNT; ++r)
+	{
+		float shadow1 = tex2Dlod(source, float4(offset1, 0.0f, 0.0f)).r;
+		float shadow2 = tex2Dlod(source, float4(offset2, 0.0f, 0.0f)).r;
+
+		float depth1 = tex2Dlod(Gbuffer8Map, float4(offset1, 0.0f, 0.0f)).r;
+		float depth2 = tex2Dlod(Gbuffer8Map, float4(offset2, 0.0f, 0.0f)).r;
+
+		float3 normal1 = DecodeNormal(tex2Dlod(Gbuffer6Map, float4(offset1, 0.0f, 0.0f)).xyz);
+		float3 normal2 = DecodeNormal(tex2Dlod(Gbuffer6Map, float4(offset2, 0.0f, 0.0f)).xyz);
+
+		float ddiff1 = abs(depth1 - centerDepth) / depthTolerance;
+		float ddiff2 = abs(depth2 - centerDepth) / depthTolerance;
+
+		float ndot1 = saturate(dot(centerNormal, normal1));
+		float ndot2 = saturate(dot(centerNormal, normal2));
+
+		float spatialWeight = exp(-float(r * r) * blurFalloff);
+		float bilateralWeight1 = spatialWeight * exp(-ddiff1 * ddiff1) * (ndot1 * ndot1);
+		float bilateralWeight2 = spatialWeight * exp(-ddiff2 * ddiff2) * (ndot2 * ndot2);
+
+		totalColor += shadow1 * bilateralWeight1 + shadow2 * bilateralWeight2;
+		totalWeight += bilateralWeight1 + bilateralWeight2;
+
+		offset1 += offset;
+		offset2 -= offset;
+	}
+
+	return totalColor / max(totalWeight, 1e-5f);
+}
+
+#endif // _SHADOWS_BILATERAL_BLUR_FXSUB_

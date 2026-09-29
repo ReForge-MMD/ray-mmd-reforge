@@ -1,5 +1,5 @@
-#ifndef RAY_MMD_CONTACT_SHADOW_FXSUB
-#define RAY_MMD_CONTACT_SHADOW_FXSUB
+#ifndef RAY_MMD_SHADOWS_CONTACT_SHADOW_FXSUB
+#define RAY_MMD_SHADOWS_CONTACT_SHADOW_FXSUB
 
 #ifndef CONTACT_QUALITY
 #	ifdef CONTACT_SHADOW_QUALITY
@@ -9,14 +9,8 @@
 #	endif
 #endif
 
-// Contact shadows are deliberately short rays (<= ~0.6 view-space units).
-// They deliberately do NOT use the shared Hi-Z traversal: the ray never
-// travels far enough for hierarchical stepping to pay off, while the mip/
-// atlas tables of the traversal blew the ps_3_0 temp register budget in
-// every lighting pass that inlines this code (X4505). A flat linear march
-// keeps the register footprint small. More samples do not solve the
-// missing off-screen geometry problem, so keep this within the SM3
-// instruction budget and let TAA integrate the stochastic distribution.
+// Contact shadows are short view-space rays (<= ~0.6 units).
+// Flat linear march keeps the temp register footprint within ps_3_0 budget (X4505).
 #if CONTACT_QUALITY <= 1
 #	define CONTACT_SHADOW_STEP_COUNT 8
 #elif CONTACT_QUALITY == 2
@@ -31,14 +25,11 @@ float ContactShadowSampleDepth(float2 screenUV)
 	return abs(tex2Dlod(Gbuffer8Map, float4(screenUV, 0.0f, 0.0f)).x);
 }
 
-
 /**
  * Reconstructs geometric normal vector from screen-space view position partial derivatives.
  */
 float3 ContactShadowGeometricNormal(float3 tangentX, float3 tangentY, float3 shadingNormal)
 {
-	// This normal intentionally ignores normal-map detail, so the origin bias
-	// is stable even on materials with high-frequency normal maps.
 	float3 geometricNormal = cross(tangentY, tangentX);
 	float normalLengthSquared = dot(geometricNormal, geometricNormal);
 
@@ -47,19 +38,11 @@ float3 ContactShadowGeometricNormal(float3 tangentX, float3 tangentY, float3 sha
 	else
 		geometricNormal = shadingNormal;
 
-	// Keep the reconstructed hemisphere compatible with the G-buffer normal.
 	return geometricNormal * (dot(geometricNormal, shadingNormal) < 0.0f ? -1.0f : 1.0f);
 }
 
 /**
  * Traces a directional screen-space ray towards the light source to compute micro-occlusion.
- *
- * @param viewPosition Ray starting point in view space.
- * @param shadingNormal Surface shading normal vector.
- * @param lightDirectionVS Direction vector towards the light in view space.
- * @param maxDistance Maximum shadow ray travel distance.
- * @param jitter Stochastic dither value for TAA accumulation.
- * @return Shadow visibility scalar in [0, 1] (1 = unshadowed, 0 = fully occluded).
  */
 float TraceScreenSpaceShadow(
 	float3 viewPosition,
@@ -68,7 +51,6 @@ float TraceScreenSpaceShadow(
 	float maxDistance,
 	float jitter)
 {
-	// Keep derivative instructions outside all early exits and loop branches.
 	float3 viewPositionDx = ddx(viewPosition);
 	float3 viewPositionDy = ddy(viewPosition);
 	float3 geometricNormal = ContactShadowGeometricNormal(viewPositionDx, viewPositionDy, shadingNormal);
@@ -78,12 +60,8 @@ float TraceScreenSpaceShadow(
 	if (nDotL <= 0.0f || maxDistance <= 0.0f)
 		return 1.0f;
 
-	// Smoothly remove SSCS at the shading-normal terminator.  It avoids black
-	// low-poly facets where the shading and geometric hemispheres disagree.
 	float terminatorFade = smoothstep(0.0f, 0.15f, nDotL);
 
-	// A footprint-aware, slope-scaled bias stays valid at different resolutions
-	// and depths.  Offset only along the geometric normal, never a normal map.
 	float pixelFootprint = max(length(viewPositionDx), length(viewPositionDy));
 	pixelFootprint = min(pixelFootprint, max(0.01f, viewPosition.z * 0.01f));
 	float slopeScale = 1.0f - saturate(nDotL);
@@ -102,10 +80,7 @@ float TraceScreenSpaceShadow(
 	[loop]
 	for (int stepIndex = 0; stepIndex < CONTACT_SHADOW_STEP_COUNT; ++stepIndex)
 	{
-		// Jitter within the current interval; the half-step offset avoids testing
-		// the origin itself and converts banding into TAA-friendly noise.
-		float rayT = ((float)stepIndex + 0.5f + 0.5f * frac(jitter)) /
-			(float)CONTACT_SHADOW_STEP_COUNT;
+		float rayT = ((float)stepIndex + 0.5f + 0.5f * frac(jitter)) / (float)CONTACT_SHADOW_STEP_COUNT;
 		float rayZ = rayOrigin.z + lightDirection.z * (rayT * maxDistance);
 		float4 clipPos = lerp(clipStart, clipEnd, rayT);
 
@@ -120,14 +95,8 @@ float TraceScreenSpaceShadow(
 		float sceneDepth = ContactShadowSampleDepth(sampleUV);
 		float penetration = rayZ - sceneDepth;
 
-		// The ray has to descend below the depth surface.  Its penetration is then
-		// limited by the thickness heuristic; overly deep samples are skipped so
-		// foreground silhouettes do not become 2.5D "false walls" on the background.
 		if (penetration > 0.0f && penetration <= thickness)
 		{
-			// Fractional occlusion by penetration depth gives the edge a real
-			// penumbra.  A binary hit here turns the step jitter into a
-			// frozen diagonal dither line along every shadow boundary.
 			occlusion = max(occlusion, saturate(penetration / (thickness * 0.5f)));
 			hitT = rayT;
 			if (occlusion >= 1.0f)
@@ -135,20 +104,12 @@ float TraceScreenSpaceShadow(
 		}
 	}
 
-	// Taper the end of the short ray to avoid a visible hard cut-off.
 	float distanceFade = 1.0f - smoothstep(0.65f, 1.0f, hitT);
 	return 1.0f - occlusion * terminatorFade * distanceFade;
 }
 
 /**
  * Public interface for evaluating contact shadows in lighting passes.
- *
- * @param viewPosition Reconstructed pixel position in view space.
- * @param shadingNormal Pixel surface normal vector.
- * @param L Unit direction vector towards light source in view space.
- * @param screenCoord Viewport coordinates of current pixel [0, 1].
- * @param linearDepth Positive linear view-space depth.
- * @return Contact shadow multiplier factor.
  */
 float GetContactShadow(
 	float3 viewPosition,
@@ -157,8 +118,6 @@ float GetContactShadow(
 	float2 screenCoord,
 	float linearDepth)
 {
-	// Scale the micro-shadow range near the camera, then cap it before distant
-	// occluders can turn screen-space depth discontinuities into long shadows.
 	float maxDistance = min(1.5f, max(0.05f, linearDepth * 0.06f));
 #if AA_QUALITY == 6
 	int frameCounter = (int)fmod(time * 60.0f, 16.0f);
@@ -167,17 +126,11 @@ float GetContactShadow(
 #endif
 	float jitter = InterleavedGradientNoise(screenCoord * ViewportSize, frameCounter);
 	float shadow = TraceScreenSpaceShadow(viewPosition, shadingNormal, L, maxDistance, jitter);
-	// Quadratic curve keeps contact shadows crisp and readable without crushing
-	// soft penumbrae or amplifying stochastic dither noise into harsh banding.
 	return shadow * shadow;
 }
 
 // -----------------------------------------------------------------------
 // Screen-Space Global Shadows (SSGS)
-// Long-range companion to contact shadows.  Traces a wider, softer ray
-// toward the directional light using the same depth-buffer traversal.
-// The soft penumbra radius grows with travel distance, giving a plausible
-// gradient where shadow-map resolution runs out.
 // -----------------------------------------------------------------------
 #if SSGS_QUALITY >= 1
 
@@ -192,19 +145,6 @@ float GetContactShadow(
 #	define SSGS_MAX_DISTANCE  15.0f
 #endif
 
-/**
- * Traces a long-range screen-space shadow ray toward the directional light.
- *
- * Unlike contact shadows the thickness budget grows with ray distance so that
- * objects farther away cast wider, softer penumbrae.  The accumulated
- * occlusion is smoothstep-blended to avoid a sharp cut-off at maxDistance.
- *
- * @param viewPosition  Ray origin in view space.
- * @param shadingNormal Surface shading normal in view space.
- * @param lightDirVS    Unit direction *toward* the light in view space.
- * @param jitter        Per-pixel stochastic offset for TAA accumulation.
- * @return Shadow visibility in [0, 1].
- */
 float TraceScreenSpaceGlobalShadow(
 	float3 viewPosition,
 	float3 shadingNormal,
@@ -239,8 +179,7 @@ float TraceScreenSpaceGlobalShadow(
 	[loop]
 	for (int stepIndex = 0; stepIndex < SSGS_STEP_COUNT; ++stepIndex)
 	{
-		float rayT = ((float)stepIndex + 0.5f + 0.5f * frac(jitter)) /
-			(float)SSGS_STEP_COUNT;
+		float rayT = ((float)stepIndex + 0.5f + 0.5f * frac(jitter)) / (float)SSGS_STEP_COUNT;
 		float rayZ = rayOrigin.z + lightDirection.z * (rayT * SSGS_MAX_DISTANCE);
 		float4 clipPos = lerp(clipStart, clipEnd, rayT);
 
@@ -252,8 +191,6 @@ float TraceScreenSpaceGlobalShadow(
 		if (any(sampleUV < 0.0f) || any(sampleUV > 1.0f))
 			break;
 
-		// Thickness grows linearly with travel distance - farther objects
-		// cast wider penumbrae, matching the intuition of a large distant sun.
 		float travelDist = rayT * SSGS_MAX_DISTANCE;
 		float thickness = max(stepLength * 2.0f, travelDist * 0.08f + normalBias);
 
@@ -262,7 +199,6 @@ float TraceScreenSpaceGlobalShadow(
 
 		if (penetration > 0.0f && penetration <= thickness)
 		{
-			// Soft penumbra: occlusion ramps from 0 to 1 across the thickness band.
 			float softOcclusion = saturate(penetration / (thickness * 0.5f)) * terminatorFade;
 			if (softOcclusion > occlusion)
 			{
@@ -274,20 +210,10 @@ float TraceScreenSpaceGlobalShadow(
 		}
 	}
 
-	// Smoothly fade the shadow out at the maximum ray distance.
 	float distanceFade = 1.0f - smoothstep(0.7f, 1.0f, hitT);
 	return 1.0f - occlusion * distanceFade;
 }
 
-/**
- * Public interface for SSGS in directional-light passes.
- *
- * @param viewPosition  Reconstructed pixel position in view space.
- * @param shadingNormal Surface normal in view space.
- * @param L             Unit direction toward the light.
- * @param screenCoord   Viewport UV [0, 1].
- * @return Global shadow multiplier in [0, 1].
- */
 float GetGlobalShadow(
 	float3 viewPosition,
 	float3 shadingNormal,
@@ -301,12 +227,9 @@ float GetGlobalShadow(
 #endif
 	float jitter = InterleavedGradientNoise(screenCoord * ViewportSize + float2(7.3f, 5.1f), frameCounter);
 	float shadow = TraceScreenSpaceGlobalShadow(viewPosition, shadingNormal, L, jitter);
-	// Moderate contrast curve: SSGS is a soft complement to the shadow map,
-	// not a hard binary occluder.  A linear-to-sqrt remap gives visible
-	// penumbrae without blackening the whole scene.
 	return sqrt(shadow);
 }
 
 #endif // SSGS_QUALITY >= 1
 
-#endif // RAY_MMD_CONTACT_SHADOW_FXSUB
+#endif // RAY_MMD_SHADOWS_CONTACT_SHADOW_FXSUB

@@ -1,0 +1,155 @@
+#ifndef _SHADOWS_PCSS_FXSUB_
+#define _SHADOWS_PCSS_FXSUB_
+
+#include "shader/Shadows/ShadowCommon.fxsub"
+
+// -----------------------------------------------------------------------------
+// PCSS Configuration Constants & Sample Counts
+// -----------------------------------------------------------------------------
+
+#ifndef PCSS_BLOCKER_SAMPLES
+#	define PCSS_BLOCKER_SAMPLES 16
+#endif
+
+#ifndef PCSS_FILTER_SAMPLES
+#	define PCSS_FILTER_SAMPLES 24
+#endif
+
+// -----------------------------------------------------------------------------
+// Blocker Search
+// Returns float2(avgBlockerDepth, blockerCount)
+// -----------------------------------------------------------------------------
+float2 FindBlocker(
+	sampler shadowMap,
+	float2 uv,
+	float receiverDepth,
+	float searchRadius,
+	float2 receiverPlaneBias,
+	float2 rotation)
+{
+	float blockerSum = 0.0f;
+	float blockerCount = 0.0f;
+
+	[unroll]
+	for (int i = 0; i < PCSS_BLOCKER_SAMPLES; ++i)
+	{
+		float2 offset = RotateSample(kPoisson16[i], rotation) * searchRadius;
+		float2 sampleUV = uv + offset;
+
+		float shadowDepth = tex2Dlod(shadowMap, float4(sampleUV, 0.0f, 0.0f)).r;
+
+		// Gradient-based receiver plane bias to prevent false self-occlusion
+		float biasedDepth = receiverDepth - dot(offset, receiverPlaneBias) * 0.75f;
+
+		if (shadowDepth < biasedDepth)
+		{
+			blockerSum += shadowDepth;
+			blockerCount += 1.0f;
+		}
+	}
+
+	float avgBlockerDepth = (blockerCount > 0.0f) ? (blockerSum / blockerCount) : 0.0f;
+	return float2(avgBlockerDepth, blockerCount);
+}
+
+// -----------------------------------------------------------------------------
+// PCF Filtering with dynamic penumbra radius
+// -----------------------------------------------------------------------------
+float PCF_Filter(
+	sampler shadowMap,
+	float2 uv,
+	float receiverDepth,
+	float filterRadius,
+	float2 receiverPlaneBias,
+	float2 rotation)
+{
+	float shadowSum = 0.0f;
+
+	// Use Poisson taps with random rotation
+	[unroll]
+	for (int i = 0; i < PCSS_FILTER_SAMPLES; ++i)
+	{
+#if PCSS_FILTER_SAMPLES <= 16
+		float2 offset = RotateSample(kPoisson16[i], rotation) * filterRadius;
+#else
+		float2 offset = RotateSample(kPoisson32[i], rotation) * filterRadius;
+#endif
+		float2 sampleUV = uv + offset;
+
+		float shadowDepth = tex2Dlod(shadowMap, float4(sampleUV, 0.0f, 0.0f)).r;
+		float biasedDepth = receiverDepth - dot(offset, receiverPlaneBias) * 0.75f;
+
+		shadowSum += (shadowDepth >= biasedDepth) ? 1.0f : 0.0f;
+	}
+
+	return shadowSum * (1.0f / float(PCSS_FILTER_SAMPLES));
+}
+
+// -----------------------------------------------------------------------------
+// PCSS Main Evaluation
+// -----------------------------------------------------------------------------
+float PCSS_Evaluate(
+	sampler shadowMap,
+	float2 uv,
+	float receiverDepth,
+	float lightSizeUV,
+	float2 receiverPlaneBias,
+	float2 rotation,
+	float texelSize)
+{
+	// Step 1: Blocker Search
+	float searchRadius = max(lightSizeUV * 0.8f, texelSize * 2.0f);
+	float2 blockerInfo = FindBlocker(shadowMap, uv, receiverDepth, searchRadius, receiverPlaneBias, rotation);
+
+	// Early out 1: No occluders found -> fully lit
+	if (blockerInfo.y < 1.0f)
+	{
+		return 1.0f;
+	}
+
+	// Step 2: Penumbra Estimation
+	// For directional sunlight: penumbra width is proportional to (receiverDepth - blockerDepth) * lightSize
+	float avgBlockerDepth = blockerInfo.x;
+	float depthDifference = max(0.0f, receiverDepth - avgBlockerDepth);
+
+	// Relative penumbra size scaled by light angular diameter
+	float penumbra = depthDifference * lightSizeUV * 12.0f;
+
+	// Clamp penumbra to valid range [minRadius, maxRadius]
+	float minFilterRadius = texelSize * 1.5f;
+	float maxFilterRadius = lightSizeUV * 1.5f;
+	float filterRadius = clamp(penumbra, minFilterRadius, maxFilterRadius);
+
+	// Step 3: PCF Filtering with dynamic penumbra footprint
+	return PCF_Filter(shadowMap, uv, receiverDepth, filterRadius, receiverPlaneBias, rotation);
+}
+
+// -----------------------------------------------------------------------------
+// Standard High-Quality PCF (Fall-back or Non-PCSS mode)
+// -----------------------------------------------------------------------------
+float PCF_Standard(
+	sampler shadowMap,
+	float2 uv,
+	float receiverDepth,
+	float2 receiverPlaneBias,
+	float2 rotation,
+	float filterRadius)
+{
+	float shadowSum = 0.0f;
+
+	[unroll]
+	for (int i = 0; i < 16; ++i)
+	{
+		float2 offset = RotateSample(kPoisson16[i], rotation) * filterRadius;
+		float2 sampleUV = uv + offset;
+
+		float shadowDepth = tex2Dlod(shadowMap, float4(sampleUV, 0.0f, 0.0f)).r;
+		float biasedDepth = receiverDepth - dot(offset, receiverPlaneBias) * 0.75f;
+
+		shadowSum += (shadowDepth >= biasedDepth) ? 1.0f : 0.0f;
+	}
+
+	return shadowSum * (1.0f / 16.0f);
+}
+
+#endif // _SHADOWS_PCSS_FXSUB_
