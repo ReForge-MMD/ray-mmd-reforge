@@ -51,6 +51,7 @@ float4 ShadowMapPS(in float2 coord : TEXCOORD0, in float4 position : TEXCOORD1) 
 technique DepthTecSS<string MMDPass = "object_ss";> {
 	pass DrawObject {
 		AlphaBlendEnable = false; AlphaTestEnable = false;
+		CullMode = NONE;
 		VertexShader = compile vs_3_0 ShadowMapVS();
 		PixelShader  = compile ps_3_0 ShadowMapPS();
 	}

@@ -77,6 +77,7 @@ technique DepthTech<string MMDPass = "object_ss";
 >{
 	pass CascadeShadowMap {
 		AlphaBlendEnable = false; AlphaTestEnable = false;
+		CullMode = NONE;
 		VertexShader = compile vs_3_0 CascadeShadowMapVS();
 		PixelShader  = compile ps_3_0 CascadeShadowMapPS();
 	}

@@ -53,11 +53,13 @@ technique DepthTecSS<string MMDPass = "object_ss";
 > {
 	pass DrawObjectF {
 		AlphaBlendEnable = false; AlphaTestEnable = false;
+		CullMode = NONE;
 		VertexShader = compile vs_3_0 ShadowMapGenVS(1);
 		PixelShader  = compile ps_3_0 ShadowMapGenPS(1);
 	}
 	pass DrawObjectB {
 		AlphaBlendEnable = false; AlphaTestEnable = false;
+		CullMode = NONE;
 		VertexShader = compile vs_3_0 ShadowMapGenVS(-1);
 		PixelShader  = compile ps_3_0 ShadowMapGenPS(-1);
 	}

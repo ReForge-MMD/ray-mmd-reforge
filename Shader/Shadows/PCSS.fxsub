@@ -110,7 +110,7 @@ float PCSS_Evaluate(
 	float texelSize)
 {
 	// Step 1: Blocker Search
-	float searchRadius = max(lightSizeUV * 0.8f, texelSize * 2.0f);
+	float searchRadius = clamp(lightSizeUV * 0.5f, texelSize * 1.5f, texelSize * 16.0f);
 	float2 blockerInfo = FindBlocker(shadowMap, uv, receiverDepth, searchRadius, receiverPlaneBias, rotation);
 
 	// Early out 1: No occluders found -> fully lit
@@ -125,11 +125,11 @@ float PCSS_Evaluate(
 	float depthDifference = max(0.0f, receiverDepth - avgBlockerDepth);
 
 	// Relative penumbra size scaled by light angular diameter
-	float penumbra = depthDifference * lightSizeUV * 12.0f;
+	float penumbra = depthDifference * lightSizeUV * 8.0f;
 
 	// Clamp penumbra to valid range [minRadius, maxRadius]
-	float minFilterRadius = texelSize * 1.5f;
-	float maxFilterRadius = lightSizeUV * 1.5f;
+	float minFilterRadius = texelSize * 0.5f;
+	float maxFilterRadius = max(lightSizeUV * 1.2f, texelSize * 2.0f);
 	float filterRadius = clamp(penumbra, minFilterRadius, maxFilterRadius);
 
 	// Step 3: PCF Filtering with dynamic penumbra footprint

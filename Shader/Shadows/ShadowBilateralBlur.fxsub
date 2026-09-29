@@ -2,7 +2,7 @@
 #define _SHADOWS_BILATERAL_BLUR_FXSUB_
 
 #ifndef SHADOW_BLUR_COUNT
-#	define SHADOW_BLUR_COUNT 6
+#	define SHADOW_BLUR_COUNT 3
 #endif
 
 float4 ShadowMapBlurPS(float2 coord : TEXCOORD0, uniform sampler source, uniform float2 offset) : COLOR
@@ -18,7 +18,7 @@ float4 ShadowMapBlurPS(float2 coord : TEXCOORD0, uniform sampler source, uniform
 	float totalWeight = 1.0f;
 	const float blurSigma = float(SHADOW_BLUR_COUNT) * 0.5f;
 	const float blurFalloff = 1.0f / (2.0f * blurSigma * blurSigma);
-	float depthTolerance = max(centerDepth * 0.05f, 0.2f);
+	float depthTolerance = max(centerDepth * 0.02f, 0.05f);
 
 	float2 offset1 = coord + offset;
 	float2 offset2 = coord - offset;
