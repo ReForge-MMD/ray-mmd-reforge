@@ -31,8 +31,8 @@ float4 SSPTOutlierRejectPS(
 	float3 pCenter = GetViewPosition(projInfo, uvCoord, zCenter);
 
 	float2 tapStep = ViewportOffset2;
-	float planeThreshold = max(zCenter * 0.045f, 0.45f);
-	float depthTolerance = max(zCenter * 0.075f, 0.70f);
+	float planeThreshold = max(zCenter * 0.05f, 0.5f);
+	float depthTolerance = max(zCenter * 0.08f, 0.8f);
 
 	float totalW = 0.0f;
 	float3 totalC = 0.0f;
@@ -40,11 +40,11 @@ float4 SSPTOutlierRejectPS(
 	[unroll]
 	for (int y = -2; y <= 2; ++y)
 	{
-		float wy = (y == 0) ? 6.0f : ((abs(y) == 1) ? 4.0f : 1.0f);
+		float wy = (y == 0) ? 3.0f : ((abs(y) == 1) ? 2.0f : 1.0f);
 		[unroll]
 		for (int x = -2; x <= 2; ++x)
 		{
-			float wx = (x == 0) ? 6.0f : ((abs(x) == 1) ? 4.0f : 1.0f);
+			float wx = (x == 0) ? 3.0f : ((abs(x) == 1) ? 2.0f : 1.0f);
 			float2 tapUv = uvCoord + float2(x, y) * tapStep;
 
 			float zTap = GetSSPTLinearDepth(tapUv);
@@ -55,16 +55,16 @@ float4 SSPTOutlierRejectPS(
 			float planeDist = abs(dot(nCenter, pTap - pCenter));
 			float planeWeight = BilateralPlaneWeight(planeDist, planeThreshold);
 			float depthWeight = BilateralDepthWeight(zTap, zCenter, depthTolerance);
-			float geomWeight = max(planeWeight, depthWeight * 0.40f);
+			float geomWeight = max(planeWeight, depthWeight * 0.70f);
 
 			float3 nTap = GetSSPTNormal(tapUv);
-			float normalWeight = saturate(0.30f + 0.70f * BilateralNormalWeight(nTap, nCenter));
+			float normalWeight = saturate(0.25f + 0.75f * BilateralNormalWeight(nTap, nCenter));
 
 			float3 sampleColor = clamp(tex2Dlod(source, float4(tapUv, 0.0f, 0.0f)).rgb, 0.0f, 100.0f);
 			float sampleLuma = dot(sampleColor, float3(0.299f, 0.587f, 0.114f));
 
-			// Karis luminance weighting: suppresses extreme fireflies without distorting linear field
-			float lumaWeight = 1.0f / (1.0f + 0.35f * sampleLuma);
+			// Karis luminance weighting: suppresses extreme fireflies
+			float lumaWeight = 1.0f / (1.0f + 0.30f * sampleLuma);
 			float weight = (wx * wy) * geomWeight * normalWeight * lumaWeight;
 
 			totalC += sampleColor * weight;
@@ -77,9 +77,9 @@ float4 SSPTOutlierRejectPS(
 }
 
 /**
- * Separable A-Trous Cross-Bilateral Filter Pass.
- * Expands step footprint across stages (stride 1 -> stride 2) to reconstruct smooth low-frequency GI
- * while strictly preserving normal creases, geometric silhouettes, and depth contours.
+ * Separable Cross-Bilateral Filter Pass.
+ * Expands step footprint across stages using integer dyadic offsets (1, 4 -> 4, 8, 12, 16, 20, 24, 28, 32 px)
+ * to reconstruct smooth low-frequency GI while preserving sharp normal and depth silhouettes.
  */
 float4 SSPTBlurPS(
 	in float2 uvCoord : TEXCOORD0,
@@ -96,22 +96,27 @@ float4 SSPTBlurPS(
 	float3 nCenter = GetSSPTNormal(uvCoord);
 	float3 pCenter = GetViewPosition(projInfo, uvCoord, zCenter);
 
-	// Dyadic step progression: step 1.0 (dense) then step 2.0 (wavelet scale) prevents grid lattice aliasing
-	float stepActual = (stepScale > 1.5f) ? 2.0f : 1.0f;
-	float2 blurDir = (isHorizontal > 0.5f ? float2(ViewportOffset2.x, 0.0f) : float2(0.0f, ViewportOffset2.y)) * stepActual;
-	float planeThreshold = max(zCenter * (0.050f * stepActual), 0.50f * stepActual);
-	float depthTolerance = max(zCenter * (0.080f * stepActual), 0.80f * stepActual);
+	// Integer step scaling: clean integer progression (1, 2, 4, 6)
+	int stepActual = max(1, (int)(stepScale + 0.5f));
+	float2 blurDir = (isHorizontal > 0.5f ? float2(ViewportOffset2.x, 0.0f) : float2(0.0f, ViewportOffset2.y)) * float(stepActual);
 
-	float blurSigma = float(SSPT_RADIUS) * 0.5f;
-	float spatialFalloff = 1.0f / (2.0f * blurSigma * blurSigma);
+	float planeThreshold = max(zCenter * (0.06f * float(stepActual)), 0.6f * float(stepActual));
+	float depthTolerance = max(zCenter * (0.10f * float(stepActual)), 1.0f * float(stepActual));
 
+	float4 centerData = tex2Dlod(source, float4(uvCoord, 0.0f, 0.0f));
 	float totalW = 1.0f;
-	float3 totalC = clamp(tex2Dlod(source, float4(uvCoord, 0.0f, 0.0f)).rgb, 0.0f, 100.0f);
+	float3 totalC = clamp(centerData.rgb, 0.0f, 100.0f);
+
+	// Integer kernel taps: 1..8 with smooth wide Gaussian falloff (sigma = 4.5)
+	static const int kFilterTaps = 8;
+	static const float kSpatialFalloff = 1.0f / (2.0f * 4.5f * 4.5f);
+	float normBase = (stepActual > 1) ? 0.35f : 0.20f;
+	float depthGeomWeight = (stepActual > 1) ? 0.85f : 0.70f;
 
 	[loop]
-	for (int i = 1; i <= SSPT_RADIUS; ++i)
+	for (int i = 1; i <= kFilterTaps; ++i)
 	{
-		float spatialWeight = exp(-float(i * i) * spatialFalloff);
+		float spatialWeight = exp(-float(i * i) * kSpatialFalloff);
 		float2 shift = blurDir * float(i);
 
 		float2 uvA = uvCoord + shift;
@@ -126,10 +131,10 @@ float4 SSPTBlurPS(
 			float planeDistA = abs(dot(nCenter, pA - pCenter));
 			float planeWeightA = BilateralPlaneWeight(planeDistA, planeThreshold);
 			float depthWeightA = BilateralDepthWeight(zA, zCenter, depthTolerance);
-			float geomWeightA = max(planeWeightA, depthWeightA * 0.35f);
+			float geomWeightA = max(planeWeightA, depthWeightA * depthGeomWeight);
 
 			float3 nA = GetSSPTNormal(uvA);
-			float normalWeightA = saturate(0.20f + 0.80f * BilateralNormalWeight(nA, nCenter));
+			float normalWeightA = saturate(normBase + (1.0f - normBase) * BilateralNormalWeight(nA, nCenter));
 			float wA = spatialWeight * geomWeightA * normalWeightA;
 
 			totalC += clamp(tex2Dlod(source, float4(uvA, 0.0f, 0.0f)).rgb, 0.0f, 100.0f) * wA;
@@ -142,10 +147,10 @@ float4 SSPTBlurPS(
 			float planeDistB = abs(dot(nCenter, pB - pCenter));
 			float planeWeightB = BilateralPlaneWeight(planeDistB, planeThreshold);
 			float depthWeightB = BilateralDepthWeight(zB, zCenter, depthTolerance);
-			float geomWeightB = max(planeWeightB, depthWeightB * 0.35f);
+			float geomWeightB = max(planeWeightB, depthWeightB * depthGeomWeight);
 
 			float3 nB = GetSSPTNormal(uvB);
-			float normalWeightB = saturate(0.20f + 0.80f * BilateralNormalWeight(nB, nCenter));
+			float normalWeightB = saturate(normBase + (1.0f - normBase) * BilateralNormalWeight(nB, nCenter));
 			float wB = spatialWeight * geomWeightB * normalWeightB;
 
 			totalC += clamp(tex2Dlod(source, float4(uvB, 0.0f, 0.0f)).rgb, 0.0f, 100.0f) * wB;

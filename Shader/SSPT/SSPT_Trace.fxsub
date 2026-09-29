@@ -157,7 +157,6 @@ float4 SSPTPassPS(in float4 uvCoord : TEXCOORD0, in float3 viewDir : TEXCOORD1) 
 
 						float3 nHit = GetSSPTNormal(rayUV);
 						float cosEmitter = isEmissive ? 1.0f : saturate(dot(-nHit, rayDir));
-						float cosReceiver = saturate(dot(nOrigin, rayDir));
 
 						if (cosEmitter > 0.01f || isEmissive)
 						{
@@ -172,13 +171,15 @@ float4 SSPTPassPS(in float4 uvCoord : TEXCOORD0, in float3 viewDir : TEXCOORD1) 
 							{
 								sampleColor *= SKIN_GI_EMISSION_SCALE;
 							}
+
 							float emitterVis = tex2Dlod(SSGIVisibilityMapSamp, float4(rayUV, 0.0f, 0.0f)).a;
 							float hitDist = length(pSample - pOrigin);
 							float distRatio = saturate(hitDist / maxWorldDistance);
 							float distFade = saturate(1.0f - distRatio);
 							distFade = distFade * distFade * (3.0f - 2.0f * distFade);
 
-							float hitWeight = intersected * cosEmitter * cosReceiver * emitterVis * distFade;
+							// Pure Lambertian Monte Carlo estimator (cosine-weighted ray distribution eliminates duplicate cosReceiver)
+							float hitWeight = intersected * cosEmitter * emitterVis * distFade;
 
 							hitRadiance = sampleColor * hitWeight;
 							break;
