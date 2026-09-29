@@ -265,12 +265,20 @@ def parse_and_add_morphs(filepath, new_morph_names, output_filepath=None):
     
     for new_name in new_morph_names:
         if new_name not in existing_morphs:
-            # Build dummy Group morph (type 0, 0 offsets)
-            panel_id = 3 if any(k in new_name for k in ('Blade', 'Fstop', 'Focal', 'Measure')) else 2
+            # Assign proper panel category based on morph name
+            if any(k in new_name for k in ('Blade', 'Fstop', 'Focal', 'Measure', 'Alpha')):
+                panel_id = 3 # Mouth / Lip (Camera / Alpha G-buffers)
+            elif any(k in new_name for k in ('SSGI', 'GI')):
+                panel_id = 4 # Other (GI controls)
+            elif any(k in new_name for k in ('Shadow', 'PSSM', 'Cascade', 'SSGS', 'SSAO', 'SSDO', 'SSR', 'Outline', 'Contact')):
+                panel_id = 1 # Brows (Shadows & Post-Effects)
+            else:
+                panel_id = 2 # Eyes (Opaque G-buffers)
+
             m_bin = bytearray()
             m_bin.extend(write_string(new_name, encoding))
             m_bin.extend(write_string(new_name, encoding))
-            m_bin.append(panel_id) # Panel: 3 = Mouth/Lip (Camera/DOF), 2 = Eyes
+            m_bin.append(panel_id)
             m_bin.append(0) # Type: 0 = Group
             m_bin.extend(struct.pack('<i', 0)) # Offset count = 0
             
