@@ -8,12 +8,12 @@
 float4 ShadowMapBlurPS(float2 coord : TEXCOORD0, uniform sampler source, uniform float2 offset) : COLOR
 {
 	float totalColor = tex2Dlod(source, float4(coord, 0.0f, 0.0f)).r;
-	float centerDepth = tex2Dlod(Gbuffer8Map, float4(coord, 0.0f, 0.0f)).r;
+	float centerDepth = tex2Dlod(Gbuffer4Map, float4(coord, 0.0f, 0.0f)).r;
 
 	if (centerDepth <= 1e-4f)
 		return totalColor;
 
-	float3 centerNormal = DecodeNormal(tex2Dlod(Gbuffer6Map, float4(coord, 0.0f, 0.0f)).xyz);
+	float3 centerNormal = DecodeNormal(tex2Dlod(Gbuffer2Map, float4(coord, 0.0f, 0.0f)).xyz);
 
 	float totalWeight = 1.0f;
 	const float blurSigma = float(SHADOW_BLUR_COUNT) * 0.5f;
@@ -29,11 +29,11 @@ float4 ShadowMapBlurPS(float2 coord : TEXCOORD0, uniform sampler source, uniform
 		float shadow1 = tex2Dlod(source, float4(offset1, 0.0f, 0.0f)).r;
 		float shadow2 = tex2Dlod(source, float4(offset2, 0.0f, 0.0f)).r;
 
-		float depth1 = tex2Dlod(Gbuffer8Map, float4(offset1, 0.0f, 0.0f)).r;
-		float depth2 = tex2Dlod(Gbuffer8Map, float4(offset2, 0.0f, 0.0f)).r;
+		float depth1 = tex2Dlod(Gbuffer4Map, float4(offset1, 0.0f, 0.0f)).r;
+		float depth2 = tex2Dlod(Gbuffer4Map, float4(offset2, 0.0f, 0.0f)).r;
 
-		float3 normal1 = DecodeNormal(tex2Dlod(Gbuffer6Map, float4(offset1, 0.0f, 0.0f)).xyz);
-		float3 normal2 = DecodeNormal(tex2Dlod(Gbuffer6Map, float4(offset2, 0.0f, 0.0f)).xyz);
+		float3 normal1 = DecodeNormal(tex2Dlod(Gbuffer2Map, float4(offset1, 0.0f, 0.0f)).xyz);
+		float3 normal2 = DecodeNormal(tex2Dlod(Gbuffer2Map, float4(offset2, 0.0f, 0.0f)).xyz);
 
 		float ddiff1 = abs(depth1 - centerDepth) / depthTolerance;
 		float ddiff2 = abs(depth2 - centerDepth) / depthTolerance;

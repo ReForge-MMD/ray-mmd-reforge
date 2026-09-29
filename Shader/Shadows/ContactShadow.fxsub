@@ -21,8 +21,8 @@
 
 float ContactShadowSampleDepth(float2 screenUV)
 {
-	// Gbuffer8.x is the positive linear view-space depth.
-	return abs(tex2Dlod(Gbuffer8Map, float4(screenUV, 0.0f, 0.0f)).x);
+	// Gbuffer4.x is the positive linear view-space depth for opaque geometry.
+	return abs(tex2Dlod(Gbuffer4Map, float4(screenUV, 0.0f, 0.0f)).x);
 }
 
 /**
