@@ -8,10 +8,6 @@ const int ClearStencil = 0;
 
 float mSunLightP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunLight+";>;
 float mSunLightM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunLight-";>;
-float mSunShadowRP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunShadowR+";>;
-float mSunShadowGP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunShadowG+";>;
-float mSunShadowBP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunShadowB+";>;
-float mSunShadowVM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunShadowV-";>;
 float mSSAOP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSAO+";>;
 float mSSAOM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSAO-";>;
 float mSSAORadiusP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSAORadius+";>;
@@ -20,8 +16,6 @@ float mSSDOP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SS
 float mSSDOM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSDO-";>;
 float mSSSSP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSSS+";>;
 float mSSSSM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSSS-";>;
-float mExposureP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "Exposure+";>;
-float mExposureM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "Exposure-";>;
 float mFstopP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "Fstop+";>;
 float mFstopM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "Fstop-";>;
 float mFocalLengthP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "FocalLength+";>;
@@ -44,20 +38,6 @@ float mBloomColorAllSP : CONTROLOBJECT<string name="ray_controller.pmx"; string 
 float mBloomColorAllVP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "BloomColorAllV+";>;
 float mBloomColorAllVM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "BloomColorAllV-";>;
 float mBloomStarFade : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "BloomStarFade";>;
-float mContrastP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "Contrast+";>;
-float mContrastM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "Contrast-";>;
-float mSaturationP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "Saturation+";>;
-float mSaturationM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "Saturation-";>;
-float mGammaP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "Gamma+";>;
-float mGammaM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "Gamma-";>;
-float mColBalanceRP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "BalanceR+";>;
-float mColBalanceGP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "BalanceG+";>;
-float mColBalanceBP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "BalanceB+";>;
-float mColBalanceRM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "BalanceR-";>;
-float mColBalanceGM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "BalanceG-";>;
-float mColBalanceBM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "BalanceB-";>;
-float mTemperatureP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "Temperature+";>;
-float mTemperatureM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "Temperature-";>;
 
 #if SSR_DEBUG
 // SSRDebugController.pmx (Dedicated SSR debug controller)
@@ -287,19 +267,19 @@ float mCgBleachBypassP2: CONTROLOBJECT<string name="ColorGradingController"; str
 float mCgCrossProcessP2: CONTROLOBJECT<string name="ColorGradingController"; string item = "CrossProcess+";>;
 float mCgMonochromeP2 : CONTROLOBJECT<string name="ColorGradingController"; string item = "Monochrome+";>;
 
-// Combined Master / Global Grading Controls
-static float mContrastP_Comb   = max(mContrastP, max(mCgContrastP1, mCgContrastP2));
-static float mContrastM_Comb   = max(mContrastM, max(mCgContrastM1, mCgContrastM2));
-static float mSaturationP_Comb = max(mSaturationP, max(mCgSaturationP1, mCgSaturationP2));
-static float mSaturationM_Comb = max(mSaturationM, max(mCgSaturationM1, mCgSaturationM2));
-static float mGammaP_Comb      = max(mGammaP, max(mCgGammaP1, mCgGammaP2));
-static float mGammaM_Comb      = max(mGammaM, max(mCgGammaM1, mCgGammaM2));
-static float mExposureP_Comb   = max(mExposureP, max(mCgExposureP1, mCgExposureP2));
-static float mExposureM_Comb   = max(mExposureM, max(mCgExposureM1, mCgExposureM2));
+// Master / Global Grading Controls (Driven exclusively by ColorGradingController)
+static float mContrastP_Comb   = max(mCgContrastP1, mCgContrastP2);
+static float mContrastM_Comb   = max(mCgContrastM1, mCgContrastM2);
+static float mSaturationP_Comb = max(mCgSaturationP1, mCgSaturationP2);
+static float mSaturationM_Comb = max(mCgSaturationM1, mCgSaturationM2);
+static float mGammaP_Comb      = max(mCgGammaP1, mCgGammaP2);
+static float mGammaM_Comb      = max(mCgGammaM1, mCgGammaM2);
+static float mExposureP_Comb   = max(mCgExposureP1, mCgExposureP2);
+static float mExposureM_Comb   = max(mCgExposureM1, mCgExposureM2);
 
-// Combined White Balance Controls
-static float mTemperatureP_Comb = max(mTemperatureP, max(mCgTemperatureP1, mCgTemperatureP2));
-static float mTemperatureM_Comb = max(mTemperatureM, max(mCgTemperatureM1, mCgTemperatureM2));
+// White Balance Controls (Driven by ColorGradingController)
+static float mTemperatureP_Comb = max(mCgTemperatureP1, mCgTemperatureP2);
+static float mTemperatureM_Comb = max(mCgTemperatureM1, mCgTemperatureM2);
 static float mTintP             = max(mCgTintP1, mCgTintP2);
 static float mTintM             = max(mCgTintM1, mCgTintM2);
 static float mColorTint         = mTintP - mTintM;
@@ -313,13 +293,13 @@ static float mHueP = max(mCgHueP1, mCgHueP2);
 static float mHueM = max(mCgHueM1, mCgHueM2);
 static float mColorHue = (mHueP - mHueM) * 3.14159265f;
 
-// Combined Color Balance
-static float mColBalanceRP_Comb = max(mColBalanceRP, max(mCgBalanceRP1, mCgBalanceRP2));
-static float mColBalanceRM_Comb = max(mColBalanceRM, max(mCgBalanceRM1, mCgBalanceRM2));
-static float mColBalanceGP_Comb = max(mColBalanceGP, max(mCgBalanceGP1, mCgBalanceGP2));
-static float mColBalanceGM_Comb = max(mColBalanceGM, max(mCgBalanceGM1, mCgBalanceGM2));
-static float mColBalanceBP_Comb = max(mColBalanceBP, max(mCgBalanceBP1, mCgBalanceBP2));
-static float mColBalanceBM_Comb = max(mColBalanceBM, max(mCgBalanceBM1, mCgBalanceBM2));
+// Color Balance (Driven by ColorGradingController)
+static float mColBalanceRP_Comb = max(mCgBalanceRP1, mCgBalanceRP2);
+static float mColBalanceRM_Comb = max(mCgBalanceRM1, mCgBalanceRM2);
+static float mColBalanceGP_Comb = max(mCgBalanceGP1, mCgBalanceGP2);
+static float mColBalanceGM_Comb = max(mCgBalanceGM1, mCgBalanceGM2);
+static float mColBalanceBP_Comb = max(mCgBalanceBP1, mCgBalanceBP2);
+static float mColBalanceBM_Comb = max(mCgBalanceBM1, mCgBalanceBM2);
 
 // Shadows Grading (Lift)
 static float3 mShadowGainP = float3(max(mCgShadowRP1, mCgShadowRP2), max(mCgShadowGP1, mCgShadowGP2), max(mCgShadowBP1, mCgShadowBP2));
@@ -400,7 +380,6 @@ static float mFocalRegion = lerp(0.0, 10.0, mFocalRegionP);
 static float mBladeCount = lerp(10, 5, mBladeCountM);
 static float3 mColorBalanceP = float3(mColBalanceRP_Comb, mColBalanceGP_Comb, mColBalanceBP_Comb);
 static float3 mColorBalanceM = float3(mColBalanceRM_Comb, mColBalanceGM_Comb, mColBalanceBM_Comb);
-static float3 mColorShadowSunP = pow(float3(mSunShadowRP, mSunShadowGP, mSunShadowBP), 2.2f);
 #if WATER_CAUSTICS_ENABLE
 static float mCstIntensityP   = max(mCstIntensityP1, mCstIntensityP2);
 static float mCstIntensityM   = max(mCstIntensityM1, mCstIntensityM2);
