@@ -24,10 +24,11 @@ Requirement :
 * Direct3D 9 With Shader Model 3.0 (ps_3_0)
 * **Powerful GPU recommended** due to advanced shading techniques.
 
-Reforge Exclusive Features (through v1.20.22) :
+Reforge Exclusive Features (through v1.21.0) :
 ------------
 
-**Direct Screen-Space Core**
+**Direct Screen-Space Core & Architecture**
+* **Clean Modular Shader Architecture**: completely reorganized the 54 loose shader files in `Shader/` into 10 domain-specific modular packages (`Core/`, `Lighting/`, `Shadows/`, `Occlusion/`, `GI/`, `SSR/`, `Subsurface/`, `PostProcess/`, `AntiAliasing/`, `textures/`), with clean direct `#include` routing across all 1447 shader references and a structured `ray.conf` with a full Table of Contents.
 * **Direct 1:1 Screen-Space Architecture**: eliminated the heavy hierarchical depth pyramid (Hi-Z) from both the deferred core and SSR pipeline, freeing all pyramid RenderTarget textures in VRAM and removing downsampling passes in favor of direct G-buffer raymarching, SIMD-vectorized SSR marching, 2D DDA, and Newton root-finding.
 * **Octahedral Normal Encoding**: compact and high-precision octahedral representation for unit normal vectors in G-buffer and math pipelines.
 
@@ -53,10 +54,9 @@ Reforge Exclusive Features (through v1.20.22) :
 * **Top-Down Sky Visibility & Heightfield Macro AO**: Snowdrop Engine (GDC 2016) directional horizon search and cone-tracing macro ambient occlusion preventing outdoor skylight and ambient IBL from leaking into covered spaces, under canopies, bridges, roofs, and doorways. Controlled via dedicated `SkyVisibilityController.pmx`.
 * **Ground-Truth Ambient Occlusion (GTAO / GTSO)**: reference XeGTAO cosine horizon integration, Jimenez multi-bounce approximation, temporal history stabilization, and directional bent normals.
 * **Hybrid HBAO / SSDO**: horizon-based and directional occlusion for accurate contact shading.
-* **Contact Shadows**: screen-space contact shadows with depth-discontinuity artifact fixes and continuous penetration-based penumbra.
 
 **Lighting & Shadows**
-* **Variance Shadow Maps (VSM)**: moment-filtered cascaded directional sun shadows using Chebyshev's inequality (Donnelly & Lauritzen 2006) with hardware moment filtering, seamless cascade blending, and tunable light bleeding reduction.
+* **Percentage-Closer Soft Shadows (PCSS) & Contact Shadows**: physically based contact-hardening directional soft shadows with dynamic blocker search, Poisson-disk TAA-jittered filtering, and angular sun radius penumbra expansion. Paired with Screen-Space Contact Shadows (SSCS) resolving sub-millimeter ground and geometry contacts, seamless 4-cascade cross-blending (`CascadeCrossBlend`), and adaptive bias eliminating close-up macro staircasing and light leaks.
 * **Directional Water Caustics**: real-time focused underwater light bands and wave curvature flux concentration with chromatic dispersion and a dedicated controller (`CausticsController.pmx`).
 * **Screen-Space Global Shadows (SSGS)**: long-range directional raymarched shadows with distance-adaptive soft penumbra expansion, grounding characters and geometry without shadow map dependence.
 * **Volumetric Atmosphere & Dynamic Clouds 2.0**: SA_DirectX 3.0 cumulus cloudscapes with Frostbite/Nubis lighting, Beer-Powder scattering, Silver Lining, planetary horizon curvature, and **Adaptive Empty Space Skipping** (2.25x stride with 0.75x boundary refinement) for high-framerate rendering in clear sky regions without edge slicing or visual quality loss.
