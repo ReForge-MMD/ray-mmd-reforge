@@ -7,9 +7,9 @@
 #include "../../shader/Lighting/ibl.fxsub"
 #include "../../shader/Lighting/PhaseFunctions.fxsub"
 
-#include "shader/Core/common.fxsub"
+#include "shader/common.fxsub"
 #include "shader/atmospheric.fxsub"
-#include "shader/Lighting/skylighting.fxsub"
+#include "shader/skylighting.fxsub"
 
 float mEnvDiffLightP : CONTROLOBJECT<string name="(self)"; string item = "EnvDiffLight+";>;
 float mEnvDiffLightM : CONTROLOBJECT<string name="(self)"; string item = "EnvDiffLight-";>;

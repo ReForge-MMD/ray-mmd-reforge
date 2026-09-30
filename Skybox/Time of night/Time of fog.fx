@@ -6,7 +6,7 @@
 #include "../../shader/Core/gbuffer_sampler.fxsub"
 #include "../../shader/Lighting/PhaseFunctions.fxsub"
 
-#include "shader/Core/common.fxsub"
+#include "shader/common.fxsub"
 #include "shader/atmospheric.fxsub"
 
 void ScatteringFogVS(

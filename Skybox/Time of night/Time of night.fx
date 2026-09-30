@@ -4,7 +4,7 @@
 #include "../../shader/Core/common.fxsub"
 #include "../../shader/Lighting/PhaseFunctions.fxsub"
 
-#include "shader/Core/common.fxsub"
+#include "shader/common.fxsub"
 #include "shader/stars.fxsub"
 #include "shader/atmospheric.fxsub"
 
