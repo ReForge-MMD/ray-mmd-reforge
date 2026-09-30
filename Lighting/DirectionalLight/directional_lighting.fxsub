@@ -131,11 +131,6 @@ static const float4x4 lightCropParams = CreateLightCropParams(matLightViewFromCa
 
 
 
-float2 RotateSample(float2 pos, float2 rotation)
-{
-	return float2(pos.x * rotation.x - pos.y * rotation.y, pos.y * rotation.x + pos.x * rotation.y);
-}
-
 // Vogel-disk PCF: 12 rotated taps replace the 5x5 (25-tap) binomial grid at the
 // same footprint. The IGN rotation that was previously computed and discarded now
 // actually decorrelates the pattern between pixels.
