@@ -8,6 +8,10 @@ const int ClearStencil = 0;
 
 float mSunLightP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunLight+";>;
 float mSunLightM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunLight-";>;
+float mSunShadowRP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunShadowR+";>;
+float mSunShadowGP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunShadowG+";>;
+float mSunShadowBP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunShadowB+";>;
+float mSunShadowVM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunShadowV-";>;
 float mSSAOP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSAO+";>;
 float mSSAOM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSAO-";>;
 float mSSAORadiusP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSAORadius+";>;
@@ -396,6 +400,7 @@ static float mFocalRegion = lerp(0.0, 10.0, mFocalRegionP);
 static float mBladeCount = lerp(10, 5, mBladeCountM);
 static float3 mColorBalanceP = float3(mColBalanceRP_Comb, mColBalanceGP_Comb, mColBalanceBP_Comb);
 static float3 mColorBalanceM = float3(mColBalanceRM_Comb, mColBalanceGM_Comb, mColBalanceBM_Comb);
+static float3 mColorShadowSunP = pow(float3(mSunShadowRP, mSunShadowGP, mSunShadowBP), 2.2f);
 #if WATER_CAUSTICS_ENABLE
 static float mCstIntensityP   = max(mCstIntensityP1, mCstIntensityP2);
 static float mCstIntensityM   = max(mCstIntensityM1, mCstIntensityM2);

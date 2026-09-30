@@ -215,6 +215,10 @@ void ShadingMaterial(MaterialParam material, float3 V, float3 L, float2 coord, o
 	bool isSkinMat = (material.lightModel == SHADINGMODELID_SKIN || material.lightModel == SHADINGMODELID_SUBSURFACE);
 	diffuse = (baseDiffuse + subsurface * shadow) * lightColor;
 
+#if SUN_SHADOW_QUALITY
+	diffuse += mColorShadowSunP * (1.0f - shadow);
+#endif
+
 #if WATER_CAUSTICS_ENABLE
 	if (material.lightModel != SHADINGMODELID_GLASS)
 	{
@@ -311,6 +315,14 @@ void ShadingImageBasedLighting(sampler source, MaterialParam material, float4 sc
 		float luma = dot(diffuse, float3(0.299f, 0.587f, 0.114f));
 		diffuse *= floor(luma * 2.0f + 0.5f) / max(luma * 2.0f, 1e-4f);
 	}
+#endif
+
+#if SUN_LIGHT_ENABLE && SUN_SHADOW_QUALITY
+	float shadowDepth = tex2Dlod(ShadowMapSamp, float4(coord, 0.0f, 0.0f)).r;
+	shadowDepth = min(shadowDepth, saturate(dot(material.normal, L) * 3.0f));
+	float envShadow = lerp(1.0f, shadowDepth, mSunShadowVM);
+	diffuse *= envShadow;
+	specular *= envShadow * envShadow * envShadow;
 #endif
 #endif
 }
