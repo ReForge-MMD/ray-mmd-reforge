@@ -1,9 +1,9 @@
 #include "ray.conf"
 #include "ray_advanced.conf"
-#include "shader/common.fxsub"
-#include "shader/math.fxsub"
-#include "shader/gbuffer.fxsub"
-#include "shader/gbuffer_sampler.fxsub"
+#include "shader/Core/common.fxsub"
+#include "shader/Core/math.fxsub"
+#include "shader/Core/gbuffer.fxsub"
+#include "shader/Core/gbuffer_sampler.fxsub"
 
 #if CONTACT_SHADOW_QUALITY >= 1 || SSGS_QUALITY >= 1
 #include "shader/Shadows/ContactShadow.fxsub"

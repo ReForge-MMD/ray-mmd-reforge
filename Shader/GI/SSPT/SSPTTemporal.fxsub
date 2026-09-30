@@ -1,7 +1,7 @@
 #ifndef RAY_MMD_SSPT_TEMPORAL_FXSUB
 #define RAY_MMD_SSPT_TEMPORAL_FXSUB
 
-#include "shader/SSPT/SSPT_Common.fxsub"
+#include "shader/GI/SSPT/SSPT_Common.fxsub"
 
 struct SSPTTemporalOutput
 {

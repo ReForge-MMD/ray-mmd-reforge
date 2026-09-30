@@ -1,7 +1,7 @@
 #include "../ray.conf"
-#include "../shader/common.fxsub"
+#include "../shader/Core/common.fxsub"
 
-#if SSGI_RECIEVER_ALPHA_MAP_ENABLE
+#if SSAO_RECIEVER_ALPHA_MAP_ENABLE
 texture DiffuseMap: MATERIALTEXTURE;
 sampler DiffuseMapSamp = sampler_state {
 	texture = <DiffuseMap>;
@@ -10,7 +10,7 @@ sampler DiffuseMapSamp = sampler_state {
 };
 #endif
 
-#if SSGI_VISIBILITY_ENABLE
+#if SSAO_VISIBILITY_ENABLE
 void DepthObjectVS(
 	in float4 Position : POSITION,
 	in float2 Texcoord : TEXCOORD0,
@@ -23,7 +23,7 @@ void DepthObjectVS(
 
 float4 DepthObjectPS(float3 coord : TEXCOORD0) : COLOR
 {
-#if SSGI_RECIEVER_ALPHA_ENABLE
+#if SSAO_RECIEVER_ALPHA_ENABLE
 	// Exclusion clips only apply when the preset is not suppressing this material:
 	// clipped pixels are never written and keep the buffer's cleared visibility
 	// (1.0), silently ignoring presets <= 0 on additive / low-alpha materials.
@@ -32,7 +32,7 @@ float4 DepthObjectPS(float3 coord : TEXCOORD0) : COLOR
 	{
 		clip(!opadd - 0.001f);
 		float alpha = MaterialDiffuse.a;
-#if SSGI_RECIEVER_ALPHA_MAP_ENABLE
+#if SSAO_RECIEVER_ALPHA_MAP_ENABLE
 		if (use_texture) alpha *= tex2D(DiffuseMapSamp, coord.xy).a;
 #endif
 		clip(alpha - 0.01);

@@ -2,4 +2,4 @@
 
 static const float selfVisibility = 1.0; // SSR self-reflection suppression (1.0 = never self-bounce)
 
-#include "../shader/SSRSelfVisibility.fxsub"
+#include "../shader/SSR/SSRSelfVisibility.fxsub"

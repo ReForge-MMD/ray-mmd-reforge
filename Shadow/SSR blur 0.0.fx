@@ -4,4 +4,4 @@
 
 static const float blurAmount = 0.0; // SSR receiver blur boost (0.0 = base PBR, 1.0 = full diffuse blur)
 
-#include "../shader/SSRBlur.fxsub"
+#include "../shader/SSR/SSRBlur.fxsub"

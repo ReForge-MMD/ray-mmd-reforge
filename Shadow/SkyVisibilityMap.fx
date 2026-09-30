@@ -3,4 +3,4 @@
 
 static const float CasterAlphaThreshold = 0.5;
 
-#include "../shader/SkyVisibilityPass.fxsub"
+#include "../shader/Occlusion/SkyVisibilityPass.fxsub"

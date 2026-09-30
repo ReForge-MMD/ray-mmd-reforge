@@ -9,9 +9,9 @@
 #define RAY_MMD_POST_PROCESS_SSGI_FXSUB
 
 #if GI_ENABLE == 3
-#	include "shader/SSPT/SSPT_Main.fxsub"
+#	include "shader/GI/SSPT/SSPT_Main.fxsub"
 #else
-#	include "shader/SSGI/SSGI_Main.fxsub"
+#	include "shader/GI/SSGI/SSGI_Main.fxsub"
 #endif
 
 #endif // RAY_MMD_POST_PROCESS_SSGI_FXSUB

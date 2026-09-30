@@ -1,5 +1,5 @@
 #if SKY_VISIBILITY_ENABLE
-#	include "shader/SkyVisibility.fxsub"
+#	include "shader/Occlusion/SkyVisibility.fxsub"
 #endif
 
 #if SUN_LIGHT_ENABLE

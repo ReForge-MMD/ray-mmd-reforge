@@ -4,16 +4,16 @@
 
 #include "Time of day.conf"
 
-#include "../../shader/math.fxsub"
-#include "../../shader/common.fxsub"
-#include "../../shader/phasefunctions.fxsub"
-#include "../../shader/gbuffer.fxsub"
-#include "../../shader/gbuffer_sampler.fxsub"
-#include "../../shader/ibl.fxsub"
+#include "../../shader/Core/math.fxsub"
+#include "../../shader/Core/common.fxsub"
+#include "../../shader/Lighting/PhaseFunctions.fxsub"
+#include "../../shader/Core/gbuffer.fxsub"
+#include "../../shader/Core/gbuffer_sampler.fxsub"
+#include "../../shader/Lighting/ibl.fxsub"
 
-#include "shader/common.fxsub"
+#include "shader/Core/common.fxsub"
 #include "shader/atmospheric.fxsub"
-#include "shader/SH.fxsub"
+#include "shader/Lighting/SH.fxsub"
 
 float mEnvDiffLightP : CONTROLOBJECT<string name="(self)"; string item = "EnvDiffLight+";>;
 float mEnvDiffLightM : CONTROLOBJECT<string name="(self)"; string item = "EnvDiffLight-";>;

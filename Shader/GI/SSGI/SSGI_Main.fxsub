@@ -9,11 +9,11 @@
 #ifndef RAY_MMD_SSGI_MAIN_FXSUB
 #define RAY_MMD_SSGI_MAIN_FXSUB
 
-#include "shader/SSGI/SSGI_Common.fxsub"
-#include "shader/SSGI/SSGI_Trace.fxsub"
-#include "shader/SSGI/SSGI_Filter.fxsub"
-#include "shader/SSGI/SSGITemporal.fxsub"
-#include "shader/SSGI/SSGI_Resolve.fxsub"
+#include "shader/GI/SSGI/SSGI_Common.fxsub"
+#include "shader/GI/SSGI/SSGI_Trace.fxsub"
+#include "shader/GI/SSGI/SSGI_Filter.fxsub"
+#include "shader/GI/SSGI/SSGITemporal.fxsub"
+#include "shader/GI/SSGI/SSGI_Resolve.fxsub"
 
 // Export standard pass bindings for ray.fx technique pipeline
 #define SSGIPassPS SSGIPassPS

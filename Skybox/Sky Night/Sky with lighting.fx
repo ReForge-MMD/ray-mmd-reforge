@@ -1,9 +1,9 @@
 #include "Sky with box.conf"
-#include "../../shader/math.fxsub"
-#include "../../shader/common.fxsub"
-#include "../../shader/gbuffer.fxsub"
-#include "../../shader/gbuffer_sampler.fxsub"
-#include "../../shader/ibl.fxsub"
+#include "../../shader/Core/math.fxsub"
+#include "../../shader/Core/common.fxsub"
+#include "../../shader/Core/gbuffer.fxsub"
+#include "../../shader/Core/gbuffer_sampler.fxsub"
+#include "../../shader/Lighting/ibl.fxsub"
 
 float mEnvRotateX : CONTROLOBJECT<string name="(self)"; string item = "EnvRotateX";>;
 float mEnvRotateY : CONTROLOBJECT<string name="(self)"; string item = "EnvRotateY";>;

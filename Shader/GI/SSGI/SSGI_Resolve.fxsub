@@ -1,22 +1,22 @@
 /**
- * Ray-MMD ReForge: Screen-Space Path Tracing (SSPT / RTGI) Resolve & Composite
+ * Ray-MMD ReForge: Screen-Space Global Illumination (SSGI) Resolve & Composite
  *
- * Module: SSPT_Resolve.fxsub
- * Independent PBR Diffuse Multi-Bounce Composite & Material Response Pass based on qUINT RTGI.
- * Composites path-traced irradiance, ambient occlusion, material BRDFs, and energy-conserving bounces.
+ * Module: SSGI_Resolve.fxsub
+ * Independent PBR Diffuse Multi-Bounce Composite & Material Response Pass.
+ * Applies energy-conserving multi-bounce interreflection, shading model modulation, and occlusion weighting.
  */
 
-#ifndef RAY_MMD_SSPT_RESOLVE_FXSUB
-#define RAY_MMD_SSPT_RESOLVE_FXSUB
+#ifndef RAY_MMD_SSGI_RESOLVE_FXSUB
+#define RAY_MMD_SSGI_RESOLVE_FXSUB
 
-#include "shader/SSPT/SSPT_Common.fxsub"
+#include "shader/GI/SSGI/SSGI_Common.fxsub"
 
 /**
- * Composites denoised indirect path-traced GI with material albedo, BRDF shading models, and occlusion.
+ * Composites denoised indirect GI irradiance with material albedo, BRDF shading models, and occlusion.
  */
-float4 SSPTFinalCombinePS(in float2 uvCoord : TEXCOORD0, in float3 viewDir : TEXCOORD1) : COLOR
+float4 SSGIFinalCombinePS(in float2 uvCoord : TEXCOORD0, in float3 viewDir : TEXCOORD1) : COLOR
 {
-	float zCenter = GetSSPTLinearDepth(uvCoord);
+	float zCenter = GetSSGILinearDepth(uvCoord);
 	MaterialParam mat;
 	DecodeGbuffer(
 		tex2Dlod(Gbuffer5Map, float4(uvCoord, 0.0f, 0.0f)),
@@ -25,7 +25,7 @@ float4 SSPTFinalCombinePS(in float2 uvCoord : TEXCOORD0, in float3 viewDir : TEX
 		tex2Dlod(Gbuffer8Map, float4(uvCoord, 0.0f, 0.0f)),
 		mat);
 
-	if (!(zCenter > 1e-4f && zCenter < SSPT_MAX_DEPTH))
+	if (!(zCenter > 1e-4f && zCenter < 1000.0f))
 		return 0.0f;
 
 	// Glass is a purely refractive/specular dielectric: no diffuse GI absorption or emission
@@ -35,7 +35,7 @@ float4 SSPTFinalCombinePS(in float2 uvCoord : TEXCOORD0, in float3 viewDir : TEX
 	float3 rawGi = tex2Dlod(SSGIMapSamp, float4(uvCoord, 0.0f, 0.0f)).rgb;
 	rawGi = clamp(rawGi, 0.0f, 100.0f);
 
-	// Pre-albedo gathered irradiance, reused for indirect specular
+	// Pre-albedo gathered irradiance, reused below as a local radiance field for indirect specular
 	float3 gatherIrradiance = rawGi;
 
 	bool isSkin = (mat.lightModel == SHADINGMODELID_SKIN || mat.lightModel == SHADINGMODELID_SUBSURFACE);
@@ -43,7 +43,6 @@ float4 SSPTFinalCombinePS(in float2 uvCoord : TEXCOORD0, in float3 viewDir : TEX
 #if SSDO_QUALITY > 0
 	float rawAO = tex2Dlod(SSDOMapSamp, float4(uvCoord, 0.0f, 0.0f)).w;
 	float occlusion = (mat.lightModel == SHADINGMODELID_GLASS) ? 1.0f : rawAO;
-	occlusion = pow(saturate(occlusion), SSPT_AO_AMOUNT);
 	// Skin SSS diffuses light into cavities, receiving softened linear AO instead of quadratic crevice absorption
 	occlusion = isSkin ? lerp(1.0f, occlusion, SKIN_AO_STRENGTH) : (occlusion * occlusion);
 #else
@@ -56,8 +55,17 @@ float4 SSPTFinalCombinePS(in float2 uvCoord : TEXCOORD0, in float3 viewDir : TEX
 	[branch]
 	if (isSkin)
 	{
+		// Dermal absorption: the dermal albedo clamp in DecodeGbuffer already caps how
+		// much light skin reflects (the "small percent"), so reception must stay
+		// near-linear like every other surface - a stronger Reinhard coefficient here
+		// saturated skin under SSGI+ and cancelled the boost entirely.
 		rawGi = (rawGi / (1.0f + rawGi * 0.05f)) * mat.albedo;
+		// Brightness compensation: recover the photometric loss, capped at +10%
 		rawGi *= 1.0f + SKIN_GI_COMPENSATION * saturate(dot(rawGi, float3(0.299f, 0.587f, 0.114f)));
+	}
+	else if (mat.lightModel == SHADINGMODELID_GLASS)
+	{
+		rawGi *= max(0.02f, mat.albedo) * (1.0f - saturate(pow(1.0f - NdV, 5.0f))) * mat.alpha;
 	}
 	else if (mat.lightModel == SHADINGMODELID_CLOTH)
 	{
@@ -69,19 +77,22 @@ float4 SSPTFinalCombinePS(in float2 uvCoord : TEXCOORD0, in float3 viewDir : TEX
 	}
 	else
 	{
+		// CEL/TONEBASED included: no luma quantization here - bounced GI is
+		// dim (luma ~0.05-0.15) and a coarse step ladder zeroed it entirely,
+		// which read as "SSGI does nothing on toon materials". The double
+		// bilateral blur already keeps GI low-frequency enough not to smear
+		// the cel bands; the flat shadow fill comes from the ramp itself
 		rawGi = (rawGi / (1.0f + rawGi * 0.05f)) * mat.albedo;
 	}
 
-	// Energy-conserving multi-bounce interreflection
-	// Skin features high internal scattering and dermal diffuse bounce; physical albedo response
-	// prevents skin from falling into unnatural darkness compared to surrounding fabrics and geometry.
-	float bounceScale = isSkin ? 2.2f : 1.85f;
-	float bounceDenom = isSkin ? 0.5f : 0.6f;
-	float3 multiBounce = 1.0f + (mat.albedo * bounceScale) / max(1.0f - mat.albedo * bounceDenom, 0.1f);
+#if GI_ENABLE >= 2
+	float3 multiBounce = isSkin ? (1.0f + (mat.albedo * 2.2f) / max(1.0f - mat.albedo * 0.5f, 0.1f)) : (1.0f + (mat.albedo * 1.85f) / max(1.0f - mat.albedo * 0.6f, 0.1f));
 	rawGi *= multiBounce;
+#endif
 
 #if SSGI_SPECULAR_GI
-	// Rough specular indirect: Fresnel-weighted slice of gathered irradiance
+	// Rough specular indirect: Fresnel(F0)-weighted slice of the gathered irradiance.
+	// Fades out on mirror-smooth surfaces (SSR covers those) and is skipped for glass/emissive/cloth models.
 	float3 specGi = 0.0f;
 	if (mat.lightModel != SHADINGMODELID_GLASS && mat.lightModel != SHADINGMODELID_EMISSIVE && mat.lightModel != SHADINGMODELID_CLOTH)
 	{
@@ -99,4 +110,4 @@ float4 SSPTFinalCombinePS(in float2 uvCoord : TEXCOORD0, in float3 viewDir : TEX
 #endif
 }
 
-#endif // RAY_MMD_SSPT_RESOLVE_FXSUB
+#endif // RAY_MMD_SSGI_RESOLVE_FXSUB

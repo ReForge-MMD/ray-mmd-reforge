@@ -4,4 +4,4 @@
 
 static const float visibility = 0.2; // SSR visibility
 
-#include "../shader/SSRVisibility.fxsub"
+#include "../shader/SSR/SSRVisibility.fxsub"

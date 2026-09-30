@@ -495,44 +495,44 @@ static float mCausticsSpeedScale = lerp(lerp(1.0f, 2.5f, mCstSpeedP), 0.1f, mCst
 static float mCausticsDispScale  = lerp(lerp(1.0f, 3.0f, mCstDispersionP), 0.0f, mCstDispersionM);
 #endif
 
-#include "shader/math.fxsub"
-#include "shader/common.fxsub"
-#include "shader/textures.fxsub"
+#include "shader/Core/math.fxsub"
+#include "shader/Core/common.fxsub"
+#include "shader/Core/textures.fxsub"
 #if (AA_QUALITY == 6) || POST_MOTION_BLUR_ENABLE || (GI_ENABLE > 0)
-#	include "shader/PostProcessMatrix.fxsub"
+#	include "shader/PostProcess/PostProcessMatrix.fxsub"
 #endif
-#include "shader/gbuffer.fxsub"
-#include "shader/ibl.fxsub"
-#include "shader/BRDF.fxsub"
-#include "shader/ColorGrading.fxsub"
+#include "shader/Core/gbuffer.fxsub"
+#include "shader/Lighting/ibl.fxsub"
+#include "shader/Lighting/BRDF.fxsub"
+#include "shader/PostProcess/ColorGrading.fxsub"
 #if SUN_SHADOW_QUALITY && SUN_LIGHT_ENABLE
 #	include "shader/Shadows/ShadowMapGen.fxsub"
 #	include "shader/Shadows/ShadowBilateralBlur.fxsub"
 #endif
-#include "shader/ShadingMaterials.fxsub"
+#include "shader/Lighting/ShadingMaterials.fxsub"
 
 
 
 #if SSDO_QUALITY && (IBL_QUALITY || SUN_LIGHT_ENABLE)
 #if SSAO_TYPE == 0
-#	include "shader/PostProcessOcclusion.fxsub"
+#	include "shader/Occlusion/PostProcessOcclusion.fxsub"
 #elif SSAO_TYPE == 1
-#	include "shader/PostProcessOcclusionHBAO.fxsub"
+#	include "shader/Occlusion/PostProcessOcclusionHBAO.fxsub"
 #elif SSAO_TYPE == 2
-#	include "shader/PostProcessOcclusionGTAO.fxsub"
+#	include "shader/Occlusion/PostProcessOcclusionGTAO.fxsub"
 #endif
 #endif
 
 #if SSSS_QUALITY
-#	include "shader/PostProcessScattering.fxsub"
+#	include "shader/Subsurface/PostProcessScattering.fxsub"
 #endif
 
 #if OUTLINE_QUALITY == 2
-#	include "shader/EdgeLineAA.fxsub"
+#	include "shader/AntiAliasing/EdgeLineAA.fxsub"
 #endif
 
 #if TOON_ENABLE == 2
-#	include "shader/PostProcessDiffusion.fxsub"
+#	include "shader/PostProcess/PostProcessDiffusion.fxsub"
 #endif
 
 #if SSR_QUALITY
@@ -540,7 +540,7 @@ static float mCausticsDispScale  = lerp(lerp(1.0f, 3.0f, mCstDispersionP), 0.0f,
 #endif
 
 #if GI_ENABLE
-#	include "shader/PostProcessSSGI.fxsub"
+#	include "shader/GI/SSGI/PostProcessSSGI.fxsub"
 #endif
 
 #ifndef BOKEH_MODE
@@ -548,51 +548,51 @@ static float mCausticsDispScale  = lerp(lerp(1.0f, 3.0f, mCstDispersionP), 0.0f,
 #endif
 
 #if BOKEH_MODE == 1
-#	include "shader/PostProcessBokeh.fxsub"
+#	include "shader/PostProcess/PostProcessBokeh.fxsub"
 #elif BOKEH_MODE == 2
-#	include "shader/PostProcessHexagonalBokeh.fxsub"
+#	include "shader/PostProcess/PostProcessHexagonalBokeh.fxsub"
 #endif
 
 #if HDR_EYE_ADAPTATION
-#	include "shader/PostProcessEyeAdaptation.fxsub"
+#	include "shader/PostProcess/PostProcessEyeAdaptation.fxsub"
 #endif
 
 #if HDR_STAR_MODE
-#	include "shader/PostProcessLensflare.fxsub"
+#	include "shader/PostProcess/PostProcessLensflare.fxsub"
 #endif
 
 #if HDR_FLARE_MODE
-#	include "shader/PostProcessGhost.fxsub"
+#	include "shader/PostProcess/PostProcessGhost.fxsub"
 #endif
 
 #if HDR_BLOOM_MODE
-#	include "shader/PostProcessBloom.fxsub"
+#	include "shader/PostProcess/PostProcessBloom.fxsub"
 #endif
 
-#include "shader/PostProcessHDR.fxsub"
+#include "shader/PostProcess/PostProcessHDR.fxsub"
 
 #if AA_QUALITY == 1
-#	include "shader/FXAA3.fxsub"
+#	include "shader/AntiAliasing/FXAA3.fxsub"
 #endif
 
 #if AA_QUALITY >= 2 && AA_QUALITY <= 5
-#	include "shader/SMAA.fxsub"
+#	include "shader/AntiAliasing/SMAA.fxsub"
 #endif
 
 #if AA_QUALITY == 6
-#	include "shader/TAA.fxsub"
+#	include "shader/AntiAliasing/TAA.fxsub"
 #endif
 
 #if AA_QUALITY == 7
-#	include "shader/DLAA.fxsub"
+#	include "shader/AntiAliasing/DLAA.fxsub"
 #endif
 
 #if POST_MOTION_BLUR_ENABLE
-#	include "shader/PostProcessMotionBlur.fxsub"
+#	include "shader/PostProcess/PostProcessMotionBlur.fxsub"
 #endif
 
 #if POST_SHARPEN_ENABLE
-#	include "shader/PostProcessSharpen.fxsub"
+#	include "shader/PostProcess/PostProcessSharpen.fxsub"
 #endif
 
 

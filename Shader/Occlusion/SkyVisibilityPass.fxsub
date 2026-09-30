@@ -3,8 +3,8 @@
 
 #include "../ray.conf"
 #include "../ray_advanced.conf"
-#include "../shader/math.fxsub"
-#include "../shader/common.fxsub"
+#include "../shader/Core/math.fxsub"
+#include "../shader/Core/common.fxsub"
 
 #if CASTER_ALPHA_MAP_ENABLE
 texture DiffuseMap: MATERIALTEXTURE;

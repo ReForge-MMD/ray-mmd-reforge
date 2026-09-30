@@ -9,8 +9,8 @@
 #ifndef RAY_MMD_SSGI_TRACE_FXSUB
 #define RAY_MMD_SSGI_TRACE_FXSUB
 
-#include "shader/SSGI/SSGI_Common.fxsub"
-#include "shader/BilateralCommon.fxsub"
+#include "shader/GI/SSGI/SSGI_Common.fxsub"
+#include "shader/Core/BilateralCommon.fxsub"
 
 #if IBL_QUALITY
 /**

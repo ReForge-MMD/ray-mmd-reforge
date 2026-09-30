@@ -4,4 +4,4 @@
 
 static const float visibility = 0.6; // SSAO visibility
 
-#include "../shader/SSAOVisibility.fxsub"
+#include "../shader/Occlusion/SSAOVisibility.fxsub"

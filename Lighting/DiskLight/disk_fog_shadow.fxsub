@@ -1,7 +1,7 @@
 #include "../../ray.conf"
 #include "../../ray_advanced.conf"
-#include "../../shader/math.fxsub"
-#include "../../shader/common.fxsub"
+#include "../../shader/Core/math.fxsub"
+#include "../../shader/Core/common.fxsub"
 #include "../../shader/Shadows/ShadowCommon.fxsub"
 
 float mAngleP : CONTROLOBJECT<string name="(OffscreenOwner)"; string item = "Angle+";>;

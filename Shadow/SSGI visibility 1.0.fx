@@ -4,4 +4,4 @@
 
 static const float visibility = 1.0; // SSGI visibility
 
-#include "../shader/SSGIVisibility.fxsub"
+#include "../shader/GI/SSGI/SSGIVisibility.fxsub"

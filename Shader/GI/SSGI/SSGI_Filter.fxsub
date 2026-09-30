@@ -9,8 +9,8 @@
 #ifndef RAY_MMD_SSGI_FILTER_FXSUB
 #define RAY_MMD_SSGI_FILTER_FXSUB
 
-#include "shader/SSGI/SSGI_Common.fxsub"
-#include "shader/BilateralCommon.fxsub"
+#include "shader/GI/SSGI/SSGI_Common.fxsub"
+#include "shader/Core/BilateralCommon.fxsub"
 
 /**
  * Geometry-aware radiance outlier clamp and stochastic speckle prefilter.

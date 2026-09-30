@@ -10,7 +10,7 @@
 #define RAY_MMD_SSR_FILTER_FXSUB
 
 #include "shader/SSR/SSR_Common.fxsub"
-#include "shader/BilateralCommon.fxsub"
+#include "shader/Core/BilateralCommon.fxsub"
 
 /**
  * 5-Tap Separable Gaussian Filter for specular lobe footprint simulation.

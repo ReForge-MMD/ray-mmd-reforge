@@ -1,6 +1,6 @@
 #include "Sky with box.conf"
-#include "../../shader/math.fxsub"
-#include "../../shader/common.fxsub"
+#include "../../shader/Core/math.fxsub"
+#include "../../shader/Core/common.fxsub"
 
 float mEnvRotateX : CONTROLOBJECT<string name="(self)"; string item = "EnvRotateX";>;
 float mEnvRotateY : CONTROLOBJECT<string name="(self)"; string item = "EnvRotateY";>;

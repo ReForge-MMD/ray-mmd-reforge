@@ -1,11 +1,11 @@
 #include "../../ray.conf"
 #include "../../ray_advanced.conf"
-#include "../../shader/math.fxsub"
-#include "../../shader/common.fxsub"
+#include "../../shader/Core/math.fxsub"
+#include "../../shader/Core/common.fxsub"
 #include "../../shader/Shadows/ShadowCommon.fxsub"
-#include "../../shader/gbuffer.fxsub"
-#include "../../shader/gbuffer_sampler.fxsub"
-#include "../../shader/PhaseFunctions.fxsub"
+#include "../../shader/Core/gbuffer.fxsub"
+#include "../../shader/Core/gbuffer_sampler.fxsub"
+#include "../../shader/Lighting/PhaseFunctions.fxsub"
 
 float mR : CONTROLOBJECT<string name="(self)"; string item="R+";>;
 float mG : CONTROLOBJECT<string name="(self)"; string item="G+";>;

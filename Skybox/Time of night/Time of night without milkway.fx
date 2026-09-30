@@ -1,10 +1,10 @@
 #include "Time of night.conf"
 
-#include "../../shader/math.fxsub"
-#include "../../shader/common.fxsub"
-#include "../../shader/phasefunctions.fxsub"
+#include "../../shader/Core/math.fxsub"
+#include "../../shader/Core/common.fxsub"
+#include "../../shader/Lighting/PhaseFunctions.fxsub"
 
-#include "shader/common.fxsub"
+#include "shader/Core/common.fxsub"
 #include "shader/stars.fxsub"
 #include "shader/atmospheric.fxsub"
 

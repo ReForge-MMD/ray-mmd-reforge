@@ -2,4 +2,4 @@
 
 static const float reflectVisibility = 0.4; // SSR reflect visibility
 
-#include "../shader/SSRReflectVisibility.fxsub"
+#include "../shader/SSR/SSRReflectVisibility.fxsub"

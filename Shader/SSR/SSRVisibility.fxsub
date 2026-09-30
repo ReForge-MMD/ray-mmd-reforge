@@ -1,5 +1,5 @@
 #include "../ray.conf"
-#include "../shader/common.fxsub"
+#include "../shader/Core/common.fxsub"
 
 #if SSR_RECIEVER_ALPHA_MAP_ENABLE
 texture DiffuseMap: MATERIALTEXTURE;

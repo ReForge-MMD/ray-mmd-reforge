@@ -1,5 +1,5 @@
 #include "../ray.conf"
-#include "../shader/common.fxsub"
+#include "../shader/Core/common.fxsub"
 
 /**
  * Ray-MMD ReForge: SSR Receiver Blur Mask
