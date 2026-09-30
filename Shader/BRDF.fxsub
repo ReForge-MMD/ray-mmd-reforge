@@ -978,9 +978,9 @@ float2x3 SurfaceEnergy(MaterialParam material, float3 N, float3 L, float3 V, flo
 
 	float roughness = max(SmoothnessToRoughness(material.smoothness), 0.001);
 	roughness = FilterGeometricRoughness(roughness, N);
-	float occlusion = ComputeAmbientMicroOcclusion(saturate(nl), material.visibility) * shadow;
-
-	float diffuseOcclusion = isSkin ? lerp(1.0f, occlusion, SKIN_AO_STRENGTH) : occlusion;
+	float microAO = ComputeAmbientMicroOcclusion(saturate(nl), material.visibility);
+	float diffuseAO = isSkin ? lerp(1.0f, microAO, SKIN_AO_STRENGTH) : microAO;
+	float diffuseOcclusion = diffuseAO * shadow;
 
 #if TOON_ENABLE
 	float3 diffuse = 0;
@@ -1035,7 +1035,8 @@ float2x3 SurfaceEnergy(MaterialParam material, float3 N, float3 L, float3 V, flo
 
 	// saturate(nl): the cel path can reach here with nl <= 0 (back-side deep
 	// shadow band) and must not pick up negative specular
-	return float2x3(diffuse * albedoScaling, specular * saturate(nl) * (isSkin ? lerp(1.0f, occlusion, SKIN_AO_STRENGTH) : occlusion));
+	float specAO = isSkin ? lerp(1.0f, microAO, SKIN_AO_STRENGTH) : microAO;
+	return float2x3(diffuse * albedoScaling, specular * saturate(nl) * specAO * shadow);
 }
 
 float4 SurfaceEnergy(MaterialParam material, float3 N, float3 Ld, float3 Ls, float3 V, float normalizeFactor = 1.0)

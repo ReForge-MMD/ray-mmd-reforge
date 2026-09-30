@@ -206,14 +206,14 @@ void ShadingMaterial(MaterialParam material, float3 V, float3 L, float2 coord, o
 	[branch]
 	if (uvSunBase.w > 0.5f)
 	{
-		float uvOcc = ComputeAmbientMicroOcclusion(saturate(dot(material.normal, L)), material.visibility) * shadow;
-		baseDiffuse = uvSunBase.rgb * lerp(1.0f, uvOcc, SKIN_AO_STRENGTH);
+		float uvAO = ComputeAmbientMicroOcclusion(saturate(dot(material.normal, L)), material.visibility);
+		baseDiffuse = uvSunBase.rgb * lerp(1.0f, uvAO, SKIN_AO_STRENGTH) * shadow;
 	}
 #endif
 	float3 subsurface = SubsurfaceShading(material, material.normal, L, V, coord, material.visibility, shadow);
 
 	bool isSkinMat = (material.lightModel == SHADINGMODELID_SKIN || material.lightModel == SHADINGMODELID_SUBSURFACE);
-	diffuse = (baseDiffuse + subsurface * (isSkinMat ? lerp(1.0f, shadow, SKIN_AO_STRENGTH) : shadow)) * lightColor;
+	diffuse = (baseDiffuse + subsurface * shadow) * lightColor;
 
 #if WATER_CAUSTICS_ENABLE
 	if (material.lightModel != SHADINGMODELID_GLASS)
