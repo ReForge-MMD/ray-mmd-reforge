@@ -333,6 +333,7 @@ void LightSourcePS(
 	if (!isSkinMat)
 		clip(shadow - 1e-5);
 #endif
+#endif
 
 	// Base layer decoded only now: it must not stay live through the
 	// shadow/contact machinery above (see GetBaseMaterialParams)
