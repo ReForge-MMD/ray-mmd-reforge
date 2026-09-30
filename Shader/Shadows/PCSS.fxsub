@@ -124,12 +124,15 @@ float PCSS_Evaluate(
 	float avgBlockerDepth = blockerInfo.x;
 	float depthDifference = max(0.0f, receiverDepth - avgBlockerDepth);
 
-	// Relative penumbra size scaled by light angular diameter
-	float penumbra = depthDifference * lightSizeUV * 8.0f;
+	// Convert normalized depth difference back to world units, then scale by angular sun diameter in UV space
+	float worldBlockerDist = depthDifference * mPSSMDepthZMax;
+	float penumbra = worldBlockerDist * lightSizeUV;
 
 	// Clamp penumbra to valid range [minRadius, maxRadius]
-	float minFilterRadius = texelSize * 0.5f;
-	float maxFilterRadius = max(lightSizeUV * 1.2f, texelSize * 2.0f);
+	// minFilterRadius must be at least ~1.75 texels so rotated Poisson disk samples straddle adjacent texels,
+	// providing clean sub-texel anti-aliasing on contact edges instead of 1-tap nearest neighbor staircasing.
+	float minFilterRadius = texelSize * 1.75f;
+	float maxFilterRadius = max(lightSizeUV * 1.5f, texelSize * 4.0f);
 	float filterRadius = clamp(penumbra, minFilterRadius, maxFilterRadius);
 
 	// Step 3: PCF Filtering with dynamic penumbra footprint
@@ -147,6 +150,8 @@ float PCF_Standard(
 	float2 rotation,
 	float filterRadius)
 {
+	// Enforce minimum anti-aliasing radius to prevent single-texel staircasing
+	filterRadius = max(filterRadius, (1.75f / float(SHADOW_MAP_SIZE)));
 	float shadowSum = 0.0f;
 
 	[unroll]
