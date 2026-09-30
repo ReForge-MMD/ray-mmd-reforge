@@ -6,38 +6,134 @@ const float4 WhiteColor = 1.0;
 const float ClearDepth = 1.0;
 const int ClearStencil = 0;
 
-float mSunLightP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunLight+";>;
-float mSunLightM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SunLight-";>;
-float mSSAOP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSAO+";>;
-float mSSAOM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSAO-";>;
-float mSSAORadiusP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSAORadius+";>;
-float mSSAORadiusM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSAORadius-";>;
-float mSSDOP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSDO+";>;
-float mSSDOM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSDO-";>;
-float mSSSSP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSSS+";>;
-float mSSSSM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "SSSS-";>;
-float mFstopP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "Fstop+";>;
-float mFstopM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "Fstop-";>;
-float mFocalLengthP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "FocalLength+";>;
-float mFocalLengthM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "FocalLength-";>;
-float mFocalDistanceP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "FocalDistance+";>;
-float mFocalDistanceM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "FocalDistance-";>;
-float mFocalRegionP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "FocalRegion+";>;
-float mFocalRegionM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "FocalRegion-";>;
-float mBladeCountM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "BladeCount-";>;
-float mMeasureMode : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "MeasureMode";>;
-float mTestMode : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "TestMode";>;
-float mVignette : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "Vignette";>;
-float mDispersion : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "Dispersion";>;
-float mDispersionRadius : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "DispersionRadius";>;
-float mBloomThresholdP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "BloomThreshold";>;
-float mBloomRadiusP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "BloomRadius+";>;
-float mBloomRadiusM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "BloomRadius-";>;
-float mBloomColorAllHP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "BloomColorAllH+";>;
-float mBloomColorAllSP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "BloomColorAllS+";>;
-float mBloomColorAllVP : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "BloomColorAllV+";>;
-float mBloomColorAllVM : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "BloomColorAllV-";>;
-float mBloomStarFade : CONTROLOBJECT<string name="ray_controller.pmx"; string item = "BloomStarFade";>;
+// =============================================================================
+// LightingController.pmx (Dedicated Lighting & Shadow Controller)
+// =============================================================================
+float mLightSunLightP1   : CONTROLOBJECT<string name="LightingController.pmx"; string item = "SunLight+";>;
+float mLightSunLightM1   : CONTROLOBJECT<string name="LightingController.pmx"; string item = "SunLight-";>;
+float mLightSunLightP2   : CONTROLOBJECT<string name="LightingController"; string item = "SunLight+";>;
+float mLightSunLightM2   : CONTROLOBJECT<string name="LightingController"; string item = "SunLight-";>;
+
+float mLightSSAOP1       : CONTROLOBJECT<string name="LightingController.pmx"; string item = "SSAO+";>;
+float mLightSSAOM1       : CONTROLOBJECT<string name="LightingController.pmx"; string item = "SSAO-";>;
+float mLightSSAOP2       : CONTROLOBJECT<string name="LightingController"; string item = "SSAO+";>;
+float mLightSSAOM2       : CONTROLOBJECT<string name="LightingController"; string item = "SSAO-";>;
+
+float mLightSSAORadiusP1 : CONTROLOBJECT<string name="LightingController.pmx"; string item = "SSAORadius+";>;
+float mLightSSAORadiusM1 : CONTROLOBJECT<string name="LightingController.pmx"; string item = "SSAORadius-";>;
+float mLightSSAORadiusP2 : CONTROLOBJECT<string name="LightingController"; string item = "SSAORadius+";>;
+float mLightSSAORadiusM2 : CONTROLOBJECT<string name="LightingController"; string item = "SSAORadius-";>;
+
+float mLightSSDOP1       : CONTROLOBJECT<string name="LightingController.pmx"; string item = "SSDO+";>;
+float mLightSSDOM1       : CONTROLOBJECT<string name="LightingController.pmx"; string item = "SSDO-";>;
+float mLightSSDOP2       : CONTROLOBJECT<string name="LightingController"; string item = "SSDO+";>;
+float mLightSSDOM2       : CONTROLOBJECT<string name="LightingController"; string item = "SSDO-";>;
+
+float mLightSSSSP1       : CONTROLOBJECT<string name="LightingController.pmx"; string item = "SSSS+";>;
+float mLightSSSSM1       : CONTROLOBJECT<string name="LightingController.pmx"; string item = "SSSS-";>;
+float mLightSSSSP2       : CONTROLOBJECT<string name="LightingController"; string item = "SSSS+";>;
+float mLightSSSSM2       : CONTROLOBJECT<string name="LightingController"; string item = "SSSS-";>;
+
+static float mSunLightP   = max(mLightSunLightP1, mLightSunLightP2);
+static float mSunLightM   = max(mLightSunLightM1, mLightSunLightM2);
+static float mSSAOP       = max(mLightSSAOP1, mLightSSAOP2);
+static float mSSAOM       = max(mLightSSAOM1, mLightSSAOM2);
+static float mSSAORadiusP = max(mLightSSAORadiusP1, mLightSSAORadiusP2);
+static float mSSAORadiusM = max(mLightSSAORadiusM1, mLightSSAORadiusM2);
+static float mSSDOP       = max(mLightSSDOP1, mLightSSDOP2);
+static float mSSDOM       = max(mLightSSDOM1, mLightSSDOM2);
+static float mSSSSP       = max(mLightSSSSP1, mLightSSSSP2);
+static float mSSSSM       = max(mLightSSSSM1, mLightSSSSM2);
+
+// =============================================================================
+// CameraController.pmx (Dedicated Physical Camera, Lens & DOF Controller)
+// =============================================================================
+float mCamFstopP1         : CONTROLOBJECT<string name="CameraController.pmx"; string item = "Fstop+";>;
+float mCamFstopM1         : CONTROLOBJECT<string name="CameraController.pmx"; string item = "Fstop-";>;
+float mCamFstopP2         : CONTROLOBJECT<string name="CameraController"; string item = "Fstop+";>;
+float mCamFstopM2         : CONTROLOBJECT<string name="CameraController"; string item = "Fstop-";>;
+
+float mCamFocalLengthP1   : CONTROLOBJECT<string name="CameraController.pmx"; string item = "FocalLength+";>;
+float mCamFocalLengthM1   : CONTROLOBJECT<string name="CameraController.pmx"; string item = "FocalLength-";>;
+float mCamFocalLengthP2   : CONTROLOBJECT<string name="CameraController"; string item = "FocalLength+";>;
+float mCamFocalLengthM2   : CONTROLOBJECT<string name="CameraController"; string item = "FocalLength-";>;
+
+float mCamFocalDistanceP1 : CONTROLOBJECT<string name="CameraController.pmx"; string item = "FocalDistance+";>;
+float mCamFocalDistanceM1 : CONTROLOBJECT<string name="CameraController.pmx"; string item = "FocalDistance-";>;
+float mCamFocalDistanceP2 : CONTROLOBJECT<string name="CameraController"; string item = "FocalDistance+";>;
+float mCamFocalDistanceM2 : CONTROLOBJECT<string name="CameraController"; string item = "FocalDistance-";>;
+
+float mCamFocalRegionP1   : CONTROLOBJECT<string name="CameraController.pmx"; string item = "FocalRegion+";>;
+float mCamFocalRegionM1   : CONTROLOBJECT<string name="CameraController.pmx"; string item = "FocalRegion-";>;
+float mCamFocalRegionP2   : CONTROLOBJECT<string name="CameraController"; string item = "FocalRegion+";>;
+float mCamFocalRegionM2   : CONTROLOBJECT<string name="CameraController"; string item = "FocalRegion-";>;
+
+float mCamBladeCountM1    : CONTROLOBJECT<string name="CameraController.pmx"; string item = "BladeCount-";>;
+float mCamBladeCountM2    : CONTROLOBJECT<string name="CameraController"; string item = "BladeCount-";>;
+
+float mCamMeasureMode1    : CONTROLOBJECT<string name="CameraController.pmx"; string item = "MeasureMode";>;
+float mCamMeasureMode2    : CONTROLOBJECT<string name="CameraController"; string item = "MeasureMode";>;
+
+float mCamTestMode1       : CONTROLOBJECT<string name="CameraController.pmx"; string item = "TestMode";>;
+float mCamTestMode2       : CONTROLOBJECT<string name="CameraController"; string item = "TestMode";>;
+
+float mCamVignette1       : CONTROLOBJECT<string name="CameraController.pmx"; string item = "Vignette";>;
+float mCamVignette2       : CONTROLOBJECT<string name="CameraController"; string item = "Vignette";>;
+
+float mCamDispersion1     : CONTROLOBJECT<string name="CameraController.pmx"; string item = "Dispersion";>;
+float mCamDispersion2     : CONTROLOBJECT<string name="CameraController"; string item = "Dispersion";>;
+
+float mCamDispersionRadius1 : CONTROLOBJECT<string name="CameraController.pmx"; string item = "DispersionRadius";>;
+float mCamDispersionRadius2 : CONTROLOBJECT<string name="CameraController"; string item = "DispersionRadius";>;
+
+static float mFstopP         = max(mCamFstopP1, mCamFstopP2);
+static float mFstopM         = max(mCamFstopM1, mCamFstopM2);
+static float mFocalLengthP   = max(mCamFocalLengthP1, mCamFocalLengthP2);
+static float mFocalLengthM   = max(mCamFocalLengthM1, mCamFocalLengthM2);
+static float mFocalDistanceP = max(mCamFocalDistanceP1, mCamFocalDistanceP2);
+static float mFocalDistanceM = max(mCamFocalDistanceM1, mCamFocalDistanceM2);
+static float mFocalRegionP   = max(mCamFocalRegionP1, mCamFocalRegionP2);
+static float mFocalRegionM   = max(mCamFocalRegionM1, mCamFocalRegionM2);
+static float mBladeCountM    = max(mCamBladeCountM1, mCamBladeCountM2);
+static float mMeasureMode    = max(mCamMeasureMode1, mCamMeasureMode2);
+static float mTestMode       = max(mCamTestMode1, mCamTestMode2);
+static float mVignette       = max(mCamVignette1, mCamVignette2);
+static float mDispersion     = max(mCamDispersion1, mCamDispersion2);
+static float mDispersionRadius = max(mCamDispersionRadius1, mCamDispersionRadius2);
+
+// =============================================================================
+// BloomController.pmx (Dedicated HDR Bloom & Glare Controller)
+// =============================================================================
+float mBloomThresholdP1      : CONTROLOBJECT<string name="BloomController.pmx"; string item = "BloomThreshold";>;
+float mBloomThresholdP2      : CONTROLOBJECT<string name="BloomController"; string item = "BloomThreshold";>;
+
+float mBloomRadiusP1         : CONTROLOBJECT<string name="BloomController.pmx"; string item = "BloomRadius+";>;
+float mBloomRadiusM1         : CONTROLOBJECT<string name="BloomController.pmx"; string item = "BloomRadius-";>;
+float mBloomRadiusP2         : CONTROLOBJECT<string name="BloomController"; string item = "BloomRadius+";>;
+float mBloomRadiusM2         : CONTROLOBJECT<string name="BloomController"; string item = "BloomRadius-";>;
+
+float mBloomColorAllHP1      : CONTROLOBJECT<string name="BloomController.pmx"; string item = "BloomColorAllH+";>;
+float mBloomColorAllHP2      : CONTROLOBJECT<string name="BloomController"; string item = "BloomColorAllH+";>;
+
+float mBloomColorAllSP1      : CONTROLOBJECT<string name="BloomController.pmx"; string item = "BloomColorAllS+";>;
+float mBloomColorAllSP2      : CONTROLOBJECT<string name="BloomController"; string item = "BloomColorAllS+";>;
+
+float mBloomColorAllVP1      : CONTROLOBJECT<string name="BloomController.pmx"; string item = "BloomColorAllV+";>;
+float mBloomColorAllVM1      : CONTROLOBJECT<string name="BloomController.pmx"; string item = "BloomColorAllV-";>;
+float mBloomColorAllVP2      : CONTROLOBJECT<string name="BloomController"; string item = "BloomColorAllV+";>;
+float mBloomColorAllVM2      : CONTROLOBJECT<string name="BloomController"; string item = "BloomColorAllV-";>;
+
+float mBloomStarFade1        : CONTROLOBJECT<string name="BloomController.pmx"; string item = "BloomStarFade";>;
+float mBloomStarFade2        : CONTROLOBJECT<string name="BloomController"; string item = "BloomStarFade";>;
+
+static float mBloomThresholdP = max(mBloomThresholdP1, mBloomThresholdP2);
+static float mBloomRadiusP    = max(mBloomRadiusP1, mBloomRadiusP2);
+static float mBloomRadiusM    = max(mBloomRadiusM1, mBloomRadiusM2);
+static float mBloomColorAllHP = max(mBloomColorAllHP1, mBloomColorAllHP2);
+static float mBloomColorAllSP = max(mBloomColorAllSP1, mBloomColorAllSP2);
+static float mBloomColorAllVP = max(mBloomColorAllVP1, mBloomColorAllVP2);
+static float mBloomColorAllVM = max(mBloomColorAllVM1, mBloomColorAllVM2);
+static float mBloomStarFade   = max(mBloomStarFade1, mBloomStarFade2);
 
 #if SSR_DEBUG
 // SSRDebugController.pmx (Dedicated SSR debug controller)
@@ -126,8 +222,7 @@ float mDbgSSGIIntensity2 : CONTROLOBJECT<string name="DebugController"; string i
 float mDbgSSGIConeAngle2 : CONTROLOBJECT<string name="DebugController"; string item = "SSGIConeAngle";>;
 float mDbgSSGIBias2      : CONTROLOBJECT<string name="DebugController"; string item = "SSGIBias";>;
 
-// SSGI intensity/cone/bias knobs live on DebugController.pmx only;
-// ray_controller.pmx has no SSGI morphs, so no bindings here.
+// SSGI intensity/cone/bias knobs live on DebugController.pmx only.
 static float mDbgSSGIIntensity = max(mDbgSSGIIntensity1, mDbgSSGIIntensity2);
 static float mDbgSSGIConeAngle = max(mDbgSSGIConeAngle1, mDbgSSGIConeAngle2);
 static float mDbgSSGIBias      = max(mDbgSSGIBias1,      mDbgSSGIBias2);

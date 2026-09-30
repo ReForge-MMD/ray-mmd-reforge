@@ -84,9 +84,14 @@ static const float SSPT_GOLDEN_ANGLE = 2.39996323f;
 static const float2x2 SSPT_ROTX = float2x2(-0.10280598f, -0.99470145f, 0.99470145f, -0.10280598f);
 static const float SSPT_Bayer1D[8] = { 1.0f, 5.0f, 3.0f, 7.0f, 2.0f, 6.0f, 4.0f, 8.0f };
 
-// Controller item bindings
-float mSSGIIntensityPlus : CONTROLOBJECT < string name="ray_controller.pmx"; string item = "SSGI+"; >;
-float mSSGIIntensityMinus : CONTROLOBJECT < string name="ray_controller.pmx"; string item = "SSGI-"; >;
+// Controller item bindings (LightingController.pmx)
+float mSSGIIntensityP1 : CONTROLOBJECT < string name = "LightingController.pmx"; string item = "SSGI+"; >;
+float mSSGIIntensityM1 : CONTROLOBJECT < string name = "LightingController.pmx"; string item = "SSGI-"; >;
+float mSSGIIntensityP2 : CONTROLOBJECT < string name = "LightingController"; string item = "SSGI+"; >;
+float mSSGIIntensityM2 : CONTROLOBJECT < string name = "LightingController"; string item = "SSGI-"; >;
+
+static float mSSGIIntensityPlus  = max(mSSGIIntensityP1, mSSGIIntensityP2);
+static float mSSGIIntensityMinus = max(mSSGIIntensityM1, mSSGIIntensityM2);
 
 // DebugController tuning knobs
 float mDbgSSGIEmissiveBoost : CONTROLOBJECT < string name="DebugController.pmx"; string item = "SSGIEmissiveBoost"; >;

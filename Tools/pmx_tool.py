@@ -345,7 +345,7 @@ def parse_and_add_morphs(filepath, new_morph_names, output_filepath=None):
     print(f"[SUCCESS] Updated PMX saved to {output_filepath}")
 
 if __name__ == '__main__':
-    target = r'ray_controller.pmx'
+    target = r'LightingController.pmx'
     if len(sys.argv) > 1:
         target = sys.argv[1]
     

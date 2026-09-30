@@ -34,9 +34,14 @@
 // Compatibility alias for legacy passes
 #define SSGI_ANGLES SSGI_RAY_COUNT
 
-// Controller item bindings
-float mSSGIIntensityPlus : CONTROLOBJECT < string name="ray_controller.pmx"; string item = "SSGI+"; >;
-float mSSGIIntensityMinus : CONTROLOBJECT < string name="ray_controller.pmx"; string item = "SSGI-"; >;
+// Controller item bindings (LightingController.pmx)
+float mSSGIIntensityP1 : CONTROLOBJECT < string name = "LightingController.pmx"; string item = "SSGI+"; >;
+float mSSGIIntensityM1 : CONTROLOBJECT < string name = "LightingController.pmx"; string item = "SSGI-"; >;
+float mSSGIIntensityP2 : CONTROLOBJECT < string name = "LightingController"; string item = "SSGI+"; >;
+float mSSGIIntensityM2 : CONTROLOBJECT < string name = "LightingController"; string item = "SSGI-"; >;
+
+static float mSSGIIntensityPlus  = max(mSSGIIntensityP1, mSSGIIntensityP2);
+static float mSSGIIntensityMinus = max(mSSGIIntensityM1, mSSGIIntensityM2);
 
 // DebugController tuning knobs (all default to stock behavior at morph weight 0)
 float mDbgSSGIEmissiveBoost : CONTROLOBJECT < string name="DebugController.pmx"; string item = "SSGIEmissiveBoost"; >;

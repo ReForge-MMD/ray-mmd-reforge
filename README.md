@@ -79,6 +79,15 @@ Reforge Exclusive Features (through v1.20.22) :
 
 **Post-Processing & Anti-Aliasing**
 * **SMAA Ultra+ (`AA_QUALITY 5`, Default)**: native 1x Ultra pipeline, G-Buffer linear depth predication (`Gbuffer8Map`) resolving fine hair tips and accessory silhouettes, dual-axis bilinear sample weights eliminating diagonal staircasing, subpixel micro-feature reconstruction (`0.65f`), and 12-sample FXAA Preset 12 HQ.
+* **Modular PMX Controller Suite**: fully decentralized domain-specific controllers replacing the monolithic legacy `ray_controller.pmx`:
+  * `LightingController.pmx`: dedicated lighting & shadow control (`SunLight+/-`, `MultiLight+/-`, `SSAO+/-`, `SSAORadius+/-`, `SSDO+/-`, `SSSS+/-`, `SSGI+/-`).
+  * `CameraController.pmx`: physical lens DOF (aperture `Fstop+/-`, `FocalLength+/-`, `FocalDistance+/-`, `FocalRegion+/-`, iris `BladeCount-`), lens optical artifacts (`Vignette`, `Dispersion`, `DispersionRadius`), and focus calibration modes (`TestMode`, `MeasureMode`).
+  * `BloomController.pmx`: HDR bloom threshold, radius, HSV tint (`BloomColorAllH/S/V`), and star diffraction burst (`BloomStarFade`).
+  * `ColorGradingController.pmx`: 60-morph studio color grading suite (Lift/Gamma/Gain, 2D white balance, creative film presets, exposure).
+  * `SkyVisibilityController.pmx`: bent-normal celestial sky occlusion.
+  * `CausticsController.pmx`: real-time directional water caustics wave simulation.
+  * `DebugController.pmx`: real-time G-buffer, shadow cascade, and SSGS inspection.
+  * *Streamlined Architecture*: the bloated monolithic `ray_controller.pmx` has been completely decommissioned and replaced by clean, focused, high-performance specialized controllers.
 * **Studio Color Grading Engine & Dedicated Controller (`ColorGradingController.pmx`)**: built-in linear HDR 3-way split-toning (Lift/Gamma/Gain for Shadows, Midtones, and Highlights) with perceptual Naka-Rushton luma partitioning, 2D white balance (Correlated Color Temperature + Green/Magenta Tint), smart skin-preserving Vibrance, branchless 3D Rodrigues Hue rotation, and cinematic creative presets (Teal & Orange, Bleach Bypass, Cross Process, Monochrome) controlled via a dedicated 60-morph PMX controller.
 * **G-DLAA Anti-Aliasing**: hybrid geometric and directionally adaptive anti-aliasing (`AA_QUALITY 7`) preserving sharp silhouette edges.
 * **Temporal Anti-Aliasing (TAA)**: 5-tap Catmull-Rom bicubic history reconstruction, Karis luma weighting, variance clipping, and depth-validated history.
