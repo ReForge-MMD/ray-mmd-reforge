@@ -305,6 +305,7 @@ Shading Model ID
     | 7  | 次表面 | 曲率 | 散射色 |
     | 8  | 卡通着色 | 阴影阈值  | 阴影色 |
     | 9  | ToonBased Shading | 阴影阈值  | 阴影色 |
+    | 10 | 眼球 (Eye)        | 角膜光滑度 | 无效 |
 
     ##### Tips:  
     `Subsurface` : `曲率`也被称为`不透明度`,定义了材质的模糊强度以及透射强度,更多信息可以查看UE4 [docs](https://docs.unrealengine.com/latest/INT/Engine/Rendering/Materials/LightingModels/SubSurfaceProfile/index.html)  
@@ -313,6 +314,7 @@ Shading Model ID
     `Cloth` : `光泽度`是一个在`GGX`和`InvGGX`的插值系数,更多信息可以查看[link](http://blog.selfshadow.com/publications/s2017-shading-course/imageworks/s2017_pbs_imageworks_sheen.pdf)  
     `Cloth` : `毛绒色`是fresnel中f0的参数,定义了材质的基本反射色使用sRGB的色彩  
     `Toon`  : 更多信息可以查看[link](https://zhuanlan.zhihu.com/p/26409746)  
+    `Eye`   : 专用的眼球无阴影着色模型 (`SHADINGMODELID_EYE`)。绕过投射阴影与明暗衰减，无需自发光即可保持明亮清澈，且在黑暗中不会发光。`CustomA` 为角膜高光光滑度。
 
 * ##### CUSTOM_A_MAP_FROM  (see [ALBEDO_MAP_FROM](#ALBEDO_MAP_FROM))
 * ##### CUSTOM_A_MAP_UV_FLIP (see [ALBEDO_MAP_UV_FLIP](#ALBEDO_MAP_UV_FLIP))

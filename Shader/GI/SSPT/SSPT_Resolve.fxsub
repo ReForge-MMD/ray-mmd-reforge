@@ -42,7 +42,7 @@ float4 SSPTFinalCombinePS(in float2 uvCoord : TEXCOORD0, in float3 viewDir : TEX
 
 #if SSDO_QUALITY > 0
 	float rawAO = tex2Dlod(SSDOMapSamp, float4(uvCoord, 0.0f, 0.0f)).w;
-	float occlusion = (mat.lightModel == SHADINGMODELID_GLASS) ? 1.0f : rawAO;
+	float occlusion = (mat.lightModel == SHADINGMODELID_GLASS || mat.lightModel == SHADINGMODELID_EYE) ? 1.0f : rawAO;
 	occlusion = pow(saturate(occlusion), SSPT_AO_AMOUNT);
 	// Skin SSS diffuses light into cavities, receiving softened linear AO instead of quadratic crevice absorption
 	occlusion = isSkin ? lerp(1.0f, occlusion, SKIN_AO_STRENGTH) : (occlusion * occlusion);
@@ -63,7 +63,7 @@ float4 SSPTFinalCombinePS(in float2 uvCoord : TEXCOORD0, in float3 viewDir : TEX
 	{
 		rawGi *= mat.albedo + mat.customDataB * (pow(1.0f - NdV, 4.0f) * mat.customDataA);
 	}
-	else if (mat.lightModel == SHADINGMODELID_CLEAR_COAT)
+	else if (mat.lightModel == SHADINGMODELID_CLEAR_COAT || mat.lightModel == SHADINGMODELID_EYE)
 	{
 		rawGi *= mat.albedo * (1.0f - mat.customDataA * (0.04f + 0.96f * pow(1.0f - NdV, 5.0f)));
 	}

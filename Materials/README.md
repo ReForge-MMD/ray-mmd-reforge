@@ -331,6 +331,7 @@ Shading Model ID
     | 7  | Subsurface        | Curvature  | Transmittance color |
     | 8  | Cel Shading       | Threshold  | Shadow color |
     | 9  | ToonBased Shading | Haredness  | Shadow color |
+    | 10 | Eye               | Cornea Smoothness | Invalid |
 
     ##### Tips:  
     `Subsurface` : The `curvature` also called `opacity`, defines the overall scattering intensity affects all the surface, see the UE4 [docs](https://docs.unrealengine.com/latest/INT/Engine/Rendering/Materials/LightingModels/SubSurfaceProfile/index.html) for more information  
@@ -339,6 +340,7 @@ Shading Model ID
     `Cloth` : `Sheen` is interpolation between `GGX` and `InvGGX`, see [paper](http://blog.selfshadow.com/publications/s2017-shading-course/imageworks/s2017_pbs_imageworks_sheen.pdf) for cloth information  
     `Cloth` : `Fuzz Color` is f0 of fresnel params in sRGB color-space, defines the overall color of the specular  
     `Toon`  : see [paper](https://zhuanlan.zhihu.com/p/26409746) for more information, but chinese  
+    `Eye`   : Dedicated unshadowed eye/cornea shading model (`SHADINGMODELID_EYE`). Bypasses cast shadow maps, geometric terminator cutoff, SSAO/SSDO, and eye socket occlusion so eyes never get unnaturally darkened or shadowed by hair/eyelids, without relying on emissive hacks (does not glow in the dark). `CustomA` controls physical clearcoat corneal reflection smoothness. Combine with `EYE_PARALLAX_ENABLE` for physical cornea refraction & iris parallax depth.
 
 * ##### CUSTOM_A_MAP_FROM  (see [ALBEDO_MAP_FROM](#ALBEDO_MAP_FROM))
 * ##### CUSTOM_A_MAP_UV_FLIP (see [ALBEDO_MAP_UV_FLIP](#ALBEDO_MAP_UV_FLIP))
@@ -375,6 +377,8 @@ Procedural Hair:
 
 Cornea Refraction & Iris Parallax:
 ----------------------------------
+Eye materials (`material_eye.fx`, `material_eye_anime.fx`) utilize `CUSTOM_ENABLE 10` (`SHADINGMODELID_EYE`). This model bypasses cast shadow mapping (from hair, bangs, and eyelids), SSAO/SSDO, and terminator darkening without using emissive hacks (`EMISSIVE_ENABLE 0`), ensuring vibrant and clear eyes under any lighting without false self-glow in darkness.
+
 * ##### EYE_PARALLAX_ENABLE
     Set `EYE_PARALLAX_ENABLE` to `1` in your eye material `.fx` file (e.g. `material_eye.fx`) to enable physical Snell's law refraction through the corneal dome into the anterior chamber of the eye.
     

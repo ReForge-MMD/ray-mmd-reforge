@@ -305,6 +305,7 @@ Shading Model ID
     | 7  | 次表面 | 曲率 | 散射色 |
     | 8  | 卡通着色 | 阴影阈值  | 阴影色 |
     | 9  | ToonBased Shading | 阴影阈值  | 阴影色 |
+    | 10 | 眼球 (Eye)        | 角膜光滑度 | 无效 |
 
     ##### Tips:  
     `Subsurface` : `曲率`也被称为`不透明度`,定义了材质的模糊强度以及透射强度,更多信息可以查看UE4 [docs](https://docs.unrealengine.com/latest/INT/Engine/Rendering/Materials/LightingModels/SubSurfaceProfile/index.html)  
@@ -313,6 +314,7 @@ Shading Model ID
     `Cloth` : `光泽度`是一个在`GGX`和`InvGGX`的插值系数,更多信息可以查看[link](http://blog.selfshadow.com/publications/s2017-shading-course/imageworks/s2017_pbs_imageworks_sheen.pdf)  
     `Cloth` : `毛绒色`是fresnel中f0的参数,定义了材质的基本反射色使用sRGB的色彩  
     `Toon`  : 更多信息可以查看[link](https://zhuanlan.zhihu.com/p/26409746)  
+    `Eye`   : 专用的眼球无阴影着色模型 (`SHADINGMODELID_EYE`)。绕过投射阴影（头发/刘海/眼皮阴影）、明暗交界线衰减以及环境光遮蔽（SSAO/SSDO/眼眶遮蔽），使眼睛始终保持明亮清澈且不再需要依赖自发光 hack（在黑暗环境下不会像手电筒一样异常发光）。`CustomA` 用于控制角膜清漆反射的高光光滑度。可配合 `EYE_PARALLAX_ENABLE` 开启物理角膜折射与虹膜视差深度。
 
 * ##### CUSTOM_A_MAP_FROM  (see [ALBEDO_MAP_FROM](#ALBEDO_MAP_FROM))
 * ##### CUSTOM_A_MAP_UV_FLIP (see [ALBEDO_MAP_UV_FLIP](#ALBEDO_MAP_UV_FLIP))
@@ -349,6 +351,8 @@ Shading Model ID
 
 角膜折射与虹膜视差 (Cornea Refraction & Iris Parallax):
 ----------------------------------
+眼球材质（`material_eye.fx`, `material_eye_anime.fx`）采用 `CUSTOM_ENABLE 10` (`SHADINGMODELID_EYE`)。该模型自动绕过来自头发、刘海与眼皮的阴影遮挡以及眼眶的 SSAO/SSDO 遮蔽，且不使用发光 hack (`EMISSIVE_ENABLE 0`)，使眼球在任何光照下都能自然明亮且在黑暗场景中不会异常自发光。
+
 * ##### EYE_PARALLAX_ENABLE
     在眼球材质 `.fx`（如 `material_eye.fx`）中将 `EYE_PARALLAX_ENABLE` 设为 `1`，开启基于斯涅尔定律的角膜透镜折射与虹膜深度视差映射。
     

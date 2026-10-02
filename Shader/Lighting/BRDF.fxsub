@@ -983,15 +983,16 @@ float2x3 SurfaceEnergy(MaterialParam material, float3 N, float3 L, float3 V, flo
 	float nl = dot(N, L);
 	bool isSkin = (material.lightModel == SHADINGMODELID_SKIN || material.lightModel == SHADINGMODELID_SUBSURFACE);
 	bool isAniso = (material.lightModel == SHADINGMODELID_ANISOTROPY);
-	float nlCutoff = (isSkin ? -0.55f : (isAniso ? -0.75f : 0.0f));
+	bool isEye = (material.lightModel == SHADINGMODELID_EYE);
+	float nlCutoff = (isSkin ? -0.55f : (isAniso ? -0.75f : (isEye ? -1.0f : 0.0f)));
 
 #if TOON_ENABLE
-	// Half-Lambert cel ramps, skin wrap, and hair backlight are defined into shadow;
+	// Half-Lambert cel ramps, skin wrap, hair backlight, and eyes are defined into shadow;
 	// only standard PBR hard-terminates at nl <= 0
-	if (nl <= nlCutoff && material.lightModel != SHADINGMODELID_CEL)
+	if (nl <= nlCutoff && material.lightModel != SHADINGMODELID_CEL && !isEye)
 		return (float2x3)0;
 #else
-	if (nl <= nlCutoff)
+	if (nl <= nlCutoff && !isEye)
 		return (float2x3)0;
 #endif
 
@@ -1014,14 +1015,20 @@ float2x3 SurfaceEnergy(MaterialParam material, float3 N, float3 L, float3 V, flo
 	float roughness = max(SmoothnessToRoughness(material.smoothness), 0.001);
 	roughness = FilterGeometricRoughness(roughness, N);
 	float microAO = ComputeAmbientMicroOcclusion(saturate(nl), material.visibility);
-	float diffuseAO = isSkin ? lerp(1.0f, microAO, SKIN_AO_STRENGTH) : microAO;
-	float diffuseOcclusion = diffuseAO * shadow;
+	float diffuseAO = isSkin ? lerp(1.0f, microAO, SKIN_AO_STRENGTH) : (isEye ? 1.0f : microAO);
+	float diffuseOcclusion = diffuseAO * (isEye ? 1.0f : shadow);
 
 #if TOON_ENABLE
 	float3 diffuse = 0;
 
 	[branch]
-	if (material.lightModel == SHADINGMODELID_CEL || material.lightModel == SHADINGMODELID_TONEBASED)
+	if (isEye)
+	{
+		// Unshaded diffuse response for eyes: iris reflects incident light
+		// with full vibrant clarity without dark terminator bands or cast shadows
+		diffuse = 1.0f;
+	}
+	else if (material.lightModel == SHADINGMODELID_CEL || material.lightModel == SHADINGMODELID_TONEBASED)
 	{
 		float3 toonShadow = ToonShadowGrade(material.customDataB, material.albedo);
 
@@ -1038,7 +1045,7 @@ float2x3 SurfaceEnergy(MaterialParam material, float3 N, float3 L, float3 V, flo
 		diffuse = DiffuseBRDF(N, L, V, roughness) * max(nl, 0.0f) * diffuseOcclusion;
 	}
 #else
-	float3 diffuse = DiffuseBRDF(N, L, V, roughness) * max(nl, 0.0f) * diffuseOcclusion;
+	float3 diffuse = isEye ? 1.0f : (DiffuseBRDF(N, L, V, roughness) * max(nl, 0.0f) * diffuseOcclusion);
 #endif
 
 	float3 specular = 0;
@@ -1049,7 +1056,7 @@ float2x3 SurfaceEnergy(MaterialParam material, float3 N, float3 L, float3 V, flo
 		specular = DualLobeSkinSpecular(nh, nl, vh, nv, roughness, material.specular, normalizeFactor);
 	else if (material.lightModel == SHADINGMODELID_CLOTH)
 		specular = ClothShading(material, nh, nl, vh, nv, roughness, normalizeFactor, albedoScaling);
-	else if (material.lightModel == SHADINGMODELID_CLEAR_COAT)
+	else if (material.lightModel == SHADINGMODELID_CLEAR_COAT || isEye)
 		specular = ClearCoatShading(material, nh, nl, vh, nv, roughness, normalizeFactor, albedoScaling);
 	else if (material.lightModel == SHADINGMODELID_GLASS)
 		specular = SpecularBRDF_Blinn(nh, nl, vh, nv, material.smoothness, material.specular, normalizeFactor);
@@ -1075,14 +1082,16 @@ float2x3 SurfaceEnergy(MaterialParam material, float3 N, float3 L, float3 V, flo
 
 	// saturate(nl): the cel path can reach here with nl <= 0 (back-side deep
 	// shadow band) and must not pick up negative specular
-	float specAO = isSkin ? lerp(1.0f, microAO, SKIN_AO_STRENGTH) : microAO;
-	return float2x3(diffuse * albedoScaling, specular * saturate(nl) * specAO * shadow * diskIntensity);
+	float specAO = isSkin ? lerp(1.0f, microAO, SKIN_AO_STRENGTH) : (isEye ? 1.0f : microAO);
+	float specShadow = isEye ? 1.0f : shadow;
+	return float2x3(diffuse * albedoScaling, specular * saturate(nl) * specAO * specShadow * diskIntensity);
 }
 
 float4 SurfaceEnergy(MaterialParam material, float3 N, float3 Ld, float3 Ls, float3 V, float normalizeFactor = 1.0)
 {
 	float nl2 = dot(N, Ld);
-	if (nl2 <= 0.0f)
+	bool isEye = (material.lightModel == SHADINGMODELID_EYE);
+	if (nl2 <= 0.0f && !isEye)
 		return (float4)0;
 
 	float nlUnclamped = dot(N, Ls);
@@ -1109,7 +1118,7 @@ float4 SurfaceEnergy(MaterialParam material, float3 N, float3 Ld, float3 Ls, flo
 	float diffuse = DiffuseBRDF(N, Ld, V, roughness);
 	float shadow = ComputeAmbientMicroOcclusion(nl2, material.visibility);
 	bool isSkin = (material.lightModel == SHADINGMODELID_SKIN || material.lightModel == SHADINGMODELID_SUBSURFACE);
-	float skinShadow = isSkin ? lerp(1.0f, shadow, SKIN_AO_STRENGTH) : shadow;
+	float skinShadow = isSkin ? lerp(1.0f, shadow, SKIN_AO_STRENGTH) : (isEye ? 1.0f : shadow);
 
 	float3 specular = 0;
 	float albedoScaling = 1.0f;
@@ -1119,7 +1128,7 @@ float4 SurfaceEnergy(MaterialParam material, float3 N, float3 Ld, float3 Ls, flo
 		specular = DualLobeSkinSpecular(nh, nl, vh, nv, roughness, material.specular, normalizeFactor);
 	else if (material.lightModel == SHADINGMODELID_CLOTH)
 		specular = ClothShading(material, nh, nl, vh, nv, roughness, normalizeFactor, albedoScaling);
-	else if (material.lightModel == SHADINGMODELID_CLEAR_COAT)
+	else if (material.lightModel == SHADINGMODELID_CLEAR_COAT || isEye)
 		specular = ClearCoatShading(material, nh, nl, vh, nv, roughness, normalizeFactor, albedoScaling);
 	else if (material.lightModel == SHADINGMODELID_GLASS)
 		specular = SpecularBRDF_Blinn(nh, nl, vh, nv, material.smoothness, material.specular, normalizeFactor);
@@ -1131,5 +1140,7 @@ float4 SurfaceEnergy(MaterialParam material, float3 N, float3 Ld, float3 Ls, flo
 		diffuse += dot(material.specular, 0.33333f) * EnergyPreservingFullyRough(specular, roughness);
 	}
 
-	return float4(diffuse * albedoScaling, specular * diskIntensity2) * nl2 * skinShadow;
+	float diffuseRes = isEye ? 1.0f : diffuse;
+	float shadowRes = isEye ? 1.0f : (nl2 * skinShadow);
+	return float4(diffuseRes * albedoScaling, specular * diskIntensity2) * shadowRes;
 }

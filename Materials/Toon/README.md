@@ -20,7 +20,7 @@ Materials/Toon/
 ├── ClearCoat/
 ├── Cloth/                    # incl. silk, velvet, black_coat, white
 ├── Emissive/                 # BodyLine, Rainbow, Fixed Color (x1/x2/x4), Blink variants
-├── Eye/                      # eye, eye_anime
+├── Eye/                      # eye, eye_anime (CUSTOM_ENABLE 10: unshadowed eye model)
 ├── Foliage/                  # grass, leaves_tree, palm, vines
 ├── Hair/
 │   ├── material_hair*.fx     # hair, procedural, sss, anisotropy variants
@@ -48,10 +48,12 @@ Not duplicated: `Editor/` (per-request skip), top-level `material_mirror.fx` /
 | --- | --- | --- |
 | Skin / body / TDA | 0.55 | warm `float3(0.92, 0.78, 0.75)` |
 | Hair (incl. procedural) | 0.45 | cool lavender `float3(0.55, 0.50, 0.78)` |
-| Eye | 0.70 | neutral violet `float3(0.45, 0.42, 0.55)` |
+| Eye (`CUSTOM_ENABLE 10`) | 0.85 (cornea smoothness) | — (unshadowed eye model) |
 | Cloth | 0.50 | cool gray `float3(0.62, 0.62, 0.72)` |
 | Foliage | 0.50 | deep green `float3(0.28, 0.42, 0.18)` |
 | everything else | 0.50 | lavender `float3(0.70, 0.60, 0.75)` |
+
+*Note on Eye*: Eye materials (`Eye/`) use `CUSTOM_ENABLE 10` (`SHADINGMODELID_EYE`) instead of cel shading. They bypass eyelid/hair shadows, SSAO/SSDO, and terminator falloff while preserving corneal clearcoat highlights, without false emissive glow in darkness.
 
 ## Look grading
 

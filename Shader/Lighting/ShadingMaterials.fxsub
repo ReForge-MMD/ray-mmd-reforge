@@ -219,8 +219,10 @@ float3 ComputeWaterCaustics(float3 worldPos, float3 normalVS, float shadow, floa
 
 void ShadingMaterial(MaterialParam material, float3 V, float3 L, float2 coord, out float3 diffuse, out float3 specular, float4 uvSunBase = float4(0, 0, 0, 0))
 {
+	bool isEyeMat = (material.lightModel == SHADINGMODELID_EYE);
+
 #if SUN_LIGHT_ENABLE && SUN_SHADOW_QUALITY
-	float shadow = tex2Dlod(ShadowMapSamp, float4(coord, 0.0f, 0.0f)).r;
+	float shadow = isEyeMat ? 1.0f : tex2Dlod(ShadowMapSamp, float4(coord, 0.0f, 0.0f)).r;
 #else
 	float shadow = 1.0f;
 #endif
@@ -235,7 +237,7 @@ void ShadingMaterial(MaterialParam material, float3 V, float3 L, float2 coord, o
 	bool isSkin = (material.lightModel == SHADINGMODELID_SKIN || material.lightModel == SHADINGMODELID_SUBSURFACE);
 	bool isToonMat = (material.lightModel == SHADINGMODELID_CEL || material.lightModel == SHADINGMODELID_TONEBASED);
 	float occTerm = min(ssdo, ssao);
-	shadow *= isSkin ? lerp(1.0f, occTerm, SKIN_AO_STRENGTH) : (isToonMat ? 1.0f : lerp(1.0f, occTerm, 0.85f));
+	shadow *= isSkin ? lerp(1.0f, occTerm, SKIN_AO_STRENGTH) : ((isToonMat || isEyeMat) ? 1.0f : lerp(1.0f, occTerm, 0.85f));
 #else
 	// Modern GTAO (SSAO_TYPE == 2) and HBAO (SSAO_TYPE == 1) compute ambient occlusion for ambient light (IBL / GI),
 	// which is fully modulated with multi-bounce color bleeding in ShadingImageBasedLighting and SSPT_Resolve.
@@ -251,7 +253,7 @@ void ShadingMaterial(MaterialParam material, float3 V, float3 L, float2 coord, o
 #if TOON_ENABLE
 	float2x3 energy = SurfaceEnergy(material, material.normal, L, V, shadow);
 #else
-	float shadowTerm = (material.lightModel == SHADINGMODELID_SKIN || material.lightModel == SHADINGMODELID_SUBSURFACE) ? shadow : min(shadow, saturate(dot(material.normal, L) * 4));
+	float shadowTerm = (material.lightModel == SHADINGMODELID_SKIN || material.lightModel == SHADINGMODELID_SUBSURFACE || isEyeMat) ? shadow : min(shadow, saturate(dot(material.normal, L) * 4));
 	float2x3 energy = SurfaceEnergy(material, material.normal, L, V, shadowTerm);
 #endif
 	float3 baseDiffuse = energy[0];
@@ -323,6 +325,7 @@ void ShadingImageBasedLighting(sampler source, MaterialParam material, float4 sc
 	float  roughness  = max(SmoothnessToRoughness(material.smoothness), 0.001f);
 	float  NdotV      = abs(dot(material.normal, V)) + 1e-5f;
 	bool   isSkin     = (material.lightModel == SHADINGMODELID_SKIN || material.lightModel == SHADINGMODELID_SUBSURFACE);
+	bool   isEyeMat   = (material.lightModel == SHADINGMODELID_EYE);
 
 	// Specular occlusion still uses bent normal + AO (applied now, before SSR overlays)
 	float ssao        = min(ssdoData.w, material.visibility);
@@ -332,13 +335,13 @@ void ShadingImageBasedLighting(sampler source, MaterialParam material, float4 sc
 	float dirSpecOcc  = ComputeDirectionalSpecularOcclusion(R, bentNormal, effectiveAO, roughness);
 	float gtso        = saturate(pow(NdotV + effectiveAO, roughness * roughness) - 1.0f + effectiveAO);
 	float specOcc     = min(lerp(baseSpecOcc, max(baseSpecOcc * 0.5f, dirSpecOcc), saturate(roughness * 2.5f)), gtso);
-	specular *= isSkin ? lerp(1.0f, specOcc, SKIN_AO_STRENGTH) : specOcc;
+	specular *= isSkin ? lerp(1.0f, specOcc, SKIN_AO_STRENGTH) : (isEyeMat ? 1.0f : specOcc);
 
 	// Jimenez multi-bounce diffuse AO applied in-material: AO is computed before
 	// shading, so direct sun, IBL and the GI composite all consume it consistently
 	// and no post-GI multiply pass is needed.
 	bool   isEmissiveOrGlass2 = (material.lightModel == SHADINGMODELID_GLASS || material.lightModel == SHADINGMODELID_EMISSIVE);
-	if (!isEmissiveOrGlass2)
+	if (!isEmissiveOrGlass2 && !isEyeMat)
 	{
 		float3 aBounce   = 2.0404f * material.albedo - 0.3324f;
 		float3 bBounce   = -4.7951f * material.albedo + 0.6417f;
@@ -349,14 +352,15 @@ void ShadingImageBasedLighting(sampler source, MaterialParam material, float4 sc
 	}
 #else
 	bool isSkinVis = (material.lightModel == SHADINGMODELID_SKIN || material.lightModel == SHADINGMODELID_SUBSURFACE);
-	float vis = isSkinVis ? lerp(1.0f, material.visibility, 0.5f) : material.visibility;
+	bool isEyeMat  = (material.lightModel == SHADINGMODELID_EYE);
+	float vis = (isSkinVis || isEyeMat) ? 1.0f : material.visibility;
 	diffuse *= vis;
-	specular *= ComputeSpecularOcclusion(abs(dot(material.normal, V)) + 1e-5f, vis, material.smoothness);
+	specular *= isEyeMat ? 1.0f : ComputeSpecularOcclusion(abs(dot(material.normal, V)) + 1e-5f, vis, material.smoothness);
 #endif
 
 
 #if SKY_VISIBILITY_ENABLE
-	if (material.lightModel != SHADINGMODELID_EMISSIVE)
+	if (material.lightModel != SHADINGMODELID_EMISSIVE && !isEyeMat)
 	{
 		float4 projConstant = GetProjConstant();
 		float3 posVS = GetViewPosition(projConstant, coord, material.linearDepth);

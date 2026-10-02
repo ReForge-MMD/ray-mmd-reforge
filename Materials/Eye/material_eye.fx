@@ -89,8 +89,8 @@ const float occlusionMapLoopNum = 1.0;
 const float parallaxMapScale = 1.0;
 const float parallaxMapLoopNum = 1.0;
 
-#define EMISSIVE_ENABLE 1
-#define EMISSIVE_MAP_FROM 3
+#define EMISSIVE_ENABLE 0
+#define EMISSIVE_MAP_FROM 0
 #define EMISSIVE_MAP_UV_FLIP 0
 #define EMISSIVE_MAP_APPLY_SCALE 0
 #define EMISSIVE_MAP_APPLY_MORPH_COLOR 0
@@ -98,13 +98,13 @@ const float parallaxMapLoopNum = 1.0;
 #define EMISSIVE_MAP_APPLY_BLINK 0
 #define EMISSIVE_MAP_FILE "emissive.png"
 
-const float3 emissive = 1.0;
-const float3 emissiveBlink = 1.0;
-const float  emissiveIntensity = 0.85;
+const float3 emissive = 0.0;
+const float3 emissiveBlink = 0.0;
+const float  emissiveIntensity = 0.0;
 const float2 emissiveMapLoopNum = 1.0;
 
-// 6: ClearCoat layer for physical Cornea dome highlight on top of Iris
-#define CUSTOM_ENABLE 6
+// 10: Eye layer (unshaded & unshadowed anime iris + physical corneal clearcoat specular)
+#define CUSTOM_ENABLE 10
 
 #define CUSTOM_A_MAP_FROM 0
 #define CUSTOM_A_MAP_UV_FLIP 0

@@ -157,7 +157,7 @@ void ShadingMaterial(MaterialParam material, float3 worldView, out float3 diffus
 	specular = prefilteredSpeculr * fresnel;
 
 	[branch]
-	if (material.lightModel == SHADINGMODELID_CLEAR_COAT)
+	if (material.lightModel == SHADINGMODELID_CLEAR_COAT || material.lightModel == SHADINGMODELID_EYE)
 	{
 		float4 clearcost = ImageBasedLightClearCost(material, nv, coord2);
 		specular = lerp(specular, clearcost.rgb, clearcost.a);

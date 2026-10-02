@@ -8,7 +8,8 @@
 #define SHADINGMODELID_SUBSURFACE 7
 #define SHADINGMODELID_CEL        8
 #define SHADINGMODELID_TONEBASED  9
-#define SHADINGMODELID_MASK       10
+#define SHADINGMODELID_EYE        10
+#define SHADINGMODELID_MASK       11
 
 // How much SSAO/HBAO (and sun-shadow softening) affects skin (0 = ignored,
 // 1 = same as other materials). Kept moderate so skin keeps its soft SSS
