@@ -24,7 +24,7 @@ Requirement :
 * Direct3D 9 With Shader Model 3.0 (ps_3_0)
 * **Powerful GPU recommended** due to advanced shading techniques.
 
-Reforge Exclusive Features (through v1.21.0) :
+Reforge Exclusive Features (through v1.21.1) :
 ------------
 
 **Direct Screen-Space Core & Architecture**
@@ -56,12 +56,20 @@ Reforge Exclusive Features (through v1.21.0) :
 * **Hybrid HBAO / SSDO**: horizon-based and directional occlusion for accurate contact shading.
 
 **Lighting & Shadows**
+* **Physical Solar Lighting & Atmospheric Optics Suite**: comprehensive overhaul of directional sunlight physics (`Shader/Lighting/BRDF.fxsub`, `Shader/Lighting/ShadingMaterials.fxsub`):
+  * **Eddington Solar Limb Darkening (`SUN_LIMB_DARKENING 1`)**: physical center-to-limb quadratic intensity profile across the solar disk ($0.533^\circ$) in `SphereMaxNoH`, eliminating artificial razor-sharp specular disk borders.
+  * **Kulla-Conty Energy Compensation (`SUN_MULTI_SCATTER_COMPENSATION 1`)**: Fdez-Aguéra analytical multi-scattering lobe for GGX and Anisotropic BRDFs, recovering lost energy on rough microfacets and preventing darkening at grazing angles.
+  * **Backlit Hair Transmission (`SUN_HAIR_TRANSMISSION 1`)**: Marschner TT-mode forward scattering through hair fibers (`SHADINGMODELID_ANISOTROPY`), simulating warm fiber luminescence when illuminated against strong sunlight.
+  * **Perez/CIE Sun-to-Sky Irradiance Coupling (`SUN_SKY_COUPLING 1`)**: dynamic zenith-dependent ratio modulation ensuring direct sunlight and diffuse skylight remain in physical balance across day, golden hour, and sunset.
+  * **Planckian Locus Daylight Auto-CCT (`SUN_AUTO_CCT 1`)**: Kang/Kim/Hernandez-Andres polynomial analytical Planckian Blackbody spectrum (2200K–6500K) dynamically computing physical daylight spectral shift from solar zenith angle.
+  * **Forward Mie Scattering Corona (`SUN_CORONA_ENABLE 1`)**: view-dependent Mie aerosol diffraction aureole centered around the solar vector for atmospheric camera transitions.
 * **Percentage-Closer Soft Shadows (PCSS) & Contact Shadows**: physically based contact-hardening directional soft shadows with dynamic blocker search, Poisson-disk TAA-jittered filtering, and angular sun radius penumbra expansion. Paired with Screen-Space Contact Shadows (SSCS) resolving sub-millimeter ground and geometry contacts, seamless 4-cascade cross-blending (`CascadeCrossBlend`), and adaptive bias eliminating close-up macro staircasing and light leaks.
 * **Directional Water Caustics**: real-time focused underwater light bands and wave curvature flux concentration with chromatic dispersion and a dedicated controller (`CausticsController.pmx`).
 * **Screen-Space Global Shadows (SSGS)**: long-range directional raymarched shadows with distance-adaptive soft penumbra expansion, grounding characters and geometry without shadow map dependence.
 * **Volumetric Atmosphere & Dynamic Clouds 2.0**: SA_DirectX 3.0 cumulus cloudscapes with Frostbite/Nubis lighting, Beer-Powder scattering, Silver Lining, planetary horizon curvature, and **Adaptive Empty Space Skipping** (2.25x stride with 0.75x boundary refinement) for high-framerate rendering in clear sky regions without edge slicing or visual quality loss.
 
 **Materials & BRDF**
+* **Dedicated Unshadowed Eye Shading Model (`SHADINGMODELID_EYE 10`, `CUSTOM_ENABLE 10`)**: purpose-built eye shading architecture replacing the legacy emissive glow workaround. Bypasses cast shadow maps (hair, bangs, eyelids), geometric terminator falloff, SSAO/SSDO, and orbital socket occlusion so eyes remain vibrant and clear under all lighting conditions, while maintaining full incident illuminance scaling and physical clearcoat corneal specular reflections without false flashlight-like self-glow in darkness.
 * **Energy-Preserving Oren-Nayar (EON) BRDF**: exact Portsmouth, Kutz & Hill (JCGT 2025) diffuse model preserving energy across all roughness levels.
 * **Unified UE Artist Skin SSS Toolchain**: WrappedDiffuse (`w=1/3, n=1.5`), AO-scaled BackScatter, view-dependent InScatter, Beer-Lambert transmission with HSV hue shift, Henyey-Greenstein backlit forward glow (`SubsurfaceShadingBacklitGlow`), and explicit sRGB transmittance authoring.
 * **Texture-Space SSS Diffusion (`SSSS_TEXSPACE 1`)**: camera distance-invariant model UV-space irradiance convolution with Christensen-Burley profile, eliminating screen-space silhouette haloing and hair light bleeding.
