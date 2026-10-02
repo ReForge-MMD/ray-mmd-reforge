@@ -61,12 +61,16 @@ float4 AtmosphericFogPS(
 	setting.earthRadius = mEarthRadius * mUnitDistance;
 	setting.earthAtmTopRadius = mEarthAtmoRadius * mUnitDistance;
 	setting.earthCenter = float3(0, -setting.earthRadius, 0);
-	setting.waveLambdaMie = mieLambda;
+	setting.waveLambdaMie = mieLambda * (mFogDensity / mFogDensityParams.x);
 	setting.waveLambdaOzone = mOzoneScatteringCoeff * mOzoneMass;
 	setting.waveLambdaRayleigh = rayleight;
 	
 	float3 fog = ComputeFogChapman(setting, CameraPosition + float3(0, mEarthPeopleHeight * mUnitDistance, 0), V, SunDirection, materialAlpha.linearDepth, mFogRange, mFogDensityFar);
-	return float4(fog, 0);
+	fog *= mFogIntensity;
+
+	float fogExtinction = luminance(mWaveLength) * materialAlpha.linearDepth * mFogDensity;
+
+	return float4(fog, fogExtinction);
 }
 
 #if FOG_WITH_GODRAY
@@ -109,11 +113,12 @@ float4 AtmosphericFogMiePS(
 	setting.earthRadius = mEarthRadius * mUnitDistance;
 	setting.earthAtmTopRadius = mEarthAtmoRadius * mUnitDistance;
 	setting.earthCenter = float3(0, -setting.earthRadius, 0);
-	setting.waveLambdaMie = mieLambda;
+	setting.waveLambdaMie = mieLambda * (mFogDensity / mFogDensityParams.x);
 	setting.waveLambdaOzone = mOzoneScatteringCoeff * mOzoneMass;
 	setting.waveLambdaRayleigh = rayleight;
 
 	float3 fog = ComputeFogChapmanMie(setting, CameraPosition + float3(0, mEarthPeopleHeight * mUnitDistance, 0), V, SunDirection, materialAlpha.linearDepth, mFogRange);
+	fog *= mFogIntensity;
 
 #if ATM_CLOUD_ENABLE
 	setting.cloud = mCloudDensity;
@@ -191,7 +196,7 @@ float4 AtmosphericScatteringPS(
 	setting.earthRadius = mEarthRadius * mUnitDistance;
 	setting.earthAtmTopRadius = mEarthAtmoRadius * mUnitDistance;
 	setting.earthCenter = float3(0, -setting.earthRadius, 0);
-	setting.waveLambdaMie = mieLambda;
+	setting.waveLambdaMie = mieLambda * (mFogDensity / mFogDensityParams.x);
 	setting.waveLambdaOzone = mOzoneScatteringCoeff * mOzoneMass;
 	setting.waveLambdaRayleigh = rayleight;
 	

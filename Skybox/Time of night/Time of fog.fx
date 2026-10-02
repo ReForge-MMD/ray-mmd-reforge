@@ -55,7 +55,7 @@ float4 ScatteringFogPS(
 	setting.mieG = mMiePhase;
 	setting.mieHeight = mMieHeight * scaling;
 	setting.rayleighHeight = mRayleighHeight * scaling;
-	setting.waveLambdaMie = mieLambda;
+	setting.waveLambdaMie = mieLambda * (mFogDensity / mFogDensityParams.x);
 	setting.waveLambdaRayleigh = rayleight;
 	setting.fogRange = mFogRange;
 
