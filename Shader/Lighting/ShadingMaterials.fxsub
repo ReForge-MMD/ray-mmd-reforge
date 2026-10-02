@@ -20,6 +20,30 @@
  * @param EE              Top-of-atmosphere direct solar illuminance scale.
  * @return Spectral RGB solar radiance reaching the surface.
  */
+#if SUN_AUTO_CCT
+/**
+ * Analytical Planckian radiator chromaticity model (Kang et al. / Krystek).
+ * Evaluates spectral daylight color temperature from 2200K (horizon) to 6500K (zenith).
+ */
+float3 ComputeSolarCCT(float zenithAngleCos)
+{
+	float cosTheta = saturate(zenithAngleCos);
+	// Solar elevation curve: non-linear ramp representing daylight temperature progression
+	float T = lerp(2200.0f, 6500.0f, pow(cosTheta, 0.55f));
+	
+	// Fast polynomial Planckian locus RGB fit (normalized to D65 whitepoint)
+	float t = T / 100.0f;
+	float r = (t <= 66.0f) ? 1.0f : saturate(1.292936f * pow(max(t - 60.0f, 0.1f), -0.1332f));
+	float g = (t <= 66.0f) ? saturate(0.39008f * log(max(t, 1.0f)) - 0.63184f)
+	                       : saturate(1.12989f * pow(max(t - 60.0f, 0.1f), -0.07551f));
+	float b = (t >= 66.0f) ? 1.0f : ((t <= 19.0f) ? 0.0f : saturate(0.54320f * log(max(t - 10.0f, 1.0f)) - 1.19625f));
+	
+	float3 cctColor = float3(r, g, b);
+	// Normalize so maximum channel is 1.0 to preserve peak radiant illuminance
+	return cctColor / max(max(cctColor.r, cctColor.g), max(cctColor.b, 1e-4f));
+}
+#endif
+
 float3 ComputeSunTransmittance(float zenithAngleCos, float EE = 10.0f)
 {
 	float cosTheta = clamp(zenithAngleCos, -1.0f, 1.0f);
@@ -47,13 +71,46 @@ float3 ComputeSunTransmittance(float zenithAngleCos, float EE = 10.0f)
 	// Smooth horizon terminator extinction (astronomical refraction & earth curvature fade)
 	float horizonCutoff = smoothstep(-0.04f, 0.02f, cosTheta);
 
-	return (EE / PI) * transmittance * horizonCutoff;
+	float3 result = (EE / PI) * transmittance * horizonCutoff;
+
+#if SUN_AUTO_CCT
+	result *= ComputeSolarCCT(cosTheta);
+#endif
+
+	return result;
 }
 
 float3 ComputeSunIntensity(float zenithAngleCos, float EE = 10.0f)
 {
-	return ComputeSunTransmittance(zenithAngleCos, EE);
+	float3 directRad = ComputeSunTransmittance(zenithAngleCos, EE);
+#if SUN_SKY_COUPLING
+	// Perez/CIE physical sun-to-sky ratio coupling:
+	// As the solar disk approaches the horizon, direct optical path through the atmosphere
+	// elongates rapidly, smoothly handing scene illumination over to the ambient sky dome
+	float cosTheta = saturate(zenithAngleCos);
+	float sunCoupling = saturate(1.0f - exp(-4.5f * cosTheta));
+	directRad *= sunCoupling;
+#endif
+	return directRad;
 }
+
+#if SUN_CORONA_ENABLE
+/**
+ * Forward Mie scattering solar corona / diffraction aureole.
+ * Evaluates forward-scattering atmospheric phase function when looking towards the sun vector.
+ */
+float3 ComputeSunCorona(float3 V, float3 L, float3 lightColor)
+{
+	// -L is the direction pointing toward the sun in view space
+	float cosGaze = saturate(dot(V, -L));
+	float g = mSunCoronaAnisotropy;
+	float g2 = g * g;
+	float denom = 1.0f + g2 - 2.0f * g * cosGaze;
+	float hgPhase = (1.0f - g2) / (4.0f * PI * pow(max(denom, 0.005f), 1.5f));
+	float angleGate = smoothstep(0.85f, 0.999f, cosGaze);
+	return lightColor * (hgPhase * angleGate * (mSunCoronaIntensity * 0.08f));
+}
+#endif
 
 #if WATER_CAUSTICS_ENABLE
 /**
@@ -241,6 +298,11 @@ void ShadingMaterial(MaterialParam material, float3 V, float3 L, float2 coord, o
 		float3 kneeCurve = tau + tau * tau - tau * tau * tau;
 		diffuse = min(diffuse, entry + knee * kneeCurve);
 	}
+
+#if SUN_CORONA_ENABLE
+	float3 corona = ComputeSunCorona(V, L, lightColor);
+	diffuse += corona;
+#endif
 
 	specular = energy[1] * lightColor;
 

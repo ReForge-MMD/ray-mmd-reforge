@@ -460,26 +460,6 @@ float3 SpecularBRDF_Blinn(float nh, float nl, float vh, float nv, float smoothne
 	return D;
 }
 
-float3 SpecularBRDF_GGX(float nh, float nl, float vh, float nv, float roughness, float3 specular, float NormalizationFactor)
-{
-	float m2 = roughness * roughness;
-	float spec = (nh * m2 - nh) * nh + 1.0f;
-	spec = m2 / (spec * spec) * NormalizationFactor;
-
-	float k = 1.0f - roughness;
-	float G = nl * (nv * k + roughness) + nv * (nl * k + roughness);
-	spec *= 0.5f / G;
-
-	float3 f0 = specular;
-	float3 f90 = ComputeSpecularMicroOcclusion(f0);
-	float3 fresnel = fresnelSchlickF(f0, f90, vh);
-
-	// Multi-scattering energy compensation for rough microfacets (Turquin 2018 / Fdez-Aguera)
-	float3 energyCompensation = 1.0f + f0 * (roughness * (1.0f - roughness) * 0.65f);
-
-	return fresnel * spec * energyCompensation;
-}
-
 /**
  * [Lazarov 2013, "Getting More Physical in Call of Duty: Black Ops II"]
  * Analytical polynomial approximation for the Environment BRDF split-sum DFG integral.
@@ -496,6 +476,28 @@ float2 EnvBRDFApproxLazarov(float roughness, float NoV)
 	float4 r = roughness * c0 + c1;
 	float a004 = min(r.x * r.x, exp2(-9.28f * NoV)) * r.x + r.y;
 	return float2(-1.04f, 1.04f) * a004 + r.zw;
+}
+
+float3 SpecularBRDF_GGX(float nh, float nl, float vh, float nv, float roughness, float3 specular, float NormalizationFactor)
+{
+	float m2 = roughness * roughness;
+	float spec = (nh * m2 - nh) * nh + 1.0f;
+	spec = m2 / (spec * spec) * NormalizationFactor;
+
+	float k = 1.0f - roughness;
+	float G = nl * (nv * k + roughness) + nv * (nl * k + roughness);
+	spec *= 0.5f / G;
+
+	float3 f0 = specular;
+	float3 f90 = ComputeSpecularMicroOcclusion(f0);
+	float3 fresnel = fresnelSchlickF(f0, f90, vh);
+
+	// Multi-scattering energy compensation for rough microfacets (Kulla-Conty / Fdez-Aguera)
+	float2 dfgV = EnvBRDFApproxLazarov(roughness, nv);
+	float EoV = saturate(dfgV.x + dfgV.y);
+	float3 energyCompensation = 1.0f + f0 * ((1.0f - EoV) / max(EoV, 0.05f));
+
+	return fresnel * spec * energyCompensation;
 }
 
 float3 EnvBRDFApprox(float3 specularColor, float roughness, float NoV)
@@ -543,13 +545,23 @@ float EnergyPreservingFullyRough(inout float3 specular, float roughness)
  * SinAlpha = sin(asin(lightAngularRadius)); 0 disables (point-light behavior).
  * nl is the unclamped dot(N,L), vl the unclamped dot(V,L).
  */
-void SphereMaxNoH(inout float nl, inout float vl, float nv, float SinAlpha, inout float nh, inout float vh)
+void SphereMaxNoH(inout float nl, inout float vl, float nv, float SinAlpha, inout float nh, inout float vh, out float diskIntensity)
 {
+	diskIntensity = 1.0f;
 	if (SinAlpha > 0)
 	{
 		float CosAlpha = sqrt(1 - pow2(SinAlpha));
 
 		float RoL = 2 * nl * nv - vl;
+
+#if SUN_LIMB_DARKENING
+		// Physical Eddington solar limb darkening falloff towards disk perimeter
+		float rDiskSq = saturate((1.0f - RoL) / max(1.0f - CosAlpha, 1e-5f));
+		float mu = sqrt(saturate(1.0f - rDiskSq));
+		float u = mSunLimbDarkeningCoeff;
+		diskIntensity = saturate((1.0f - u * (1.0f - mu)) / max(1.0f - u * 0.33333f, 1e-4f));
+#endif
+
 		if (RoL >= CosAlpha)
 		{
 			// The whole sphere is "front" of the half-vector region
@@ -698,8 +710,10 @@ float3 SpecularBRDF_GGXAniso(float3 N, float3 H, float nh, float nl, float vh, f
 		float3 f90 = ComputeSpecularMicroOcclusion(f0);
 		float3 fresnel = fresnelSchlickF(f0, f90, vh);
 
-		// Multi-scattering energy compensation for anisotropic surfaces
-		float3 energyCompensation = 1.0f + f0 * (roughness * (1.0f - roughness) * 0.65f);
+		// Multi-scattering energy compensation for anisotropic surfaces (Kulla-Conty / Fdez-Aguera)
+		float2 dfgV = EnvBRDFApproxLazarov(roughness, nv);
+		float EoV = saturate(dfgV.x + dfgV.y);
+		float3 energyCompensation = 1.0f + f0 * ((1.0f - EoV) / max(EoV, 0.05f));
 
 		return D * V * fresnel * energyCompensation;
 	}
@@ -946,18 +960,38 @@ float3 SubsurfaceShading(MaterialParam material, float3 N, float3 L, float3 V, f
 		return 0;
 }
 
+#if SUN_HAIR_TRANSMISSION
+/**
+ * Marschner TT-mode forward scattering through hair fibers under directional sunlight.
+ * Simulates sunlight transmitting through hair fibers with cuticle scale longitudinal tilt (~3 deg)
+ * and azimuthal diffusion, producing a rich golden-hour rim glow.
+ */
+float3 HairBacklightTransmission(MaterialParam material, float3 N, float3 L, float3 V, float roughness)
+{
+	float voL = dot(V, L);
+	float forwardCone = saturate(-voL);
+	float beta = max(roughness * 0.5f + 0.1f, 0.05f);
+	float forwardPhase = exp(-pow2(1.0f - forwardCone) / (2.0f * beta * beta));
+	float wrapNoL = saturate((-dot(N, L) + 0.4f) / 1.4f);
+	float3 hairTransTint = sqrt(saturate(material.albedo) + 1e-4f);
+	return hairTransTint * (forwardPhase * wrapNoL * mSunHairTransIntensity);
+}
+#endif
+
 float2x3 SurfaceEnergy(MaterialParam material, float3 N, float3 L, float3 V, float shadow, float normalizeFactor = 1.0)
 {
 	float nl = dot(N, L);
 	bool isSkin = (material.lightModel == SHADINGMODELID_SKIN || material.lightModel == SHADINGMODELID_SUBSURFACE);
+	bool isAniso = (material.lightModel == SHADINGMODELID_ANISOTROPY);
+	float nlCutoff = (isSkin ? -0.55f : (isAniso ? -0.75f : 0.0f));
 
 #if TOON_ENABLE
-	// Half-Lambert cel ramps and skin wrap are defined into shadow;
+	// Half-Lambert cel ramps, skin wrap, and hair backlight are defined into shadow;
 	// only standard PBR hard-terminates at nl <= 0
-	if (nl <= (isSkin ? -0.55f : 0.0f) && material.lightModel != SHADINGMODELID_CEL)
+	if (nl <= nlCutoff && material.lightModel != SHADINGMODELID_CEL)
 		return (float2x3)0;
 #else
-	if (nl <= (isSkin ? -0.55f : 0.0f))
+	if (nl <= nlCutoff)
 		return (float2x3)0;
 #endif
 
@@ -972,7 +1006,8 @@ float2x3 SurfaceEnergy(MaterialParam material, float3 N, float3 L, float3 V, flo
 
 	// [de Carpentier 2017] Optional sphere-light highlight softening / specular
 	// AA; identity no-op when EFFECTIVE_SPEC_SIN_ALPHA = 0 (constant-folded)
-	SphereMaxNoH(nl, lv, nv, EFFECTIVE_SPEC_SIN_ALPHA, nh, vh);
+	float diskIntensity = 1.0f;
+	SphereMaxNoH(nl, lv, nv, EFFECTIVE_SPEC_SIN_ALPHA, nh, vh, diskIntensity);
 
 	float3 H = (material.lightModel == SHADINGMODELID_ANISOTROPY) ? ((V + L) * InvLenH) : 0;
 
@@ -1019,7 +1054,12 @@ float2x3 SurfaceEnergy(MaterialParam material, float3 N, float3 L, float3 V, flo
 	else if (material.lightModel == SHADINGMODELID_GLASS)
 		specular = SpecularBRDF_Blinn(nh, nl, vh, nv, material.smoothness, material.specular, normalizeFactor);
 	else if (material.lightModel == SHADINGMODELID_ANISOTROPY)
+	{
 		specular = SpecularBRDF_GGXAniso(N, H, nh, nl, vh, nv, material.specular, material.albedo, roughness, material.customDataA, material.customDataB, normalizeFactor);
+#if SUN_HAIR_TRANSMISSION
+		diffuse += HairBacklightTransmission(material, N, L, V, roughness) * shadow;
+#endif
+	}
 	else
 	{
 		specular = SpecularBRDF_GGX(nh, nl, vh, nv, roughness, material.specular, normalizeFactor);
@@ -1036,7 +1076,7 @@ float2x3 SurfaceEnergy(MaterialParam material, float3 N, float3 L, float3 V, flo
 	// saturate(nl): the cel path can reach here with nl <= 0 (back-side deep
 	// shadow band) and must not pick up negative specular
 	float specAO = isSkin ? lerp(1.0f, microAO, SKIN_AO_STRENGTH) : microAO;
-	return float2x3(diffuse * albedoScaling, specular * saturate(nl) * specAO * shadow);
+	return float2x3(diffuse * albedoScaling, specular * saturate(nl) * specAO * shadow * diskIntensity);
 }
 
 float4 SurfaceEnergy(MaterialParam material, float3 N, float3 Ld, float3 Ls, float3 V, float normalizeFactor = 1.0)
@@ -1057,7 +1097,8 @@ float4 SurfaceEnergy(MaterialParam material, float3 N, float3 Ld, float3 Ls, flo
 
 	// [de Carpentier 2017] Optional sphere/area-light highlight softening;
 	// shaped by the specular direction Ls and a no-op when the knob is 0
-	SphereMaxNoH(nlUnclamped, vl, nv, EFFECTIVE_SPEC_SIN_ALPHA, nh, vh);
+	float diskIntensity2 = 1.0f;
+	SphereMaxNoH(nlUnclamped, vl, nv, EFFECTIVE_SPEC_SIN_ALPHA, nh, vh, diskIntensity2);
 	// Adopt the re-projected NoL (no-op when the knob is 0)
 	nl = saturate(max(nl, nlUnclamped));
 
@@ -1090,5 +1131,5 @@ float4 SurfaceEnergy(MaterialParam material, float3 N, float3 Ld, float3 Ls, flo
 		diffuse += dot(material.specular, 0.33333f) * EnergyPreservingFullyRough(specular, roughness);
 	}
 
-	return float4(diffuse * albedoScaling, specular) * nl2 * skinShadow;
+	return float4(diffuse * albedoScaling, specular * diskIntensity2) * nl2 * skinShadow;
 }
