@@ -226,6 +226,7 @@ float3 ColorCorrectAll(
 
 float3 TonemapACES(float3 x)
 {
+	x = max(0.0f, x);
 	const float A = 2.51f;
 	const float B = 0.03f;
 	const float C = 2.43f;
@@ -268,13 +269,14 @@ float3 TonemapReinhardLumaBased(float3 color, float whitePt)
 {
 	float luma = luminance(color);
 	float toneMappedLuma = luma * (1 + luma / (whitePt * whitePt))/ (1 + luma);
-	color *= toneMappedLuma / luma;
+	color *= toneMappedLuma / max(luma, 1e-6f);
 	return color;
 }
 
 // ponytail: ACES Fitted curve (Stephen Hill) provides accurate filmic response without color shifting in bright highlights
 float3 TonemapACESFitted(float3 color)
 {
+	color = max(0.0f, color);
 	static const float3x3 ACESInputMat = {
 		0.59719, 0.35458, 0.04823,
 		0.07600, 0.90834, 0.01566,
@@ -293,7 +295,7 @@ float3 TonemapACESFitted(float3 color)
 }
 
 // AgX Tonemapping (Troy Sobotka / Blender 4.0 OCIO standard) - preserves chromatic purity and hue in extreme highlights
-float3 TonemapAgX(float3 val)
+float3 TonemapAgX(float3 val, uniform bool punchy)
 {
 	static const float3x3 AgXInsetMat = {
 		0.842479065f, 0.078433600f, 0.079223745f,
@@ -301,22 +303,58 @@ float3 TonemapAgX(float3 val)
 		0.042375655f, 0.078433600f, 0.879142973f
 	};
 	static const float3x3 AgXOutMat = {
-		 1.1968790f, -0.05289685f, -0.05297164f,
-		-0.09802088f,  1.15190312f, -0.09804345f,
-		-0.09902975f, -0.07547978f,  1.15107314f
+		 1.19687900f, -0.09802088f, -0.09902974f,
+		-0.05289685f,  1.15190313f, -0.09896118f,
+		-0.05297164f, -0.09804345f,  1.15107367f
 	};
 
 	val = max(1e-6f, val);
 	val = mul(AgXInsetMat, val);
 
-	// Normalized log2 encoding over [-10.0 EV, +6.5 EV] range (16.5 stops dynamic range)
-	val = clamp((log2(val) + 10.0f) / 16.5f, 0.0f, 1.0f);
+	// Normalized log2 encoding over [-12.47393 EV, +4.026069 EV] range (16.5 stops dynamic range)
+	val = clamp((log2(val) + 12.47393f) / 16.5f, 0.0f, 1.0f);
 
 	// Exact 6th-order polynomial fit of the official Blender 4.0 / OCIO AgX Base Contrast S-Curve
 	val = val * (val * (val * (val * (val * (15.5f * val - 40.14f) + 31.96f) - 6.868f) + 0.4298f) + 0.1191f) - 0.00232f;
 
+	if (punchy)
+	{
+		// Official AgX Punchy look (CDL slope 1.0, power 1.35, sat 1.4)
+		val = pow(max(0.0f, val), 1.35f);
+		float luma = dot(val, float3(0.2126f, 0.7152f, 0.0722f));
+		val = luma + 1.4f * (val - luma);
+	}
+
 	val = mul(AgXOutMat, val);
-	return saturate(val);
+
+	// AgX outset matrix maps to sRGB display encoding.
+	// Convert to linear so the pipeline's subsequent linear2srgb() operates correctly without double-gamma.
+	return srgb2linear(saturate(val));
+}
+
+// Khronos PBR Neutral Tone Mapper (Khronos Group 2024)
+// Preserves exact base material color and avoids hue shifts or oversaturation in highlights
+float3 TonemapKhronosPbrNeutral(float3 color)
+{
+	const float startCompression = 0.8f - 0.04f;
+	const float desaturation = 0.15f;
+
+	color = max(0.0f, color);
+
+	float x = min(color.r, min(color.g, color.b));
+	float offset = x < 0.08f ? x - 6.25f * x * x : 0.04f;
+	color -= offset;
+
+	float peak = max(color.r, max(color.g, color.b));
+	if (peak < startCompression)
+		return color;
+
+	const float d = 1.0f - startCompression;
+	float newPeak = 1.0f - d * d / (peak + d - startCompression);
+	color *= newPeak / peak;
+
+	float g = 1.0f - 1.0f / (desaturation * (peak - newPeak) + 1.0f);
+	return lerp(color, newPeak.xxx, g);
 }
 
 float3 ColorToneMapping(float3 color)
@@ -345,7 +383,13 @@ float3 ColorToneMapping(float3 color)
 	float3 curr = TonemapACESFitted(color);
 	return saturate(curr);
 #elif HDR_TONEMAP_OPERATOR == 8
-	float3 curr = TonemapAgX(color);
+	float3 curr = TonemapAgX(color, false);
+	return saturate(curr);
+#elif HDR_TONEMAP_OPERATOR == 9
+	float3 curr = TonemapAgX(color, true);
+	return saturate(curr);
+#elif HDR_TONEMAP_OPERATOR == 10
+	float3 curr = TonemapKhronosPbrNeutral(color);
 	return saturate(curr);
 #else
 	return saturate(color);
