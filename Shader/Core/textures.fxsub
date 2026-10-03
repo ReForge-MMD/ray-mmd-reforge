@@ -356,7 +356,7 @@ sampler SSGIVisibilityMapSamp = sampler_state {
 shared texture PSSM1 : OFFSCREENRENDERTARGET<
 	string Description = "Cascade shadow map for ray";
 	int2 Dimensions = { SHADOW_MAP_SIZE, SHADOW_MAP_SIZE };
-	string Format = "G32R32F";
+	string Format = "R32F";
 	float4 ClearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
 	float ClearDepth = 1.0f;
 	string DefaultEffect =
@@ -372,7 +372,7 @@ shared texture PSSM1 : OFFSCREENRENDERTARGET<
 shared texture PSSM2 : OFFSCREENRENDERTARGET<
 	string Description = "Cascade shadow map for ray";
 	int2 Dimensions = { SHADOW_MAP_SIZE, SHADOW_MAP_SIZE };
-	string Format = "G32R32F";
+	string Format = "R32F";
 	float4 ClearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
 	float ClearDepth = 1.0f;
 	string DefaultEffect =
@@ -388,7 +388,7 @@ shared texture PSSM2 : OFFSCREENRENDERTARGET<
 shared texture PSSM3 : OFFSCREENRENDERTARGET<
 	string Description = "Cascade shadow map for ray";
 	int2 Dimensions = { SHADOW_MAP_SIZE, SHADOW_MAP_SIZE };
-	string Format = "G32R32F";
+	string Format = "R32F";
 	float4 ClearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
 	float ClearDepth = 1.0f;
 	string DefaultEffect =
@@ -404,7 +404,7 @@ shared texture PSSM3 : OFFSCREENRENDERTARGET<
 shared texture PSSM4 : OFFSCREENRENDERTARGET<
 	string Description = "Cascade shadow map for ray";
 	int2 Dimensions = { SHADOW_MAP_SIZE, SHADOW_MAP_SIZE };
-	string Format = "G32R32F";
+	string Format = "R32F";
 	float4 ClearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
 	float ClearDepth = 1.0f;
 	string DefaultEffect =
@@ -420,32 +420,32 @@ shared texture PSSM4 : OFFSCREENRENDERTARGET<
 
 sampler PSSM1Samp = sampler_state {
 	texture = <PSSM1>;
-	MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = NONE;
+	MinFilter = POINT; MagFilter = POINT; MipFilter = NONE;
 	AddressU = CLAMP; AddressV = CLAMP;
 };
 sampler PSSM2Samp = sampler_state {
 	texture = <PSSM2>;
-	MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = NONE;
+	MinFilter = POINT; MagFilter = POINT; MipFilter = NONE;
 	AddressU = CLAMP; AddressV = CLAMP;
 };
 sampler PSSM3Samp = sampler_state {
 	texture = <PSSM3>;
-	MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = NONE;
+	MinFilter = POINT; MagFilter = POINT; MipFilter = NONE;
 	AddressU = CLAMP; AddressV = CLAMP;
 };
 sampler PSSM4Samp = sampler_state {
 	texture = <PSSM4>;
-	MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = NONE;
+	MinFilter = POINT; MagFilter = POINT; MipFilter = NONE;
 	AddressU = CLAMP; AddressV = CLAMP;
 };
 
 shared texture ShadowMap : RENDERCOLORTARGET<
 	float2 ViewportRatio = {1.0, 1.0};
-	string Format = "R16F";
+	string Format = "L8";
 >;
 texture ShadowMapTemp : RENDERCOLORTARGET<
 	float2 ViewportRatio = {1.0, 1.0};
-	string Format = "R16F";
+	string Format = "L8";
 >;
 sampler ShadowMapSamp = sampler_state {
 	texture = <ShadowMap>;

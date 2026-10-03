@@ -66,7 +66,7 @@ float4 CascadeShadowMapPS(
 	clip(alpha - CasterAlphaThreshold);
 #endif
 	float depth = saturate(coord1.z);
-	return float4(depth, depth * depth, 0.0f, 1.0f);
+	return float4(depth, 0.0f, 0.0f, 1.0f);
 }
 
 technique DepthTech<string MMDPass = "object_ss";

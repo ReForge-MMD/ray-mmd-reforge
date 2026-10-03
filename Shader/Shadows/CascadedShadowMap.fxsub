@@ -42,25 +42,6 @@ float SampleCascadeSingle(
 #endif
 }
 
-float SampleCascadeMap(
-	int cascadeIndex,
-	float2 coord,
-	float receiverDepth,
-	float lightSizeUV,
-	float2 receiverPlaneBias,
-	float2 rotation)
-{
-	[branch]
-	if (cascadeIndex == 0)
-		return SampleCascadeSingle(PSSM1Samp, coord, receiverDepth, lightSizeUV, receiverPlaneBias, rotation);
-	else if (cascadeIndex == 1)
-		return SampleCascadeSingle(PSSM2Samp, coord, receiverDepth, lightSizeUV, receiverPlaneBias, rotation);
-	else if (cascadeIndex == 2)
-		return SampleCascadeSingle(PSSM3Samp, coord, receiverDepth, lightSizeUV, receiverPlaneBias, rotation);
-	else
-		return SampleCascadeSingle(PSSM4Samp, coord, receiverDepth, lightSizeUV, receiverPlaneBias, rotation);
-}
-
 // -----------------------------------------------------------------------------
 // Evaluate Cascaded Sun Shadows
 // -----------------------------------------------------------------------------
@@ -117,13 +98,13 @@ float EvaluateCascadedShadow(MaterialParam material, float3 viewPosition, float2
 	if (lightPPos0.z > 0.0f)
 	{
 		float lightSize0 = SUN_LIGHT_RADIUS * lightCropParams[0].x * 0.5f;
-		float shadow0 = SampleCascadeMap(0, lightPPos0.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize0, receiverPlaneBias, rotation);
+		float shadow0 = SampleCascadeSingle(PSSM1Samp, lightPPos0.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize0, receiverPlaneBias, rotation);
 
 		[branch]
 		if (lightPPos0.z < kCascadeBlendThreshold && lightPPos1.z > 0.0f)
 		{
 			float lightSize1 = SUN_LIGHT_RADIUS * lightCropParams[1].x * 0.5f;
-			float shadow1 = SampleCascadeMap(1, lightPPos1.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize1, receiverPlaneBias, rotation);
+			float shadow1 = SampleCascadeSingle(PSSM2Samp, lightPPos1.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize1, receiverPlaneBias, rotation);
 			shadow = lerp(shadow1, shadow0, saturate(lightPPos0.z / kCascadeBlendThreshold));
 		}
 		else
@@ -134,13 +115,13 @@ float EvaluateCascadedShadow(MaterialParam material, float3 viewPosition, float2
 	else if (lightPPos1.z > 0.0f)
 	{
 		float lightSize1 = SUN_LIGHT_RADIUS * lightCropParams[1].x * 0.5f;
-		float shadow1 = SampleCascadeMap(1, lightPPos1.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize1, receiverPlaneBias, rotation);
+		float shadow1 = SampleCascadeSingle(PSSM2Samp, lightPPos1.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize1, receiverPlaneBias, rotation);
 
 		[branch]
 		if (lightPPos1.z < kCascadeBlendThreshold && lightPPos2.z > 0.0f)
 		{
 			float lightSize2 = SUN_LIGHT_RADIUS * lightCropParams[2].x * 0.5f;
-			float shadow2 = SampleCascadeMap(2, lightPPos2.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize2, receiverPlaneBias, rotation);
+			float shadow2 = SampleCascadeSingle(PSSM3Samp, lightPPos2.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize2, receiverPlaneBias, rotation);
 			shadow = lerp(shadow2, shadow1, saturate(lightPPos1.z / kCascadeBlendThreshold));
 		}
 		else
@@ -151,13 +132,13 @@ float EvaluateCascadedShadow(MaterialParam material, float3 viewPosition, float2
 	else if (lightPPos2.z > 0.0f)
 	{
 		float lightSize2 = SUN_LIGHT_RADIUS * lightCropParams[2].x * 0.5f;
-		float shadow2 = SampleCascadeMap(2, lightPPos2.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize2, receiverPlaneBias, rotation);
+		float shadow2 = SampleCascadeSingle(PSSM3Samp, lightPPos2.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize2, receiverPlaneBias, rotation);
 
 		[branch]
 		if (lightPPos2.z < kCascadeBlendThreshold && lightPPos3.z > 0.0f)
 		{
 			float lightSize3 = SUN_LIGHT_RADIUS * lightCropParams[3].x * 0.5f;
-			float shadow3 = SampleCascadeMap(3, lightPPos3.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize3, receiverPlaneBias, rotation);
+			float shadow3 = SampleCascadeSingle(PSSM4Samp, lightPPos3.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize3, receiverPlaneBias, rotation);
 			shadow = lerp(shadow3, shadow2, saturate(lightPPos2.z / kCascadeBlendThreshold));
 		}
 		else
@@ -168,14 +149,14 @@ float EvaluateCascadedShadow(MaterialParam material, float3 viewPosition, float2
 	else if (lightPPos3.z > 0.0f)
 	{
 		float lightSize3 = SUN_LIGHT_RADIUS * lightCropParams[3].x * 0.5f;
-		shadow = SampleCascadeMap(3, lightPPos3.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize3, receiverPlaneBias, rotation);
+		shadow = SampleCascadeSingle(PSSM4Samp, lightPPos3.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize3, receiverPlaneBias, rotation);
 	}
 	else if (material.linearDepth < mPSSMCascadeZMax)
 	{
 		// Fallback to Cascade 3 with clamped coordinates for peripheral geometry within cascade range
 		float lightSize3 = SUN_LIGHT_RADIUS * lightCropParams[3].x * 0.5f;
 		float2 clampedCoord = clamp(lightCoord23.zw, 0.001f, 0.999f);
-		shadow = SampleCascadeMap(3, clampedCoord + ShadowMapOffset, normalizedReceiverDepth, lightSize3, receiverPlaneBias, rotation);
+		shadow = SampleCascadeSingle(PSSM4Samp, clampedCoord + ShadowMapOffset, normalizedReceiverDepth, lightSize3, receiverPlaneBias, rotation);
 	}
 	else
 	{
