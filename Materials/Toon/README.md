@@ -32,7 +32,7 @@ Materials/Toon/
 │   ├── Water/                # legacy self-contained folder, copied verbatim (no cel flip)
 │   └── Wetness/              # legacy self-contained folder, copied verbatim (no cel flip)
 ├── Skin/
-│   ├── Human/, TDA/          # body/face variants
+│   ├── Human/, TDA/, Tonal/  # body/face variants, 5x5 tonal skin matrix
 │   └── material_skin*.fx     # skin, beige/dark, melanoderm
 ├── Subsurface/               # jade_white, lampshade, marble
 ├── Transparent/              # glass, glasses, plastic, force_*
