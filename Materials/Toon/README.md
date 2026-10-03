@@ -24,9 +24,8 @@ Materials/Toon/
 ├── Foliage/                  # grass, leaves_tree, palm, vines
 ├── Hair/
 │   ├── material_hair*.fx     # hair, procedural, sss, anisotropy variants
-│   ├── Procedural Bonus/     # 13 super shine
-│   ├── Procedural Metallic/  # Coarse / Fine / Very Fine x low-medium-high shine
-│   └── Procedural Silky/     # semi-matte .. very shiny
+│   ├── Procedural/           # Silky / Metallic (Coarse, Fine, Very Fine) / Super_Shine
+│   └── Textured/             # Silky / Clustered / Fine_Strands / Anime_Anisotropic (normal map)
 ├── Metallic/                 # flat ingot rough/smooth/worn, ingot bricks (6 metals each)
 ├── Programmable/
 │   ├── Water/                # legacy self-contained folder, copied verbatim (no cel flip)
