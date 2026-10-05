@@ -8,11 +8,11 @@
 // -----------------------------------------------------------------------------
 
 #ifndef PCSS_BLOCKER_SAMPLES
-#	define PCSS_BLOCKER_SAMPLES 16
+#	define PCSS_BLOCKER_SAMPLES 8
 #endif
 
 #ifndef PCSS_FILTER_SAMPLES
-#	define PCSS_FILTER_SAMPLES 24
+#	define PCSS_FILTER_SAMPLES 16
 #endif
 
 // -----------------------------------------------------------------------------

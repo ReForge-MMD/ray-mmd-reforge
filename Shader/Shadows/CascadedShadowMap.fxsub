@@ -146,17 +146,12 @@ float EvaluateCascadedShadow(MaterialParam material, float3 viewPosition, float2
 			shadow = shadow2;
 		}
 	}
-	else if (lightPPos3.z > 0.0f)
+	else if (lightPPos3.z > 0.0f || material.linearDepth < mPSSMCascadeZMax)
 	{
+		// Cascade 3 / peripheral geometry fallback with clamped coordinates within cascade range
 		float lightSize3 = SUN_LIGHT_RADIUS * lightCropParams[3].x * 0.5f;
-		shadow = SampleCascadeSingle(PSSM4Samp, lightPPos3.xy + ShadowMapOffset, normalizedReceiverDepth, lightSize3, receiverPlaneBias, rotation);
-	}
-	else if (material.linearDepth < mPSSMCascadeZMax)
-	{
-		// Fallback to Cascade 3 with clamped coordinates for peripheral geometry within cascade range
-		float lightSize3 = SUN_LIGHT_RADIUS * lightCropParams[3].x * 0.5f;
-		float2 clampedCoord = clamp(lightCoord23.zw, 0.001f, 0.999f);
-		shadow = SampleCascadeSingle(PSSM4Samp, clampedCoord + ShadowMapOffset, normalizedReceiverDepth, lightSize3, receiverPlaneBias, rotation);
+		float2 coord = (lightPPos3.z > 0.0f) ? lightPPos3.xy : clamp(lightCoord23.zw, 0.001f, 0.999f);
+		shadow = SampleCascadeSingle(PSSM4Samp, coord + ShadowMapOffset, normalizedReceiverDepth, lightSize3, receiverPlaneBias, rotation);
 	}
 	else
 	{
