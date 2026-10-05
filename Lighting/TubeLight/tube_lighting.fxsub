@@ -44,7 +44,7 @@ static const float LightWidth = (2 + mWidthP * TUBELIGHT_MAX_WIDTH);
 static const float LightRadius = lerp(lerp(1, TUBELIGHT_MAX_RADIUS, mRadiusP), 0.1, mRadiusM);
 static const float LightHardness = lerp(shadowHardness.x, shadowHardness.y, mHardnessP);
 static const float LightBlink = saturate(1 - SmoothTriangleWave(time * (mBlink * 10)));
-static const float LightRange = lerp(lerp(lightRangeParams.x, lightRangeParams.z, mRangeP), lightRangeParams.y, mRangeM);
+static const float LightRange = clamp(lerp(lerp(lightRangeParams.x, lightRangeParams.z, mRangeP), lightRangeParams.y, mRangeM), lightRangeParams.y, lightRangeParams.z);
 static const float LightAttenuationBulb = lerp(lerp(lightAttenuationBulbParams.x, lightAttenuationBulbParams.z, mAttenuationBulbP), lightAttenuationBulbParams.y, mAttenuationBulbM);
 static const float LightIntensity = lerp(lerp(lightIntensityParams.x, lightIntensityParams.z, mIntensityP), lightIntensityParams.y, mIntensityM);
 static const float LightIntensity2 = lerp(lerp(mLightIntensityMin, mLightIntensityMax, mMultiLightP), 0, mMultiLightM);
@@ -149,12 +149,10 @@ void GetGbufferParams(float4 texcoord, out MaterialParam material, out MaterialP
 {
 	float2 coord = texcoord.xy / texcoord.w;
 
-	float4 MRT8 = tex2Dlod(Gbuffer8Map, float4(coord, 0, 0));
-	clip(MRT8.x - 1e-5);
-
 	float4 MRT5 = tex2Dlod(Gbuffer5Map, float4(coord, 0, 0));
 	float4 MRT6 = tex2Dlod(Gbuffer6Map, float4(coord, 0, 0));
 	float4 MRT7 = tex2Dlod(Gbuffer7Map, float4(coord, 0, 0));
+	float4 MRT8 = tex2Dlod(Gbuffer8Map, float4(coord, 0, 0));
 
 	DecodeGbuffer(MRT5, MRT6, MRT7, MRT8, materialAlpha);
 

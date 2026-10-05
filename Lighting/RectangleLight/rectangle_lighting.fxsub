@@ -184,10 +184,12 @@ void ShadingMaterial(MaterialParam material, float3 P, float3 V, inout float3 di
 	float3 Lw = RectangleDirection(L, viewLightRight, viewLightUp, viewLightDirection, LightRect);
 	float3 L2 = normalize(Lw);
 
+	float atten = RectangleAttenuation(L2, viewLightDirection);
+
 	float3 points[4];
 	LTC_InitRectPoints(viewLightPosition, viewLightRight, viewLightUp, LightWidth, LightHeight, points);
 
-	diffuse = SubsurfaceShading(material, material.normal, L2, V);
+	diffuse = SubsurfaceShading(material, material.normal, L2, V) * atten;
 #if VIDEO_MAP_FROM
 	diffuse += LTC_EvaluateRectangle(VideoMapSamp, material.normal, V, P, viewLightDirection, points);
 #else
@@ -209,12 +211,10 @@ void ShadingMaterial(MaterialParam material, float3 P, float3 V, inout float3 di
 
 void GetGbufferParams(float2 coord, out MaterialParam material, out MaterialParam materialAlpha)
 {
-	float4 MRT8 = tex2Dlod(Gbuffer8Map, float4(coord, 0, 0));
-	clip(MRT8.x - 1e-5);
-
 	float4 MRT5 = tex2Dlod(Gbuffer5Map, float4(coord, 0, 0));
 	float4 MRT6 = tex2Dlod(Gbuffer6Map, float4(coord, 0, 0));
 	float4 MRT7 = tex2Dlod(Gbuffer7Map, float4(coord, 0, 0));
+	float4 MRT8 = tex2Dlod(Gbuffer8Map, float4(coord, 0, 0));
 
 	DecodeGbuffer(MRT5, MRT6, MRT7, MRT8, materialAlpha);
 
