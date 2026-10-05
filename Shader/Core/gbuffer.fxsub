@@ -40,6 +40,7 @@ struct MaterialParam
 	float3 albedo;
 	float3 specular;
 	float smoothness;
+	float emissiveIntensity;
 	float alpha;
 	float visibility;
 	float customDataA;
@@ -142,6 +143,7 @@ void DecodeGbuffer(float4 buffer1, float4 buffer2, float4 buffer3, float4 buffer
 	material.linearDepth = buffer4.x;
 	material.visibility = buffer4.z;
 	material.lightModel = (int)floor(buffer4.w);
+	material.emissiveIntensity = buffer4.y;
 
 	// Texture-space SSS coordinate: the material stage packs the final mesh UV
 	// into the free skin slots of buffer4 (y = 1 + u; the fractional alpha slot
@@ -179,6 +181,11 @@ void DecodeGbuffer(float4 buffer1, float4 buffer2, float4 buffer3, float4 buffer
 float3 DecodeGBufferAlbedo(float4 buffer1)
 {
 	return buffer1.rgb;
+}
+
+float DecodeGBufferAlpha(float4 buffer4)
+{
+	return frac(buffer4.w) / MAX_FRACTIONAL_8_BIT;
 }
 
 float3 DecodeGBufferNormal(float4 buffer2)

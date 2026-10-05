@@ -585,12 +585,10 @@ float4 ShadingTransparentPS(
 	in float3 viewdir: TEXCOORD1, 
 	in float4 screenPosition : SV_Position) : COLOR
 {
-	float4 MRT8 = tex2Dlod(Gbuffer8Map, float4(coord, 0, 0));
-	clip(MRT8.x - 1e-5);
-
 	float4 MRT5 = tex2Dlod(Gbuffer5Map, float4(coord, 0, 0));
 	float4 MRT6 = tex2Dlod(Gbuffer6Map, float4(coord, 0, 0));
 	float4 MRT7 = tex2Dlod(Gbuffer7Map, float4(coord, 0, 0));
+	float4 MRT8 = tex2Dlod(Gbuffer8Map, float4(coord, 0, 0));
 
 	MaterialParam material;
 	DecodeGbuffer(MRT5, MRT6, MRT7, MRT8, material);
@@ -719,16 +717,17 @@ float4 ShadingTransparentPS(
 	}
 #endif
 
-	if (material.lightModel != SHADINGMODELID_GLASS)
-	{
-		float4 MRT3 = tex2Dlod(Gbuffer3Map, float4(coord, 0, 0));
-		float4 MRT4 = tex2Dlod(Gbuffer4Map, float4(coord, 0, 0));
+	float4 MRT3 = tex2Dlod(Gbuffer3Map, float4(coord, 0, 0));
+	float4 MRT4 = tex2Dlod(Gbuffer4Map, float4(coord, 0, 0));
 
-		float3 emissive0 = DecodeGBufferEmissive(MRT3, MRT4);
-		float3 emissive1 = material.customDataB * material.customDataA * any(material.lightModel == SHADINGMODELID_EMISSIVE);
+	float3 emissive0 = DecodeGBufferEmissive(MRT3, MRT4);
+	float3 emissive1 = (material.lightModel == SHADINGMODELID_EMISSIVE) 
+		? (material.customDataB * material.emissiveIntensity) 
+		: 0.0f;
 
-		lighting += lerp(emissive0, emissive1, MRT8.a) * lerp(1.0, float3(0.6,0.45,0.25), pow(1.0 - saturate(dot(material.normal, V)), 2.5));
-	}
+	float3 emissiveFresnel = lerp(1.0, float3(0.6, 0.45, 0.25), pow(1.0 - saturate(dot(material.normal, V)), 2.5));
+
+	lighting += (emissive0 * (1.0 - material.alpha) + emissive1 * material.alpha) * emissiveFresnel;
 
 #if OUTLINE_QUALITY
 	#if OUTLINE_QUALITY == 1
