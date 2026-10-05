@@ -178,7 +178,9 @@ float4 HDRTonemappingPS(in float4 coord: TEXCOORD0, uniform sampler source) : CO
 	color = ColorToneMapping(color);
 
 	color = linear2srgb(color);
+#if !POST_SHARPEN_ENABLE
 	color = ColorDithering(color, coord.xy);
+#endif
 
 #if AA_QUALITY > 0
 	return float4(color, luminance(color));
