@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadStable = document.getElementById('download-stable');
     
     if (downloadBtn) {
-        const repo = 'norz3n/ray-mmd-reforge';
+        const repo = 'ReForge-MMD/ray-mmd-reforge';
         
         fetch(`https://api.github.com/repos/${repo}/releases/latest`)
             .then(response => response.json())
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cachedHtml && cachedTime && (now - cachedTime < 3600000)) {
             stableChangelog.innerHTML = cachedHtml;
         } else {
-            fetch('https://api.github.com/repos/norz3n/ray-mmd-reforge/releases')
+            fetch('https://api.github.com/repos/ReForge-MMD/ray-mmd-reforge/releases')
                 .then(res => res.json())
                 .then(async data => {
                     if (!Array.isArray(data)) throw new Error("API Limit");
@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div style="margin-top: 8px; padding-left: 12px; border-left: 2px solid rgba(163, 190, 140, 0.3);">
                         `;
                         try {
-                            const commitsRes = await fetch(`https://api.github.com/repos/norz3n/ray-mmd-reforge/commits?sha=${release.tag_name}&per_page=3`);
+                            const commitsRes = await fetch(`https://api.github.com/repos/ReForge-MMD/ray-mmd-reforge/commits?sha=${release.tag_name}&per_page=3`);
                             const commits = await commitsRes.json();
                             if (commits && commits.length) {
                                 html += commits.map(commit => `
@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <span style="color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; width: 100%;">${commit.commit.message.split('\\n')[0]}</span>
                                     </div>
                                 `).join('');
-                                html += `<div style="font-size: 0.85rem; margin-top: 6px;"><a href="https://github.com/norz3n/ray-mmd-reforge/commits/${release.tag_name}" target="_blank" style="color: #64869e; text-decoration: none; transition: color 0.2s;">View all changes &rarr;</a></div>`;
+                                html += `<div style="font-size: 0.85rem; margin-top: 6px;"><a href="https://github.com/ReForge-MMD/ray-mmd-reforge/commits/${release.tag_name}" target="_blank" style="color: #64869e; text-decoration: none; transition: color 0.2s;">View all changes &rarr;</a></div>`;
                             }
                         } catch(e) {
                             html += `<div style="font-size: 0.85rem; color: #64869e;">Failed to load commits.</div>`;
@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const masterChangelog = document.getElementById('master-changelog');
     if (masterChangelog) {
-        fetch('https://api.github.com/repos/norz3n/ray-mmd-reforge/commits?sha=master')
+        fetch('https://api.github.com/repos/ReForge-MMD/ray-mmd-reforge/commits?sha=master')
             .then(res => res.json())
             .then(data => {
                 masterChangelog.innerHTML = data.slice(0, 10).map(commit => `

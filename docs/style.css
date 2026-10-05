@@ -575,3 +575,29 @@ footer {
 ::-webkit-scrollbar-thumb:hover {
     background: #81A1C1; /* Lighter Nordic Blue */
 }
+
+/* Discord Integration */
+.nav-link-discord {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #5865F2 !important;
+}
+
+.nav-link-discord:hover {
+    color: #7983F5 !important;
+    text-shadow: 0 0 10px rgba(88, 101, 242, 0.4);
+}
+
+.btn-discord-hero {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-color: rgba(88, 101, 242, 0.5) !important;
+}
+
+.btn-discord-hero:hover {
+    border-color: #5865F2 !important;
+    color: #fff !important;
+    box-shadow: 0 0 15px rgba(88, 101, 242, 0.3) !important;
+}

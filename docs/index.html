@@ -30,7 +30,8 @@
             <div class="nav-links">
                 <a href="#features">Features</a>
                 <a href="#showcase">Showcase</a>
-                <a href="https://github.com/norz3n/ray-mmd-reforge" target="_blank" class="btn-primary">GitHub</a>
+                <a href="https://discord.gg/v2GePAA3Jh" target="_blank" class="nav-link-discord"><i class="ph ph-discord-logo"></i> Discord</a>
+                <a href="https://github.com/ReForge-MMD/ray-mmd-reforge" target="_blank" class="btn-primary">GitHub</a>
             </div>
         </div>
     </nav>
@@ -38,19 +39,20 @@
     <header class="hero">
         <div class="hero-content fade-in">
             <h1>Heavyweight graphics.<br><span class="highlight-text">Reforged for perfection.</span></h1>
-            <p>A modified fork of the original Ray-MMD library, rebuilt around a single unified Hi-Z buffer that accelerates every screen-space effect — reflections, global illumination, ambient occlusion, contact shadows, and glass refraction. Modern AAA graphics techniques for a stable, physically grounded image out of the box.</p>
+            <p>A modernized, open-source continuation of the Ray-MMD library. Engineered with next-gen contact-hardening PCSS shadows, SSGI 3.0, vectorized SIMD reflections, calibrated 5x5 skin tones, and Blender 4.0 AgX color science — delivering AAA physical fidelity straight out of the box.</p>
             <div class="hero-buttons">
                 <div class="download-group">
-                    <a href="https://github.com/norz3n/ray-mmd-reforge/archive/refs/heads/master.zip" class="btn-primary btn-large" id="download-btn">Download</a>
+                    <a href="https://github.com/ReForge-MMD/ray-mmd-reforge/archive/refs/heads/master.zip" class="btn-primary btn-large" id="download-btn">Download</a>
                     <button class="btn-primary btn-large dropdown-toggle" id="download-dropdown-btn">
                         <i class="ph ph-caret-down"></i>
                     </button>
                     <div class="dropdown-menu">
-                        <a href="https://github.com/norz3n/ray-mmd-reforge/releases" id="download-stable">Stable Release</a>
-                        <a href="https://github.com/norz3n/ray-mmd-reforge/archive/refs/heads/master.zip">Latest Commit (Dev build)</a>
+                        <a href="https://github.com/ReForge-MMD/ray-mmd-reforge/releases" id="download-stable">Stable Release</a>
+                        <a href="https://github.com/ReForge-MMD/ray-mmd-reforge/archive/refs/heads/master.zip">Latest Commit (Dev build)</a>
                     </div>
                 </div>
-                <a href="https://github.com/norz3n/ray-mmd-reforge" class="btn-secondary btn-large">View Documentation</a>
+                <a href="https://github.com/ReForge-MMD/ray-mmd-reforge" class="btn-secondary btn-large">View Documentation</a>
+                <a href="https://discord.gg/v2GePAA3Jh" target="_blank" class="btn-secondary btn-large btn-discord-hero"><i class="ph ph-discord-logo"></i> Join Discord</a>
             </div>
         </div>
         <!-- Background decorative elements -->
@@ -66,69 +68,75 @@
         
         <div class="feature-grid">
             <div class="feature-card fade-in">
-                <div class="feature-icon"><i class="ph ph-stack"></i></div>
-                <h3>Unified Hi-Z Core</h3>
-                <p>One hierarchical Z-buffer shared by SSR, SSGI, HBAO/SSDO, contact shadows, and glass refraction — academically correct DDA traversal with near-plane clamping and cell-boundary fixes.</p>
+                <div class="feature-icon"><i class="ph ph-cloud-moon"></i></div>
+                <h3>Next-Gen PCSS &amp; Contact Shadows</h3>
+                <p>True physical contact-hardening shadows based on solar angular diameter (0.53&deg;), 4-cascade cross-blending, and sub-millimeter Screen-Space Contact Shadows (SSCS) that eliminate Peter-Panning.</p>
             </div>
 
             <div class="feature-card fade-in" style="transition-delay: 0.1s;">
-                <div class="feature-icon"><i class="ph ph-cube"></i></div>
-                <h3>Screen Space Global Illumination</h3>
-                <p>Modular SSGI with progressive Hi-Z LOD gather, multi-bounce interreflection, rough specular GI, and visibility masking — replacing legacy VXGI entirely.</p>
+                <div class="feature-icon"><i class="ph ph-lightning"></i></div>
+                <h3>Vectorized SIMD SSR &amp; SSGI 3.0</h3>
+                <p>Optimized 4-sample SIMD batching for raymarching without warp divergence, progressive multi-bounce indirect lighting, slope-adaptive tolerance, and dedicated reflect-visibility maps.</p>
             </div>
 
             <div class="feature-card fade-in" style="transition-delay: 0.2s;">
                 <div class="feature-icon"><i class="ph ph-circle-half"></i></div>
-                <h3>Hybrid HBAO / SSDO</h3>
-                <p>Horizon-based ambient occlusion and directional occlusion with multi-scale Hi-Z sampling, plus occlusion-aware bent normals for believable indirect shading.</p>
+                <h3>Hybrid GTAO / HBSSDO</h3>
+                <p>Horizon-based ambient occlusion and directional occlusion with occlusion-aware bent normals for believable indirect shading without darkening skin contours.</p>
             </div>
 
             <div class="feature-card fade-in" style="transition-delay: 0.3s;">
-                <div class="feature-icon"><i class="ph ph-cloud-moon"></i></div>
-                <h3>PCSS &amp; Variance Shadow Maps</h3>
-                <p>Percentage-closer soft shadows with variable penumbra for local lights, and grain-free high-resolution VSM sun shadows that stay clean on character faces.</p>
-            </div>
-
-            <div class="feature-card fade-in" style="transition-delay: 0.4s;">
-                <div class="feature-icon"><i class="ph ph-lightning"></i></div>
-                <h3>PBR Screen-Space Reflections</h3>
-                <p>Clean-room Hi-Z ray traversal with binary-search refinement, depth-aware bilateral blur, edge fade, and energy-conserving BRDF integration.</p>
-            </div>
-
-            <div class="feature-card fade-in" style="transition-delay: 0.5s;">
                 <div class="feature-icon"><i class="ph ph-sun-horizon"></i></div>
-                <h3>AgX Tone Mapping</h3>
-                <p>Exact 6th-order polynomial implementation of the official Blender 4.0 AgX mapper (default), with an ACES-fitted option for a filmic, highlight-preserving look.</p>
-            </div>
-
-            <div class="feature-card fade-in" style="transition-delay: 0.1s;">
-                <div class="feature-icon"><i class="ph ph-magic-wand"></i></div>
-                <h3>Temporal Anti-Aliasing</h3>
-                <p>5-tap Catmull-Rom bicubic history reconstruction, Karis luma weighting, variance clipping, and depth-validated history for a stable, flicker-free image.</p>
-            </div>
-
-            <div class="feature-card fade-in" style="transition-delay: 0.2s;">
-                <div class="feature-icon"><i class="ph ph-sparkle"></i></div>
-                <h3>Physical Skin, Hair &amp; Eyes</h3>
-                <p>Dynamic-curvature subsurface scattering with scale-invariant thickness, procedural anisotropic hair with Kajiya-Kay highlights, and corneal-dome procedural eyes.</p>
-            </div>
-
-            <div class="feature-card fade-in" style="transition-delay: 0.3s;">
-                <div class="feature-icon"><i class="ph ph-drop"></i></div>
-                <h3>Glass &amp; Transparency Pipeline</h3>
-                <p>Chromatic-dispersion refraction traced against the scene Hi-Z, tinted glass presets inheriting MMD diffuse color, and forced-transparency material presets.</p>
+                <h3>AgX, Punchy &amp; Khronos PBR Neutral</h3>
+                <p>Official 6th-order Blender 4.0 AgX color science, high-contrast AgX Punchy, and official Khronos PBR Neutral tonemapping for highlight-preserving, unclipped color fidelity.</p>
             </div>
 
             <div class="feature-card fade-in" style="transition-delay: 0.4s;">
-                <div class="feature-icon"><i class="ph ph-aperture"></i></div>
-                <h3>Cinematic Post-Processing</h3>
-                <p>Clean-room hexagonal bokeh DOF with blade control, anti-firefly Karis bloom, FidelityFX CAS sharpening, anamorphic flares, and dithered volumetrics.</p>
+                <div class="feature-icon"><i class="ph ph-sparkle"></i></div>
+                <h3>5x5 Calibrated Tonal Skin &amp; UE5 SSS</h3>
+                <p>Calibrated 5x5 Fitzpatrick tonal skin suite for PBR and Toon shading, dual-lobe microfacet specular, Henyey-Greenstein backlit tissue glow, and camera-invariant UV-space diffusion.</p>
             </div>
 
             <div class="feature-card fade-in" style="transition-delay: 0.5s;">
                 <div class="feature-icon"><i class="ph ph-leaf"></i></div>
-                <h3>Procedural Foliage &amp; Cloth</h3>
-                <p>Vertex wind animation engine with four vegetation presets, rewritten cloth BRDF with Charlie Sheen distribution, and thin-film iridescence for advanced surfaces.</p>
+                <h3>Marschner Hair &amp; Hashed Alpha</h3>
+                <p>Dual-highlight tangent-shifted anisotropic specular (R + TRT), energy-preserving GGX, and Wyman &amp; McGuire band-limited hashed alpha cutout without fringe crawling grain.</p>
+            </div>
+
+            <div class="feature-card fade-in" style="transition-delay: 0.1s;">
+                <div class="feature-icon"><i class="ph ph-eye"></i></div>
+                <h3>Corneal Dome Eyes &amp; Iris Parallax</h3>
+                <p>Automatic convex normal inversion (CONVEX_NORMAL), Snell's law refraction parallax for deep pupil immersion, analytical Jorge Jimenez iris caustics, and dedicated unshadowed highlights.</p>
+            </div>
+
+            <div class="feature-card fade-in" style="transition-delay: 0.2s;">
+                <div class="feature-icon"><i class="ph ph-stack"></i></div>
+                <h3>10-Domain Modular Architecture</h3>
+                <p>Fully reorganized 10-domain shader pipeline with zero broken includes, alongside decoupled PMX controllers (LightingController, CameraController, BloomController, DebugController).</p>
+            </div>
+
+            <div class="feature-card fade-in" style="transition-delay: 0.3s;">
+                <div class="feature-icon"><i class="ph ph-magic-wand"></i></div>
+                <h3>Temporal Anti-Aliasing (TAA)</h3>
+                <p>5-tap Catmull-Rom bicubic history reconstruction, Karis luma weighting, variance clipping, and depth-validated history for a stable, flicker-free image.</p>
+            </div>
+
+            <div class="feature-card fade-in" style="transition-delay: 0.4s;">
+                <div class="feature-icon"><i class="ph ph-aperture"></i></div>
+                <h3>FidelityFX CAS &amp; Cinematic Bokeh</h3>
+                <p>AMD FidelityFX Contrast-Adaptive Sharpening, hexagonal bokeh DOF with physical iris blade controls, anti-firefly Karis bloom, and spectral film halation.</p>
+            </div>
+
+            <div class="feature-card fade-in" style="transition-delay: 0.5s;">
+                <div class="feature-icon"><i class="ph ph-drop"></i></div>
+                <h3>Glass &amp; Chromatic Dispersion</h3>
+                <p>Physical RGB chromatic dispersion refraction, tinted glass presets inheriting MMD diffuse color, and forced-transparency material presets.</p>
+            </div>
+
+            <div class="feature-card fade-in" style="transition-delay: 0.6s;">
+                <div class="feature-icon"><i class="ph ph-cube"></i></div>
+                <h3>Foliage Translucency &amp; Cloth</h3>
+                <p>Energy-conserving Steve McAuley two-sided wrapped transmission for leaves and paper, Charlie sheen cloth BRDF, and vertex wind animation engine.</p>
             </div>
         </div>
     </section>
@@ -213,9 +221,9 @@
                 <div class="logo-text">RAYMMD<span>REFORGE</span></div>
             </div>
             <div class="footer-credits">
-                <p>Reforged with <i class="ph-fill ph-heart" style="color: #bf616a; vertical-align: middle;"></i> by <a href="https://github.com/norz3n" target="_blank">Norz3n</a>.</p>
-                <p>Based on the original <a href="https://github.com/ray-cast/ray-mmd" target="_blank">Ray-MMD</a> by Rui.</p>
-                <p class="footer-inspired">Integrations inspired by dendewaLAB & ikeno.</p>
+                <p>Reforged with <i class="ph-fill ph-heart" style="color: #bf616a; vertical-align: middle;"></i> by <a href="https://github.com/norz3n" target="_blank">Norz3n</a> &amp; ReForge Contributors.</p>
+                <p>Based on the original <a href="https://github.com/ray-cast/ray-mmd" target="_blank">Ray-MMD</a> by Rui. Join our <a href="https://discord.gg/v2GePAA3Jh" target="_blank">Discord Community</a>.</p>
+                <p class="footer-inspired">Integrations inspired by dendewaLAB &amp; ikeno.</p>
             </div>
         </div>
     </footer>
