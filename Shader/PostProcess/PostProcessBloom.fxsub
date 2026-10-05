@@ -4,7 +4,11 @@ static float2 BloomOffset3 = ViewportOffset2 * 8;
 static float2 BloomOffset4 = ViewportOffset2 * 16;
 static float2 BloomOffset5 = ViewportOffset2 * 32;
 
-static const float2 BloomScale = 512 * float2(ViewportAspect, 1);
+#ifndef HDR_BLOOM_QUALITY
+#define HDR_BLOOM_QUALITY 2048
+#endif
+
+static const float2 BloomScale = HDR_BLOOM_QUALITY * float2(ViewportAspect, 1);
 
 static const float2 BloomOffsetX1 = float2( 2 / BloomScale.x, 0.0);
 static const float2 BloomOffsetX2 = float2( 4 / BloomScale.x, 0.0);
