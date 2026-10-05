@@ -58,7 +58,7 @@ float EnvironmentSpecularUnreal4(float nv, float smoothness)
 
 float ComputeSpecularOcclusion(float nv, float ao, float smoothness)
 {
-	return saturate(pow(nv + ao, smoothness) - 1 + ao);
+	return saturate(pow(max(nv + ao, 1e-5f), smoothness) - 1.0f + ao);
 }
 
 float ComputeDirectionalSpecularOcclusion(float3 R, float3 bentNormal, float ao, float roughness)
@@ -70,7 +70,7 @@ float ComputeDirectionalSpecularOcclusion(float3 R, float3 bentNormal, float ao,
 	float specOcclusion = saturate((RdotBentN - coneAngleCos) / max(1.0f - coneAngleCos, 1e-4f));
 
 	// Fade directional occlusion based on surface roughness (diffuse surfaces are less directionally selective)
-	float scalarOcclusion = saturate(pow(abs(dot(bentNormal, R)) + ao, 1.0f - roughness) - 1.0f + ao);
+	float scalarOcclusion = saturate(pow(max(abs(dot(bentNormal, R)) + ao, 1e-5f), 1.0f - roughness) - 1.0f + ao);
 	return lerp(specOcclusion, scalarOcclusion, saturate(roughness * 1.5f));
 }
 

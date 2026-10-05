@@ -44,8 +44,8 @@ texture VelocityMap: OFFSCREENRENDERTARGET<
 		"*fog.pmx = hide;"
 		"*controller.pmx = hide;"
 		"*editor*.pmx = hide;"
-		"*.pmx = ./Shader/VelocityMap.fx;"
-		"*.pmd = ./Shader/VelocityMap.fx;"
+		"*.pmx = ./Shader/Core/VelocityMap.fx;"
+		"*.pmd = ./Shader/Core/VelocityMap.fx;"
 		"* = hide;";
 >;
 sampler VelocityMapSamp = sampler_state {

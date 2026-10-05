@@ -730,6 +730,7 @@ float3 SpecularBRDF_GGXAniso(float3 N, float3 H, float nh, float nl, float vh, f
 // [Estevez and Kulla 2017, "Production Friendly Microfacet Sheen BRDF"]
 float Vis_Charlie_L(float x, float r)
 {
+	x = max(x, 1e-5f);
 	r = saturate(r);
 	r = 1.0f - (1.0f - r) * (1.0f - r);
 
@@ -744,11 +745,14 @@ float Vis_Charlie_L(float x, float r)
 
 float Vis_Charlie(float roughness, float nv, float nl)
 {
+	nv = max(nv, 1e-5f);
+	nl = max(nl, 1e-5f);
+
 	// Remap x away from poles with the mirrored fit to avoid its singularity
 	float VisV = nv < 0.5f ? exp(Vis_Charlie_L(nv, roughness)) : exp(2 * Vis_Charlie_L(0.5f, roughness) - Vis_Charlie_L(1 - nv, roughness));
 	float VisL = nl < 0.5f ? exp(Vis_Charlie_L(nl, roughness)) : exp(2 * Vis_Charlie_L(0.5f, roughness) - Vis_Charlie_L(1 - nl, roughness));
 
-	return 1.0f / ((1 + VisV + VisL) * (4 * nv * nl));
+	return 1.0f / ((1.0f + VisV + VisL) * max(4.0f * nv * nl, 1e-5f));
 }
 
 /**

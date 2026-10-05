@@ -858,7 +858,8 @@ technique DeferredLighting<
 #endif
 
 #if AA_QUALITY == 6
-	"RenderColorTarget0=TAAHistoryMap; RenderColorTarget1=TAADepthMap; Pass=TAAPass;"
+	"RenderColorTarget0=TAAHistoryMapTemp; RenderColorTarget1=TAADepthMapTemp; Pass=TAAPass;"
+	"RenderColorTarget0=TAAHistoryMap;     RenderColorTarget1=TAADepthMap;     Pass=TAAUpdateHistory;"
 	"RenderColorTarget1=;"
 #if POST_MOTION_BLUR_ENABLE || POST_SHARPEN_ENABLE
 	"RenderColorTarget=ShadingMapTemp2; Pass=TAAFinal;"
@@ -883,6 +884,7 @@ technique DeferredLighting<
 #else
 	"RenderColorTarget=; RenderDepthStencilTarget=; Pass=PostProcessMotionBlur;"
 	"RenderColorTarget=TAAMatrixMap; Pass=TAAMatrixUpdatePass;"
+	"RenderColorTarget=; RenderDepthStencilTarget=;"
 #endif
 #else
 #if AA_QUALITY == 6 || (GI_ENABLE > 0)
@@ -890,6 +892,8 @@ technique DeferredLighting<
 #endif
 #if POST_SHARPEN_ENABLE
 	"RenderColorTarget=; RenderDepthStencilTarget=; Pass=PostProcessSharpen;"
+#elif AA_QUALITY == 6 || (GI_ENABLE > 0)
+	"RenderColorTarget=; RenderDepthStencilTarget=;"
 #endif
 #endif
 
@@ -1594,6 +1598,12 @@ technique DeferredLighting<
 		ZEnable = false; ZWriteEnable = false;
 		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
 		PixelShader  = compile ps_3_0 TAAPS(ShadingMapTempSamp);
+	}
+	pass TAAUpdateHistory<string Script= "Draw=Buffer;";>{
+		AlphaBlendEnable = false; AlphaTestEnable = false;
+		ZEnable = false; ZWriteEnable = false;
+		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
+		PixelShader  = compile ps_3_0 TAAUpdateHistoryPS();
 	}
 #endif
 #if AA_QUALITY == 6 || POST_MOTION_BLUR_ENABLE || (GI_ENABLE > 0)

@@ -24,6 +24,29 @@ sampler TAADepthMapSamp = sampler_state {
 	AddressU = CLAMP; AddressV = CLAMP;
 };
 
+// Intermediate staging buffers to eliminate Direct3D 9 read-after-write hazard / feedback loop
+texture TAAHistoryMapTemp : RENDERCOLORTARGET <
+	float2 ViewPortRatio = {1.0, 1.0};
+	bool AntiAlias = false;
+	string Format = "A16B16G16R16F";
+>;
+sampler TAAHistoryMapTempSamp = sampler_state {
+	texture = <TAAHistoryMapTemp>;
+	MinFilter = POINT; MagFilter = POINT; MipFilter = NONE;
+	AddressU = CLAMP; AddressV = CLAMP;
+};
+
+texture TAADepthMapTemp : RENDERCOLORTARGET <
+	float2 ViewPortRatio = {1.0, 1.0};
+	bool AntiAlias = false;
+	string Format = "R16F";
+>;
+sampler TAADepthMapTempSamp = sampler_state {
+	texture = <TAADepthMapTemp>;
+	MinFilter = POINT; MagFilter = POINT; MipFilter = NONE;
+	AddressU = CLAMP; AddressV = CLAMP;
+};
+
 
 float3 RGB2YCoCg(float3 rgb)
 {
@@ -184,8 +207,17 @@ void TAAPS(in float4 coord : TEXCOORD0, in float3 viewdir : TEXCOORD1, uniform s
 }
 
 
+void TAAUpdateHistoryPS(
+	in float2 coord : TEXCOORD0,
+	out float4 oColor : COLOR0,
+	out float4 oDepth : COLOR1)
+{
+	oColor = tex2Dlod(TAAHistoryMapTempSamp, float4(coord, 0, 0));
+	oDepth = tex2Dlod(TAADepthMapTempSamp, float4(coord, 0, 0));
+}
+
 float4 TAAFinalPS(in float2 coord : TEXCOORD0) : COLOR
 {
-	return tex2Dlod(TAAHistoryMapSamp, float4(coord, 0, 0));
+	return tex2Dlod(TAAHistoryMapTempSamp, float4(coord, 0, 0));
 }
 
