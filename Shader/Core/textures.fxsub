@@ -562,17 +562,32 @@ texture ShadingMap : RENDERCOLORTARGET<
 	float2 ViewportRatio = {1.0, 1.0};
 	string Format = "A16B16G16R16F";
 >;
+// HDR intermediate ping-pong (SSSS blur, shading passes, etc.)
 texture ShadingMapTemp : RENDERCOLORTARGET<
 	float2 ViewportRatio = {1.0, 1.0};
 	string Format = "A16B16G16R16F";
 >;
+// LDR ping-pong for post-AA passes (MotionBlur, Sharpen) — never holds HDR data.
+// A8R8G8B8 avoids AMD D3D9 POINT-sampling breakage on float16 RTs and halves
+// bandwidth at this stage.
 texture ShadingMapTemp2 : RENDERCOLORTARGET<
 	float2 ViewportRatio = {1.0, 1.0};
-	string Format = "A16B16G16R16F";
+	bool AntiAlias = false;
+	string Format = "A8R8G8B8";
 >;
 texture ShadingMapTempSpecular : RENDERCOLORTARGET<
 	float2 ViewportRatio = {1.0, 1.0};
 	string Format = "A16B16G16R16F";
+>;
+// Dedicated LDR tonemapped buffer consumed by all AA passes (SMAA, TAA, DLAA, FXAA).
+// Kept as A8R8G8B8 so POINT-sampled reads (SMAA edge detection, tex2Dlod in TAA/DLAA)
+// work correctly on AMD D3D9 drivers that mis-read float16 RT via the point path.
+// Alpha channel carries per-pixel luminance written by HDRTonemappingPS for luma-based
+// edge detection — A8R8G8B8 preserves 8-bit luma with sufficient precision for that.
+texture ShadingMapLDR : RENDERCOLORTARGET<
+	float2 ViewportRatio = {1.0, 1.0};
+	bool AntiAlias = false;
+	string Format = "A8R8G8B8";
 >;
 sampler ShadingMapSamp = sampler_state {
 	texture = <ShadingMap>;
@@ -601,6 +616,20 @@ sampler ShadingMapTempPointSamp = sampler_state {
 };
 sampler ShadingMapTempSpecularSamp = sampler_state {
 	texture = <ShadingMapTempSpecular>;
+	MinFilter = POINT; MagFilter = POINT; MipFilter = NONE;
+	AddressU = CLAMP; AddressV = CLAMP;
+};
+// Linear sampler for AA passes that bilinearly reconstruct (SMAA neighborhood blend,
+// TAA Catmull-Rom history, FXAA sub-pixel reconstruction).
+sampler ShadingMapLDRSamp = sampler_state {
+	texture = <ShadingMapLDR>;
+	MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = NONE;
+	AddressU = CLAMP; AddressV = CLAMP;
+};
+// Point sampler for AA passes that need exact per-pixel reads (SMAA edge detection,
+// DLAA center tap, TAA tex2Dlod neighborhood gather).
+sampler ShadingMapLDRPointSamp = sampler_state {
+	texture = <ShadingMapLDR>;
 	MinFilter = POINT; MagFilter = POINT; MipFilter = NONE;
 	AddressU = CLAMP; AddressV = CLAMP;
 };

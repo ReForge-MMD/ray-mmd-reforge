@@ -836,7 +836,7 @@ technique DeferredLighting<
 	"RenderColorTarget=; RenderDepthStencilTarget=; Pass=HDRTonemapping;"
 #endif
 #else
-	"RenderColorTarget=ShadingMapTemp; Pass=HDRTonemapping;"
+	"RenderColorTarget=ShadingMapLDR; Pass=HDRTonemapping;"
 #endif
 
 #if AA_QUALITY == 1
@@ -1569,7 +1569,7 @@ technique DeferredLighting<
 		AlphaBlendEnable = false; AlphaTestEnable = false;
 		ZEnable = false; ZWriteEnable = false;
 		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
-		PixelShader  = compile ps_3_0 FXAA3(ShadingMapTempSamp, ViewportOffset2);
+		PixelShader  = compile ps_3_0 FXAA3(ShadingMapLDRSamp, ViewportOffset2);
 	}
 #endif
 #if AA_QUALITY >= 2 && AA_QUALITY <= 5
@@ -1577,7 +1577,7 @@ technique DeferredLighting<
 		AlphaBlendEnable = false; AlphaTestEnable = false;
 		ZEnable = false; ZWriteEnable = false;
 		VertexShader = compile vs_3_0 SMAAEdgeDetectionVS();
-		PixelShader  = compile ps_3_0 SMAAColorEdgeDetectionPS(ShadingMapTempPointSamp);
+		PixelShader  = compile ps_3_0 SMAAColorEdgeDetectionPS(ShadingMapLDRPointSamp);
 	}
 	pass SMAABlendingWeightCalculation<string Script= "Draw=Buffer;";>{
 		AlphaBlendEnable = false; AlphaTestEnable = false;
@@ -1589,7 +1589,7 @@ technique DeferredLighting<
 		AlphaBlendEnable = false; AlphaTestEnable = false;
 		ZEnable = false; ZWriteEnable = false;
 		VertexShader = compile vs_3_0 SMAANeighborhoodBlendingVS();
-		PixelShader  = compile ps_3_0 SMAANeighborhoodBlendingPS(ShadingMapTempSamp, true);
+		PixelShader  = compile ps_3_0 SMAANeighborhoodBlendingPS(ShadingMapLDRSamp, true);
 	}
 #endif
 #if AA_QUALITY == 6
@@ -1597,7 +1597,7 @@ technique DeferredLighting<
 		AlphaBlendEnable = false; AlphaTestEnable = false;
 		ZEnable = false; ZWriteEnable = false;
 		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
-		PixelShader  = compile ps_3_0 TAAPS(ShadingMapTempSamp);
+		PixelShader  = compile ps_3_0 TAAPS(ShadingMapLDRSamp);
 	}
 	pass TAAUpdateHistory<string Script= "Draw=Buffer;";>{
 		AlphaBlendEnable = false; AlphaTestEnable = false;
@@ -1637,7 +1637,7 @@ technique DeferredLighting<
 		AlphaBlendEnable = false; AlphaTestEnable = false;
 		ZEnable = false; ZWriteEnable = false;
 		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
-		PixelShader  = compile ps_3_0 GDLAA_PS(ShadingMapTempSamp, ViewportOffset2);
+		PixelShader  = compile ps_3_0 GDLAA_PS(ShadingMapLDRSamp, ViewportOffset2);
 	}
 #endif
 #if POST_SHARPEN_ENABLE
@@ -1645,11 +1645,8 @@ technique DeferredLighting<
 		AlphaBlendEnable = false; AlphaTestEnable = false;
 		ZEnable = false; ZWriteEnable = false;
 		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
-#if POST_MOTION_BLUR_ENABLE
-		PixelShader  = compile ps_3_0 PostProcessSharpenPS(ShadingMapTempSamp, ViewportOffset2);
-#else
+		// MotionBlur writes its output to ShadingMapTemp2; without it, AA writes there directly.
 		PixelShader  = compile ps_3_0 PostProcessSharpenPS(ShadingMapTemp2Samp, ViewportOffset2);
-#endif
 	}
 #endif
 }
