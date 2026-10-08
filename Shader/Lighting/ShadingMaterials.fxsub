@@ -708,14 +708,6 @@ float4 ShadingTransparentPS(
 		lighting = lerp(prefilteredRefract * (1 - material.alpha), lighting, material.alpha);
 	}
 
-#if FOG_ENABLE
-	if (material.lightModel != SHADINGMODELID_GLASS)
-	{
-		float4 fog = tex2Dlod(FogMapSamp, float4(coord, 0, 0));
-		lighting *= exp(-fog.a);
-		lighting += fog.rgb;
-	}
-#endif
 
 	float4 MRT3 = tex2Dlod(Gbuffer3Map, float4(coord, 0, 0));
 	float4 MRT4 = tex2Dlod(Gbuffer4Map, float4(coord, 0, 0));
