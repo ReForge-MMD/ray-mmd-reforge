@@ -30,7 +30,9 @@ float4 FogCompositePS(
 	float3 finalInscattering = 0.0f;
 	float finalTransmittance = 1.0f;
 
-	float3 viewRay = normalize(viewdir);
+	// Reconstruct view ray canonically via projection constants (positive Y up, positive Z forward)
+	float4 projConstant = GetProjConstant();
+	float3 viewRay = normalize(float3(coord * projConstant.xy + projConstant.zw, 1.0f));
 	float3 viewDir = mul(viewRay, (float3x3)matViewInverse);
 
 #if FOG_ENABLE == 1

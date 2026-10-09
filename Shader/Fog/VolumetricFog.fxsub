@@ -71,7 +71,12 @@ float SampleVolumetricShadow(float3 worldPos, float3 viewPos)
 	float4 lightPPos23 = proj.xyxy * float4(lightCropParams[2].xy, lightCropParams[3].xy) + float4(lightCropParams[2].zw, lightCropParams[3].zw);
 
 	float receiverDepth = dot(float4(viewPos, 1.0f), matLightViewFromCameraView._13_23_33_43);
+	if (receiverDepth <= 0.0f)
+		return 0.0f;
+
 	float normalizedReceiverDepth = saturate(receiverDepth / mPSSMDepthZMax);
+	if (normalizedReceiverDepth >= 1.0f)
+		return 0.0f;
 
 	float shadowVal = 1.0f;
 
@@ -95,13 +100,23 @@ float SampleVolumetricShadow(float3 worldPos, float3 viewPos)
 		float2 shadowUV = PosToCoord(lightPPos23.zw) + ShadowMapOffset;
 		shadowVal = tex2Dlod(PSSM4Samp, float4(shadowUV, 0.0f, 0.0f)).r;
 	}
+	else if (viewPos.z < mPSSMCascadeZMax)
+	{
+		// Peripheral geometry fallback clamped to cascade 4
+		float2 shadowUV = clamp(PosToCoord(lightPPos23.zw), 0.002f, 0.998f) + ShadowMapOffset;
+		shadowVal = tex2Dlod(PSSM4Samp, float4(shadowUV, 0.0f, 0.0f)).r;
+	}
 	else
 	{
-		return 1.0f; // Outside shadow cascades
+		return 0.0f;
 	}
 
-	// Bias for air volumes (no surface curvature acne)
-	return (shadowVal + 0.0015f >= normalizedReceiverDepth) ? 1.0f : 0.0f;
+	// Smooth cascade distance fadeout near cascade 4 boundary
+	float cascadeDistFade = saturate((mPSSMCascadeZMax - viewPos.z) / 40.0f);
+
+	// Direct sunlight visibility with air volume depth bias
+	float vis = (shadowVal + 0.0015f >= normalizedReceiverDepth) ? 1.0f : 0.0f;
+	return vis * cascadeDistFade;
 #else
 	return 1.0f;
 #endif
@@ -136,7 +151,9 @@ float4 VolumetricFogRaymarchPS(
 		return float4(0.0f, 0.0f, 0.0f, 1.0f); // Zero inscattering, full transmittance
 	}
 
-	float3 viewRay = normalize(viewdir);
+	// Reconstruct view ray canonically via projection constants (positive Y up, positive Z forward)
+	float4 projConstant = GetProjConstant();
+	float3 viewRay = normalize(float3(coord * projConstant.xy + projConstant.zw, 1.0f));
 	float3 worldRay = mul(viewRay, (float3x3)matViewInverse);
 	float3 L = -SunDirection;
 	float cosTheta = dot(worldRay, L);
@@ -154,6 +171,9 @@ float4 VolumetricFogRaymarchPS(
 	float3 sunRadiance = params.sunColor * (params.sunIntensity * PI);
 	float3 ambientColor = params.color;
 
+	// Scale factor of active fog density to extinguish godrays when fog is turned down
+	float densityScale = saturate((params.density + params.groundDensity) / max(1e-4f, mFogDensityDefault + mGroundFogDensityDefault));
+
 	[unroll]
 	for (int i = 0; i < VOLUMETRIC_FOG_STEPS; ++i)
 	{
@@ -169,18 +189,33 @@ float4 VolumetricFogRaymarchPS(
 		float d2 = params.groundDensity * exp(-clamp(params.groundFalloff * h2, -30.0f, 30.0f));
 
 		float mistMod = SampleMistNoise(sampleWorldPos, params.mistNoise, params.windSpeed);
-		float sampleDensity = (d1 + d2 * mistMod) * params.rayDensity;
 
-		if (sampleDensity > 1e-6f)
+		// Smooth start-distance near fade to eliminate hard circular/plane cutout
+		float nearFade = (params.startDistance > 1e-3f) ? saturate((t - params.startDistance) / max(5.0f, params.startDistance * 0.25f)) : 1.0f;
+
+		// 1. Ambient fog density (creates background mist & extinction)
+		float ambientDensity = (d1 + d2 * mistMod) * nearFade;
+
+		// 2. Godrays scattering density (crepuscular rays scatter from fog/mist particles)
+		float godrayDensity = (ambientDensity * 2.0f + 0.0008f * densityScale * nearFade) * params.rayDensity * params.godraysIntensity;
+
+		if (godrayDensity > 1e-6f || ambientDensity > 1e-6f)
 		{
 			float shadowVis = SampleVolumetricShadow(sampleWorldPos, sampleViewPos);
 
-			// Step optical depth
-			float stepTau = sampleDensity * stepSize;
-			float stepTransmittance = exp(-stepTau);
+			// Direct sun ray scattering
+			float3 sunScattering = (shadowVis * sunRadiance * phase) * godrayDensity;
 
-			// Step scattering
-			float3 stepScattering = (shadowVis * sunRadiance * phase * params.godraysIntensity + ambientColor * 0.25f) * sampleDensity * stepSize;
+			// Ambient volumetric haze (only present where ambient fog is configured)
+			float3 ambientScattering = (ambientColor * 0.15f) * ambientDensity;
+
+			// Combined step scattering
+			float3 stepScattering = (sunScattering + ambientScattering) * stepSize;
+
+			// Optical extinction: ambient fog attenuates background; godrays have low extinction (high single-scattering albedo)
+			float extinctionDensity = ambientDensity + godrayDensity * 0.06f;
+			float stepTau = extinctionDensity * stepSize;
+			float stepTransmittance = exp(-stepTau);
 
 			accumulatedInscattering += accumulatedTransmittance * stepScattering;
 			accumulatedTransmittance *= stepTransmittance;
@@ -193,7 +228,7 @@ float4 VolumetricFogRaymarchPS(
 }
 
 // =============================================================================
-// Depth-Aware Cross-Bilateral Blur Passes (Full Resolution)
+// Depth-Aware Cross-Bilateral Blur Passes (Full Resolution 9-Tap)
 // =============================================================================
 float4 VolumetricFogBilateralBlur(float2 coord, float2 direction, uniform sampler2D source)
 {
@@ -203,14 +238,18 @@ float4 VolumetricFogBilateralBlur(float2 coord, float2 direction, uniform sample
 	float centerDepth = tex2Dlod(Gbuffer8Map, float4(coord, 0.0f, 0.0f)).x;
 	if (centerDepth <= 1e-4f) centerDepth = tex2Dlod(Gbuffer4Map, float4(coord, 0.0f, 0.0f)).x;
 
-	static const float kernelWeights[5] = { 0.06136f, 0.24477f, 0.38774f, 0.24477f, 0.06136f };
-	static const float kernelOffsets[5] = { -2.0f, -1.0f, 0.0f, 1.0f, 2.0f };
+	static const float kernelWeights[9] = {
+		0.0205f, 0.0598f, 0.1245f, 0.1907f, 0.2090f, 0.1907f, 0.1245f, 0.0598f, 0.0205f
+	};
+	static const float kernelOffsets[9] = {
+		-4.0f, -3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f, 4.0f
+	};
 
 	float4 accumColor = 0.0f;
 	float totalWeight = 0.0f;
 
 	[unroll]
-	for (int i = 0; i < 5; ++i)
+	for (int i = 0; i < 9; ++i)
 	{
 		float2 tapUV = coord + texel * kernelOffsets[i];
 		float4 tapFog = tex2Dlod(source, float4(tapUV, 0.0f, 0.0f));
@@ -219,7 +258,7 @@ float4 VolumetricFogBilateralBlur(float2 coord, float2 direction, uniform sample
 		if (tapDepth <= 1e-4f) tapDepth = tex2Dlod(Gbuffer4Map, float4(tapUV, 0.0f, 0.0f)).x;
 
 		float depthDiff = abs(centerDepth - tapDepth);
-		float depthWeight = exp(-depthDiff / max(1e-3f, mFogBilateralDepthThreshold * max(1.0f, centerDepth * 0.05f)));
+		float depthWeight = exp(-depthDiff / max(1e-3f, mFogBilateralDepthThreshold * max(1.0f, centerDepth * 0.08f)));
 
 		float w = kernelWeights[i] * depthWeight;
 		accumColor += tapFog * w;

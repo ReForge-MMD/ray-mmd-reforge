@@ -151,12 +151,14 @@ FogParameters GetFogParameters()
 	FogParameters p;
 
 	float densityP = max(mFogDensityP1, mFogDensityP2);
-	float densityM = max(mFogDensityM1, mFogDensityM2);
-	p.density = mFogDensityDefault * max(0.0f, (1.0f + densityP * 8.0f - densityM * 0.95f));
+	float densityM = saturate(max(mFogDensityM1, mFogDensityM2));
+	float densityFactor = saturate(1.0f - densityM);
+	p.density = mFogDensityDefault * (1.0f + densityP * 8.0f) * densityFactor;
 
 	float groundDensityP = max(mGroundDensityP1, mGroundDensityP2);
-	float groundDensityM = max(mGroundDensityM1, mGroundDensityM2);
-	p.groundDensity = mGroundFogDensityDefault * max(0.0f, (1.0f + groundDensityP * 8.0f - groundDensityM * 0.95f));
+	float groundDensityM = saturate(max(mGroundDensityM1, mGroundDensityM2));
+	float groundDensityFactor = saturate(1.0f - max(groundDensityM, densityM));
+	p.groundDensity = mGroundFogDensityDefault * (1.0f + groundDensityP * 8.0f) * groundDensityFactor;
 
 	float heightP = max(mFogHeightP1, mFogHeightP2);
 	float heightM = max(mFogHeightM1, mFogHeightM2);
@@ -176,7 +178,7 @@ FogParameters GetFogParameters()
 
 	float startP = max(mFogStartDistP1, mFogStartDistP2);
 	float startM = max(mFogStartDistM1, mFogStartDistM2);
-	p.startDistance = max(0.0f, mFogStartDistanceDefault + (startP * 100.0f - startM * 50.0f));
+	p.startDistance = max(0.0f, mFogStartDistanceDefault + (startP * 150.0f - startM * mFogStartDistanceDefault));
 
 	float cutoffP = max(mFogCutoffDistP1, mFogCutoffDistP2);
 	float cutoffM = max(mFogCutoffDistM1, mFogCutoffDistM2);
@@ -184,7 +186,7 @@ FogParameters GetFogParameters()
 
 	float maxOpacP = max(mFogMaxOpacityP1, mFogMaxOpacityP2);
 	float maxOpacM = max(mFogMaxOpacityM1, mFogMaxOpacityM2);
-	p.maxOpacity = saturate(mFogMaxOpacityDefault * (1.0f - maxOpacM * 0.9f + maxOpacP * 0.0f));
+	p.maxOpacity = saturate(mFogMaxOpacityDefault + maxOpacP * (1.0f - mFogMaxOpacityDefault) - maxOpacM * mFogMaxOpacityDefault);
 
 	float rP = max(mFogRP1, mFogRP2); float rM = max(mFogRM1, mFogRM2);
 	float gP = max(mFogGP1, mFogGP2); float gM = max(mFogGM1, mFogGM2);
@@ -198,7 +200,7 @@ FogParameters GetFogParameters()
 
 	float sunIntP = max(mFogSunIntensityP1, mFogSunIntensityP2);
 	float sunIntM = max(mFogSunIntensityM1, mFogSunIntensityM2);
-	p.sunIntensity = max(0.0f, mFogSunIntensityDefault * (1.0f + sunIntP * 4.0f - sunIntM * 0.9f));
+	p.sunIntensity = max(0.0f, mFogSunIntensityDefault * (1.0f + sunIntP * 4.0f) * saturate(1.0f - sunIntM));
 
 	float mieP = max(mFogMiePhaseP1, mFogMiePhaseP2);
 	float mieM = max(mFogMiePhaseM1, mFogMiePhaseM2);
@@ -206,19 +208,19 @@ FogParameters GetFogParameters()
 
 	float godP = max(mFogGodraysP1, mFogGodraysP2);
 	float godM = max(mFogGodraysM1, mFogGodraysM2);
-	p.godraysIntensity = max(0.0f, 1.0f + godP * 3.0f - godM * 0.95f);
+	p.godraysIntensity = max(0.0f, (1.0f + godP * 3.0f) * saturate(1.0f - godM));
 
 	float rayDP = max(mFogRayDensityP1, mFogRayDensityP2);
 	float rayDM = max(mFogRayDensityM1, mFogRayDensityM2);
-	p.rayDensity = max(0.0f, 1.0f + rayDP * 3.0f - rayDM * 0.9f);
+	p.rayDensity = max(0.0f, (1.0f + rayDP * 3.0f) * saturate(1.0f - rayDM));
 
 	float mistP = max(mFogMistNoiseP1, mFogMistNoiseP2);
 	float mistM = max(mFogMistNoiseM1, mFogMistNoiseM2);
-	p.mistNoise = max(0.0f, mistP * 2.5f - mistM * 0.9f);
+	p.mistNoise = max(0.0f, mistP * 2.5f * saturate(1.0f - mistM));
 
 	float windP = max(mFogWindSpeedP1, mFogWindSpeedP2);
 	float windM = max(mFogWindSpeedM1, mFogWindSpeedM2);
-	p.windSpeed = max(0.0f, 1.0f + windP * 4.0f - windM * 0.9f);
+	p.windSpeed = max(0.0f, (1.0f + windP * 4.0f) * saturate(1.0f - windM));
 
 	return p;
 }
@@ -307,8 +309,9 @@ void EvaluateAnalyticalFog(
 	// Clamp ray distance to cutoff distance
 	rayDistance = min(rayDistance, params.cutoffDistance);
 
-	// Account for camera exclusion start distance
+	// Account for camera exclusion start distance with smooth near-fade
 	float effectiveRayLength = rayDistance - params.startDistance;
+	float startFade = (params.startDistance > 1e-3f) ? saturate(effectiveRayLength / max(5.0f, params.startDistance * 0.25f)) : 1.0f;
 	float3 rayStart = cameraPos + viewDir * params.startDistance;
 	float3 rayEnd   = cameraPos + viewDir * rayDistance;
 
@@ -324,7 +327,7 @@ void EvaluateAnalyticalFog(
 	float densityStart2 = params.groundDensity * exp(-clamp(params.groundFalloff * h2, -40.0f, 40.0f));
 	float opticalPath2 = CalculateExponentialLineIntegral(params.groundFalloff, deltaY, densityStart2, effectiveRayLength);
 
-	float totalOpticalPath = max(0.0f, opticalPath1 + opticalPath2);
+	float totalOpticalPath = max(0.0f, (opticalPath1 + opticalPath2) * startFade);
 
 	// Beer-Lambert transmittance: T = exp(-tau)
 	float transmittance = exp(-totalOpticalPath);
@@ -333,12 +336,14 @@ void EvaluateAnalyticalFog(
 	float opacity = min(1.0f - transmittance, params.maxOpacity);
 	transmittance = 1.0f - opacity;
 
-	// Directional light inscattering
+	// Directional light inscattering (balanced solar aureole, avoiding sky blowout)
 	float3 L = -SunDirection; // Light direction towards light source
 	float cosTheta = dot(viewDir, L);
 	float phase = ComputePhaseCS(cosTheta, params.miePhase);
+	float sunCos = saturate(dot(viewDir, L));
+	float sunAureole = pow(sunCos, 8.0f);
 
-	float3 directionalRadiance = params.sunColor * (phase * params.sunIntensity * PI);
+	float3 directionalRadiance = params.sunColor * (params.sunIntensity * (min(phase, 2.5f) * 0.35f + sunAureole * 0.65f));
 
 	// Inscattering: ambient body haze + forward sunlight scattering
 	float3 ambientInscattering = params.color * opacity;
