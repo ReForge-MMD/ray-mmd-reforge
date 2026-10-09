@@ -1322,26 +1322,26 @@ technique DeferredLighting<
 	pass FogRaymarch<string Script= "Draw=Buffer;";>{
 		AlphaBlendEnable = false; AlphaTestEnable = false;
 		ZEnable = false; ZWriteEnable = false;
-		VertexShader = compile vs_3_0 VolumetricFogRaymarchVS();
+		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
 		PixelShader  = compile ps_3_0 VolumetricFogRaymarchPS();
 	}
 	pass FogBilateralX<string Script= "Draw=Buffer;";>{
 		AlphaBlendEnable = false; AlphaTestEnable = false;
 		ZEnable = false; ZWriteEnable = false;
-		VertexShader = compile vs_3_0 VolumetricFogBlurVS();
+		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
 		PixelShader  = compile ps_3_0 VolumetricFogBilateralXPS();
 	}
 	pass FogBilateralY<string Script= "Draw=Buffer;";>{
 		AlphaBlendEnable = false; AlphaTestEnable = false;
 		ZEnable = false; ZWriteEnable = false;
-		VertexShader = compile vs_3_0 VolumetricFogBlurVS();
+		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
 		PixelShader  = compile ps_3_0 VolumetricFogBilateralYPS();
 	}
 #endif
 	pass FogComposite<string Script= "Draw=Buffer;";>{
 		AlphaBlendEnable = false; AlphaTestEnable = false;
 		ZEnable = false; ZWriteEnable = false;
-		VertexShader = compile vs_3_0 FogCompositeVS();
+		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
 		PixelShader  = compile ps_3_0 FogCompositePS();
 	}
 	pass FogCopyBack<string Script= "Draw=Buffer;";>{

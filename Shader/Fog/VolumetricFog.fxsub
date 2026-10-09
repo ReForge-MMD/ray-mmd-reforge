@@ -110,18 +110,6 @@ float SampleVolumetricShadow(float3 worldPos, float3 viewPos)
 // =============================================================================
 // Volumetric Godrays Raymarcher Pass (Half Resolution)
 // =============================================================================
-void VolumetricFogRaymarchVS(
-	in float4 Position : POSITION,
-	in float2 Texcoord : TEXCOORD0,
-	out float2 oTexcoord : TEXCOORD0,
-	out float3 oViewdir : TEXCOORD1,
-	out float4 oPosition : POSITION)
-{
-	oPosition = Position;
-	oTexcoord = Texcoord;
-	oViewdir = mul(Position, matProjectInverse).xyz;
-}
-
 float4 VolumetricFogRaymarchPS(
 	in float2 coord : TEXCOORD0,
 	in float3 viewdir : TEXCOORD1) : COLOR
@@ -148,16 +136,17 @@ float4 VolumetricFogRaymarchPS(
 		return float4(0.0f, 0.0f, 0.0f, 1.0f); // Zero inscattering, full transmittance
 	}
 
-	float3 V = normalize(viewdir);
+	float3 viewRay = normalize(viewdir);
+	float3 worldRay = mul(viewRay, (float3x3)matViewInverse);
 	float3 L = -SunDirection;
-	float cosTheta = dot(V, L);
+	float cosTheta = dot(worldRay, L);
 	float phase = ComputePhaseCS(cosTheta, params.miePhase);
 
 	float marchRange = maxMarchDist - params.startDistance;
 	float stepSize = marchRange / float(VOLUMETRIC_FOG_STEPS);
 
 	// Interleaved Gradient Noise jitter to eliminate slice banding
-	float jitter = InterleavedGradientNoise(coord * ViewportSize * 0.5f);
+	float jitter = InterleavedGradientNoise(coord * ViewportSize);
 
 	float accumulatedTransmittance = 1.0f;
 	float3 accumulatedInscattering = 0.0f;
@@ -169,8 +158,8 @@ float4 VolumetricFogRaymarchPS(
 	for (int i = 0; i < VOLUMETRIC_FOG_STEPS; ++i)
 	{
 		float t = params.startDistance + (float(i) + jitter) * stepSize;
-		float3 sampleWorldPos = CameraPosition + V * t;
-		float3 sampleViewPos  = V * t;
+		float3 sampleWorldPos = CameraPosition + worldRay * t;
+		float3 sampleViewPos  = viewRay * t;
 
 		// Evaluate dual-layer density at sample position
 		float h1 = sampleWorldPos.y - params.height;
@@ -198,29 +187,19 @@ float4 VolumetricFogRaymarchPS(
 		}
 	}
 
-	accumulatedTransmittance = max(accumulatedTransmittance, 1.0f - params.maxOpacity);
+	accumulatedTransmittance = clamp(accumulatedTransmittance, 1.0f - params.maxOpacity, 1.0f);
 
 	return float4(accumulatedInscattering, accumulatedTransmittance);
 }
 
 // =============================================================================
-// Depth-Aware Cross-Bilateral Blur Passes (Half Resolution)
+// Depth-Aware Cross-Bilateral Blur Passes (Full Resolution)
 // =============================================================================
-void VolumetricFogBlurVS(
-	in float4 Position : POSITION,
-	in float2 Texcoord : TEXCOORD0,
-	out float2 oTexcoord : TEXCOORD0,
-	out float4 oPosition : POSITION)
+float4 VolumetricFogBilateralBlur(float2 coord, float2 direction, uniform sampler2D source)
 {
-	oPosition = Position;
-	oTexcoord = Texcoord;
-}
+	float2 texel = ViewportOffset2 * direction;
 
-float4 VolumetricFogBilateralBlur(float2 coord, float2 direction)
-{
-	float2 halfTexel = (1.0f / (ViewportSize * 0.5f)) * direction;
-
-	float4 centerFog = tex2Dlod(FogMapSamp, float4(coord, 0.0f, 0.0f));
+	float4 centerFog = tex2Dlod(source, float4(coord, 0.0f, 0.0f));
 	float centerDepth = tex2Dlod(Gbuffer8Map, float4(coord, 0.0f, 0.0f)).x;
 	if (centerDepth <= 1e-4f) centerDepth = tex2Dlod(Gbuffer4Map, float4(coord, 0.0f, 0.0f)).x;
 
@@ -233,8 +212,8 @@ float4 VolumetricFogBilateralBlur(float2 coord, float2 direction)
 	[unroll]
 	for (int i = 0; i < 5; ++i)
 	{
-		float2 tapUV = coord + halfTexel * kernelOffsets[i];
-		float4 tapFog = tex2Dlod(FogMapSamp, float4(tapUV, 0.0f, 0.0f));
+		float2 tapUV = coord + texel * kernelOffsets[i];
+		float4 tapFog = tex2Dlod(source, float4(tapUV, 0.0f, 0.0f));
 
 		float tapDepth = tex2Dlod(Gbuffer8Map, float4(tapUV, 0.0f, 0.0f)).x;
 		if (tapDepth <= 1e-4f) tapDepth = tex2Dlod(Gbuffer4Map, float4(tapUV, 0.0f, 0.0f)).x;
@@ -252,12 +231,12 @@ float4 VolumetricFogBilateralBlur(float2 coord, float2 direction)
 
 float4 VolumetricFogBilateralXPS(in float2 coord : TEXCOORD0) : COLOR
 {
-	return VolumetricFogBilateralBlur(coord, float2(1.0f, 0.0f));
+	return VolumetricFogBilateralBlur(coord, float2(1.0f, 0.0f), FogMapSamp);
 }
 
 float4 VolumetricFogBilateralYPS(in float2 coord : TEXCOORD0) : COLOR
 {
-	return VolumetricFogBilateralBlur(coord, float2(0.0f, 1.0f));
+	return VolumetricFogBilateralBlur(coord, float2(0.0f, 1.0f), FogBlurMapSamp);
 }
 
 #endif // FOG_ENABLE >= 2

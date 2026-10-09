@@ -674,13 +674,13 @@ sampler SSGIMapHistorySamp = sampler_state {
 
 #if FOG_ENABLE >= 2
 shared texture FogMap : RENDERCOLORTARGET<
-	float2 ViewportRatio = {0.5, 0.5};
+	float2 ViewportRatio = {1.0, 1.0};
 	bool AntiAlias = false;
 	string Format = "A16B16G16R16F";
 	float4 ClearColor = {0, 0, 0, 1};
 >;
 texture FogBlurMap : RENDERCOLORTARGET<
-	float2 ViewportRatio = {0.5, 0.5};
+	float2 ViewportRatio = {1.0, 1.0};
 	bool AntiAlias = false;
 	string Format = "A16B16G16R16F";
 	float4 ClearColor = {0, 0, 0, 1};
