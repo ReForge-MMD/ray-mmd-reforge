@@ -1,0 +1,352 @@
+#ifndef _SHADER_FOG_COMMON_FXSUB_
+#define _SHADER_FOG_COMMON_FXSUB_
+
+#if FOG_ENABLE
+// =============================================================================
+// FogController.pmx Morph & Bone Bindings
+// =============================================================================
+// Density & Opacity
+float mFogDensityP1          : CONTROLOBJECT<string name="FogController.pmx"; string item = "FogDensity+";>;
+float mFogDensityM1          : CONTROLOBJECT<string name="FogController.pmx"; string item = "FogDensity-";>;
+float mFogDensityP2          : CONTROLOBJECT<string name="FogController"; string item = "FogDensity+";>;
+float mFogDensityM2          : CONTROLOBJECT<string name="FogController"; string item = "FogDensity-";>;
+
+float mGroundDensityP1       : CONTROLOBJECT<string name="FogController.pmx"; string item = "GroundDensity+";>;
+float mGroundDensityM1       : CONTROLOBJECT<string name="FogController.pmx"; string item = "GroundDensity-";>;
+float mGroundDensityP2       : CONTROLOBJECT<string name="FogController"; string item = "GroundDensity+";>;
+float mGroundDensityM2       : CONTROLOBJECT<string name="FogController"; string item = "GroundDensity-";>;
+
+float mFogMaxOpacityP1       : CONTROLOBJECT<string name="FogController.pmx"; string item = "MaxOpacity+";>;
+float mFogMaxOpacityM1       : CONTROLOBJECT<string name="FogController.pmx"; string item = "MaxOpacity-";>;
+float mFogMaxOpacityP2       : CONTROLOBJECT<string name="FogController"; string item = "MaxOpacity+";>;
+float mFogMaxOpacityM2       : CONTROLOBJECT<string name="FogController"; string item = "MaxOpacity-";>;
+
+// Height & Falloff
+float mFogHeightP1           : CONTROLOBJECT<string name="FogController.pmx"; string item = "FogHeight+";>;
+float mFogHeightM1           : CONTROLOBJECT<string name="FogController.pmx"; string item = "FogHeight-";>;
+float mFogHeightP2           : CONTROLOBJECT<string name="FogController"; string item = "FogHeight+";>;
+float mFogHeightM2           : CONTROLOBJECT<string name="FogController"; string item = "FogHeight-";>;
+
+float mHeightFalloffP1       : CONTROLOBJECT<string name="FogController.pmx"; string item = "HeightFalloff+";>;
+float mHeightFalloffM1       : CONTROLOBJECT<string name="FogController.pmx"; string item = "HeightFalloff-";>;
+float mHeightFalloffP2       : CONTROLOBJECT<string name="FogController"; string item = "HeightFalloff+";>;
+float mHeightFalloffM2       : CONTROLOBJECT<string name="FogController"; string item = "HeightFalloff-";>;
+
+float mGroundHeightP1        : CONTROLOBJECT<string name="FogController.pmx"; string item = "GroundHeight+";>;
+float mGroundHeightM1        : CONTROLOBJECT<string name="FogController.pmx"; string item = "GroundHeight-";>;
+float mGroundHeightP2        : CONTROLOBJECT<string name="FogController"; string item = "GroundHeight+";>;
+float mGroundHeightM2        : CONTROLOBJECT<string name="FogController"; string item = "GroundHeight-";>;
+
+float mGroundFalloffP1       : CONTROLOBJECT<string name="FogController.pmx"; string item = "GroundFalloff+";>;
+float mGroundFalloffM1       : CONTROLOBJECT<string name="FogController.pmx"; string item = "GroundFalloff-";>;
+float mGroundFalloffP2       : CONTROLOBJECT<string name="FogController"; string item = "GroundFalloff+";>;
+float mGroundFalloffM2       : CONTROLOBJECT<string name="FogController"; string item = "GroundFalloff-";>;
+
+// Distance Bounds
+float mFogStartDistP1        : CONTROLOBJECT<string name="FogController.pmx"; string item = "StartDistance+";>;
+float mFogStartDistM1        : CONTROLOBJECT<string name="FogController.pmx"; string item = "StartDistance-";>;
+float mFogStartDistP2        : CONTROLOBJECT<string name="FogController"; string item = "StartDistance+";>;
+float mFogStartDistM2        : CONTROLOBJECT<string name="FogController"; string item = "StartDistance-";>;
+
+float mFogCutoffDistP1       : CONTROLOBJECT<string name="FogController.pmx"; string item = "CutoffDistance+";>;
+float mFogCutoffDistM1       : CONTROLOBJECT<string name="FogController.pmx"; string item = "CutoffDistance-";>;
+float mFogCutoffDistP2       : CONTROLOBJECT<string name="FogController"; string item = "CutoffDistance+";>;
+float mFogCutoffDistM2       : CONTROLOBJECT<string name="FogController"; string item = "CutoffDistance-";>;
+
+// Ambient Fog Color
+float mFogRP1                : CONTROLOBJECT<string name="FogController.pmx"; string item = "FogR+";>;
+float mFogRM1                : CONTROLOBJECT<string name="FogController.pmx"; string item = "FogR-";>;
+float mFogRP2                : CONTROLOBJECT<string name="FogController"; string item = "FogR+";>;
+float mFogRM2                : CONTROLOBJECT<string name="FogController"; string item = "FogR-";>;
+
+float mFogGP1                : CONTROLOBJECT<string name="FogController.pmx"; string item = "FogG+";>;
+float mFogGM1                : CONTROLOBJECT<string name="FogController.pmx"; string item = "FogG-";>;
+float mFogGP2                : CONTROLOBJECT<string name="FogController"; string item = "FogG+";>;
+float mFogGM2                : CONTROLOBJECT<string name="FogController"; string item = "FogG-";>;
+
+float mFogBP1                : CONTROLOBJECT<string name="FogController.pmx"; string item = "FogB+";>;
+float mFogBM1                : CONTROLOBJECT<string name="FogController.pmx"; string item = "FogB-";>;
+float mFogBP2                : CONTROLOBJECT<string name="FogController"; string item = "FogB+";>;
+float mFogBM2                : CONTROLOBJECT<string name="FogController"; string item = "FogB-";>;
+
+// Sunlight Inscattering Color & Phase
+float mFogSunRP1             : CONTROLOBJECT<string name="FogController.pmx"; string item = "SunR+";>;
+float mFogSunRM1             : CONTROLOBJECT<string name="FogController.pmx"; string item = "SunR-";>;
+float mFogSunRP2             : CONTROLOBJECT<string name="FogController"; string item = "SunR+";>;
+float mFogSunRM2             : CONTROLOBJECT<string name="FogController"; string item = "SunR-";>;
+
+float mFogSunGP1             : CONTROLOBJECT<string name="FogController.pmx"; string item = "SunG+";>;
+float mFogSunGM1             : CONTROLOBJECT<string name="FogController.pmx"; string item = "SunG-";>;
+float mFogSunGP2             : CONTROLOBJECT<string name="FogController"; string item = "SunG+";>;
+float mFogSunGM2             : CONTROLOBJECT<string name="FogController"; string item = "SunG-";>;
+
+float mFogSunBP1             : CONTROLOBJECT<string name="FogController.pmx"; string item = "SunB+";>;
+float mFogSunBM1             : CONTROLOBJECT<string name="FogController.pmx"; string item = "SunB-";>;
+float mFogSunBP2             : CONTROLOBJECT<string name="FogController"; string item = "SunB+";>;
+float mFogSunBM2             : CONTROLOBJECT<string name="FogController"; string item = "SunB-";>;
+
+float mFogSunIntensityP1     : CONTROLOBJECT<string name="FogController.pmx"; string item = "SunIntensity+";>;
+float mFogSunIntensityM1     : CONTROLOBJECT<string name="FogController.pmx"; string item = "SunIntensity-";>;
+float mFogSunIntensityP2     : CONTROLOBJECT<string name="FogController"; string item = "SunIntensity+";>;
+float mFogSunIntensityM2     : CONTROLOBJECT<string name="FogController"; string item = "SunIntensity-";>;
+
+float mFogMiePhaseP1         : CONTROLOBJECT<string name="FogController.pmx"; string item = "MiePhase+";>;
+float mFogMiePhaseM1         : CONTROLOBJECT<string name="FogController.pmx"; string item = "MiePhase-";>;
+float mFogMiePhaseP2         : CONTROLOBJECT<string name="FogController"; string item = "MiePhase+";>;
+float mFogMiePhaseM2         : CONTROLOBJECT<string name="FogController"; string item = "MiePhase-";>;
+
+// Volumetric Godrays
+float mFogGodraysP1          : CONTROLOBJECT<string name="FogController.pmx"; string item = "Godrays+";>;
+float mFogGodraysM1          : CONTROLOBJECT<string name="FogController.pmx"; string item = "Godrays-";>;
+float mFogGodraysP2          : CONTROLOBJECT<string name="FogController"; string item = "Godrays+";>;
+float mFogGodraysM2          : CONTROLOBJECT<string name="FogController"; string item = "Godrays-";>;
+
+float mFogRayDensityP1       : CONTROLOBJECT<string name="FogController.pmx"; string item = "RayDensity+";>;
+float mFogRayDensityM1       : CONTROLOBJECT<string name="FogController.pmx"; string item = "RayDensity-";>;
+float mFogRayDensityP2       : CONTROLOBJECT<string name="FogController"; string item = "RayDensity+";>;
+float mFogRayDensityM2       : CONTROLOBJECT<string name="FogController"; string item = "RayDensity-";>;
+
+// Animated Mist & Wind
+float mFogMistNoiseP1        : CONTROLOBJECT<string name="FogController.pmx"; string item = "MistNoise+";>;
+float mFogMistNoiseM1        : CONTROLOBJECT<string name="FogController.pmx"; string item = "MistNoise-";>;
+float mFogMistNoiseP2        : CONTROLOBJECT<string name="FogController"; string item = "MistNoise+";>;
+float mFogMistNoiseM2        : CONTROLOBJECT<string name="FogController"; string item = "MistNoise-";>;
+
+float mFogWindSpeedP1        : CONTROLOBJECT<string name="FogController.pmx"; string item = "WindSpeed+";>;
+float mFogWindSpeedM1        : CONTROLOBJECT<string name="FogController.pmx"; string item = "WindSpeed-";>;
+float mFogWindSpeedP2        : CONTROLOBJECT<string name="FogController"; string item = "WindSpeed+";>;
+float mFogWindSpeedM2        : CONTROLOBJECT<string name="FogController"; string item = "WindSpeed-";>;
+
+// Controller Bone Position (Direct Viewport Height Offset)
+float3 mFogControllerPos1    : CONTROLOBJECT<string name="FogController.pmx"; string item = "Position";>;
+float3 mFogControllerPos2    : CONTROLOBJECT<string name="FogController"; string item = "Position";>;
+static float3 mFogControllerPos = any(mFogControllerPos1) ? mFogControllerPos1 : mFogControllerPos2;
+
+// =============================================================================
+// Resolved Parameters
+// =============================================================================
+struct FogParameters
+{
+	float density;
+	float groundDensity;
+	float height;
+	float heightFalloff;
+	float groundHeight;
+	float groundFalloff;
+	float startDistance;
+	float cutoffDistance;
+	float maxOpacity;
+	float3 color;
+	float3 sunColor;
+	float sunIntensity;
+	float miePhase;
+	float godraysIntensity;
+	float rayDensity;
+	float mistNoise;
+	float windSpeed;
+};
+
+FogParameters GetFogParameters()
+{
+	FogParameters p;
+
+	float densityP = max(mFogDensityP1, mFogDensityP2);
+	float densityM = max(mFogDensityM1, mFogDensityM2);
+	p.density = mFogDensityDefault * max(0.0f, (1.0f + densityP * 8.0f - densityM * 0.95f));
+
+	float groundDensityP = max(mGroundDensityP1, mGroundDensityP2);
+	float groundDensityM = max(mGroundDensityM1, mGroundDensityM2);
+	p.groundDensity = mGroundFogDensityDefault * max(0.0f, (1.0f + groundDensityP * 8.0f - groundDensityM * 0.95f));
+
+	float heightP = max(mFogHeightP1, mFogHeightP2);
+	float heightM = max(mFogHeightM1, mFogHeightM2);
+	p.height = mFogHeightDefault + mFogControllerPos.y + (heightP * 50.0f - heightM * 50.0f);
+
+	float falloffP = max(mHeightFalloffP1, mHeightFalloffP2);
+	float falloffM = max(mHeightFalloffM1, mHeightFalloffM2);
+	p.heightFalloff = max(1e-4f, mFogHeightFalloffDefault * (1.0f + falloffP * 3.0f - falloffM * 0.8f));
+
+	float groundHeightP = max(mGroundHeightP1, mGroundHeightP2);
+	float groundHeightM = max(mGroundHeightM1, mGroundHeightM2);
+	p.groundHeight = mGroundFogHeightDefault + mFogControllerPos.y + (groundHeightP * 20.0f - groundHeightM * 20.0f);
+
+	float groundFalloffP = max(mGroundFalloffP1, mGroundFalloffP2);
+	float groundFalloffM = max(mGroundFalloffM1, mGroundFalloffM2);
+	p.groundFalloff = max(1e-4f, mGroundFogFalloffDefault * (1.0f + groundFalloffP * 4.0f - groundFalloffM * 0.8f));
+
+	float startP = max(mFogStartDistP1, mFogStartDistP2);
+	float startM = max(mFogStartDistM1, mFogStartDistM2);
+	p.startDistance = max(0.0f, mFogStartDistanceDefault + (startP * 100.0f - startM * 50.0f));
+
+	float cutoffP = max(mFogCutoffDistP1, mFogCutoffDistP2);
+	float cutoffM = max(mFogCutoffDistM1, mFogCutoffDistM2);
+	p.cutoffDistance = max(p.startDistance + 10.0f, mFogCutoffDistanceDefault + (cutoffP * 3000.0f - cutoffM * 2500.0f));
+
+	float maxOpacP = max(mFogMaxOpacityP1, mFogMaxOpacityP2);
+	float maxOpacM = max(mFogMaxOpacityM1, mFogMaxOpacityM2);
+	p.maxOpacity = saturate(mFogMaxOpacityDefault * (1.0f - maxOpacM * 0.9f + maxOpacP * 0.0f));
+
+	float rP = max(mFogRP1, mFogRP2); float rM = max(mFogRM1, mFogRM2);
+	float gP = max(mFogGP1, mFogGP2); float gM = max(mFogGM1, mFogGM2);
+	float bP = max(mFogBP1, mFogBP2); float bM = max(mFogBM1, mFogBM2);
+	p.color = saturate(mFogColorDefault * float3(1.0f + rP * 2.0f - rM * 0.8f, 1.0f + gP * 2.0f - gM * 0.8f, 1.0f + bP * 2.0f - bM * 0.8f));
+
+	float sunRP = max(mFogSunRP1, mFogSunRP2); float sunRM = max(mFogSunRM1, mFogSunRM2);
+	float sunGP = max(mFogSunGP1, mFogSunGP2); float sunGM = max(mFogSunGM1, mFogSunGM2);
+	float sunBP = max(mFogSunBP1, mFogSunBP2); float sunBM = max(mFogSunBM1, mFogSunBM2);
+	p.sunColor = saturate(mFogSunColorDefault * float3(1.0f + sunRP * 2.0f - sunRM * 0.8f, 1.0f + sunGP * 2.0f - sunGM * 0.8f, 1.0f + sunBP * 2.0f - sunBM * 0.8f));
+
+	float sunIntP = max(mFogSunIntensityP1, mFogSunIntensityP2);
+	float sunIntM = max(mFogSunIntensityM1, mFogSunIntensityM2);
+	p.sunIntensity = max(0.0f, mFogSunIntensityDefault * (1.0f + sunIntP * 4.0f - sunIntM * 0.9f));
+
+	float mieP = max(mFogMiePhaseP1, mFogMiePhaseP2);
+	float mieM = max(mFogMiePhaseM1, mFogMiePhaseM2);
+	p.miePhase = clamp(mFogMiePhaseDefault + (mieP * 0.24f - mieM * 0.60f), 0.0f, 0.99f);
+
+	float godP = max(mFogGodraysP1, mFogGodraysP2);
+	float godM = max(mFogGodraysM1, mFogGodraysM2);
+	p.godraysIntensity = max(0.0f, 1.0f + godP * 3.0f - godM * 0.95f);
+
+	float rayDP = max(mFogRayDensityP1, mFogRayDensityP2);
+	float rayDM = max(mFogRayDensityM1, mFogRayDensityM2);
+	p.rayDensity = max(0.0f, 1.0f + rayDP * 3.0f - rayDM * 0.9f);
+
+	float mistP = max(mFogMistNoiseP1, mFogMistNoiseP2);
+	float mistM = max(mFogMistNoiseM1, mFogMistNoiseM2);
+	p.mistNoise = max(0.0f, mistP * 2.5f - mistM * 0.9f);
+
+	float windP = max(mFogWindSpeedP1, mFogWindSpeedP2);
+	float windM = max(mFogWindSpeedM1, mFogWindSpeedM2);
+	p.windSpeed = max(0.0f, 1.0f + windP * 4.0f - windM * 0.9f);
+
+	return p;
+}
+
+// =============================================================================
+// Analytical Closed-Form Line Integral Mathematics (UE5 / Filament)
+// =============================================================================
+
+/**
+ * Calculates the exact line integral of exponential density along a ray segment.
+ * Density at height y: rho(y) = rho0 * exp(-falloff * (y - height0))
+ * Line integral: rho(y_start) * (1 - exp(-falloff * deltaY)) / (falloff * deltaY) * rayLength
+ * Taylor series expansion used near deltaY -> 0 to prevent division by zero.
+ */
+float CalculateExponentialLineIntegral(float heightFalloff, float deltaY, float rayStartDensity, float rayLength)
+{
+	float falloffTimesDeltaY = heightFalloff * deltaY;
+	
+	// Clamp exponent to prevent numerical underflow/overflow on DX9
+	falloffTimesDeltaY = clamp(falloffTimesDeltaY, -60.0f, 60.0f);
+
+	// Continuous Taylor approximation for small values (|x| < 1e-3)
+	if (abs(falloffTimesDeltaY) < 1e-3f)
+	{
+		float taylor = 1.0f - 0.5f * falloffTimesDeltaY + (1.0f / 6.0f) * (falloffTimesDeltaY * falloffTimesDeltaY);
+		return rayStartDensity * rayLength * taylor;
+	}
+	else
+	{
+		return rayStartDensity * rayLength * ((1.0f - exp(-falloffTimesDeltaY)) / falloffTimesDeltaY);
+	}
+}
+
+// =============================================================================
+// Phase Functions
+// =============================================================================
+
+/**
+ * Henyey-Greenstein scattering phase function.
+ * @param cosTheta dot product between view ray direction and light direction
+ * @param g forward scattering anisotropy factor in [0, 0.99]
+ */
+float ComputePhaseHG(float cosTheta, float g)
+{
+	float g2 = g * g;
+	float denom = 1.0f + g2 - 2.0f * g * cosTheta;
+	return (1.0f / (4.0f * PI)) * ((1.0f - g2) / max(1e-4f, pow(max(denom, 1e-4f), 1.5f)));
+}
+
+/**
+ * Cornette-Shanks scattering phase function (Mie approximation with Rayleigh base).
+ */
+float ComputePhaseCS(float cosTheta, float g)
+{
+	float g2 = g * g;
+	float num = 3.0f * (1.0f - g2) * (1.0f + cosTheta * cosTheta);
+	float denom = (8.0f * PI * (2.0f + g2)) * pow(max(1.0f + g2 - 2.0f * g * cosTheta, 1e-4f), 1.5f);
+	return num / max(1e-4f, denom);
+}
+
+// =============================================================================
+// Full Analytical Dual-Layer Fog Evaluation
+// =============================================================================
+
+/**
+ * Evaluates dual-layer exponential height fog transmittance and inscattering
+ * along the camera ray according to Beer-Lambert law.
+ */
+void EvaluateAnalyticalFog(
+	FogParameters params,
+	float3 cameraPos,
+	float3 worldPos,
+	float3 viewDir,
+	float rayDistance,
+	out float3 outInscattering,
+	out float outTransmittance)
+{
+	// Early exit when fog is fully disabled or behind start distance
+	if (rayDistance <= params.startDistance || (params.density <= 1e-7f && params.groundDensity <= 1e-7f))
+	{
+		outInscattering = 0.0f;
+		outTransmittance = 1.0f;
+		return;
+	}
+
+	// Clamp ray distance to cutoff distance
+	rayDistance = min(rayDistance, params.cutoffDistance);
+
+	// Account for camera exclusion start distance
+	float effectiveRayLength = rayDistance - params.startDistance;
+	float3 rayStart = cameraPos + viewDir * params.startDistance;
+	float3 rayEnd   = cameraPos + viewDir * rayDistance;
+
+	float deltaY = rayEnd.y - rayStart.y;
+
+	// Layer 1: Atmospheric Haze
+	float h1 = rayStart.y - params.height;
+	float densityStart1 = params.density * exp(-clamp(params.heightFalloff * h1, -40.0f, 40.0f));
+	float opticalPath1 = CalculateExponentialLineIntegral(params.heightFalloff, deltaY, densityStart1, effectiveRayLength);
+
+	// Layer 2: Ground Mist
+	float h2 = rayStart.y - params.groundHeight;
+	float densityStart2 = params.groundDensity * exp(-clamp(params.groundFalloff * h2, -40.0f, 40.0f));
+	float opticalPath2 = CalculateExponentialLineIntegral(params.groundFalloff, deltaY, densityStart2, effectiveRayLength);
+
+	float totalOpticalPath = max(0.0f, opticalPath1 + opticalPath2);
+
+	// Beer-Lambert transmittance: T = exp(-tau)
+	float transmittance = exp(-totalOpticalPath);
+
+	// Apply Max Opacity constraint
+	float opacity = min(1.0f - transmittance, params.maxOpacity);
+	transmittance = 1.0f - opacity;
+
+	// Directional light inscattering
+	float3 L = -SunDirection; // Light direction towards light source
+	float cosTheta = dot(viewDir, L);
+	float phase = ComputePhaseCS(cosTheta, params.miePhase);
+
+	float3 directionalRadiance = params.sunColor * (phase * params.sunIntensity * PI);
+
+	// Inscattering: ambient body haze + forward sunlight scattering
+	float3 ambientInscattering = params.color * opacity;
+	float3 directionalInscattering = directionalRadiance * opacity;
+
+	outInscattering = ambientInscattering + directionalInscattering;
+	outTransmittance = transmittance;
+}
+
+#endif // FOG_ENABLE
+#endif // _SHADER_FOG_COMMON_FXSUB_

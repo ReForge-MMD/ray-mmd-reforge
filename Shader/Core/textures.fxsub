@@ -671,3 +671,33 @@ sampler SSGIMapHistorySamp = sampler_state {
 	AddressU = CLAMP;  AddressV = CLAMP;
 };
 #endif
+
+#if FOG_ENABLE >= 2
+shared texture FogMap : RENDERCOLORTARGET<
+	float2 ViewportRatio = {0.5, 0.5};
+	bool AntiAlias = false;
+	string Format = "A16B16G16R16F";
+	float4 ClearColor = {0, 0, 0, 1};
+>;
+texture FogBlurMap : RENDERCOLORTARGET<
+	float2 ViewportRatio = {0.5, 0.5};
+	bool AntiAlias = false;
+	string Format = "A16B16G16R16F";
+	float4 ClearColor = {0, 0, 0, 1};
+>;
+sampler FogMapSamp = sampler_state {
+	texture = <FogMap>;
+	MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = NONE;
+	AddressU = CLAMP;  AddressV = CLAMP;
+};
+sampler FogBlurMapSamp = sampler_state {
+	texture = <FogBlurMap>;
+	MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = NONE;
+	AddressU = CLAMP;  AddressV = CLAMP;
+};
+sampler FogMapPointSamp = sampler_state {
+	texture = <FogMap>;
+	MinFilter = POINT; MagFilter = POINT; MipFilter = NONE;
+	AddressU = CLAMP;  AddressV = CLAMP;
+};
+#endif

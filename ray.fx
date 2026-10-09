@@ -553,6 +553,14 @@ static float mCausticsDispScale  = lerp(lerp(1.0f, 3.0f, mCstDispersionP), 0.0f,
 #	include "shader/PostProcess/PostProcessHexagonalBokeh.fxsub"
 #endif
 
+#if FOG_ENABLE
+#	include "shader/Fog/FogCommon.fxsub"
+#if FOG_ENABLE >= 2
+#	include "shader/Fog/VolumetricFog.fxsub"
+#endif
+#	include "shader/Fog/FogComposite.fxsub"
+#endif
+
 #if HDR_EYE_ADAPTATION
 #	include "shader/PostProcess/PostProcessEyeAdaptation.fxsub"
 #endif
@@ -772,6 +780,16 @@ technique DeferredLighting<
 	"RenderColorTarget=FocalBlur1Map;         Clear=Color; Pass=ComputeBilinearBlur;"
 
 	"RenderColorTarget=ShadingMap; Pass=ComputeBokehFinal;"
+#endif
+
+#if FOG_ENABLE
+#if FOG_ENABLE >= 2
+	"RenderColorTarget=FogMap;     Clear=Color; Pass=FogRaymarch;"
+	"RenderColorTarget=FogBlurMap; Clear=Color; Pass=FogBilateralX;"
+	"RenderColorTarget=FogMap;     Clear=Color; Pass=FogBilateralY;"
+#endif
+	"RenderColorTarget=ShadingMapTemp; Pass=FogComposite;"
+	"RenderColorTarget=ShadingMap;     Pass=FogCopyBack;"
 #endif
 
 #if HDR_EYE_ADAPTATION
@@ -1296,6 +1314,41 @@ technique DeferredLighting<
 		DestBlend = INVSRCALPHA; SrcBlend = SRCALPHA;
 		VertexShader = compile vs_3_0 ScreenSpaceQuadOffsetVS(float2(0.0f, 0.0f));
 		PixelShader  = compile ps_3_0 ComputeBokehFinalPS();
+	}
+#endif
+
+#if FOG_ENABLE
+#if FOG_ENABLE >= 2
+	pass FogRaymarch<string Script= "Draw=Buffer;";>{
+		AlphaBlendEnable = false; AlphaTestEnable = false;
+		ZEnable = false; ZWriteEnable = false;
+		VertexShader = compile vs_3_0 VolumetricFogRaymarchVS();
+		PixelShader  = compile ps_3_0 VolumetricFogRaymarchPS();
+	}
+	pass FogBilateralX<string Script= "Draw=Buffer;";>{
+		AlphaBlendEnable = false; AlphaTestEnable = false;
+		ZEnable = false; ZWriteEnable = false;
+		VertexShader = compile vs_3_0 VolumetricFogBlurVS();
+		PixelShader  = compile ps_3_0 VolumetricFogBilateralXPS();
+	}
+	pass FogBilateralY<string Script= "Draw=Buffer;";>{
+		AlphaBlendEnable = false; AlphaTestEnable = false;
+		ZEnable = false; ZWriteEnable = false;
+		VertexShader = compile vs_3_0 VolumetricFogBlurVS();
+		PixelShader  = compile ps_3_0 VolumetricFogBilateralYPS();
+	}
+#endif
+	pass FogComposite<string Script= "Draw=Buffer;";>{
+		AlphaBlendEnable = false; AlphaTestEnable = false;
+		ZEnable = false; ZWriteEnable = false;
+		VertexShader = compile vs_3_0 FogCompositeVS();
+		PixelShader  = compile ps_3_0 FogCompositePS();
+	}
+	pass FogCopyBack<string Script= "Draw=Buffer;";>{
+		AlphaBlendEnable = false; AlphaTestEnable = false;
+		ZEnable = false; ZWriteEnable = false;
+		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
+		PixelShader  = compile ps_3_0 FogCopyBackPS(ShadingMapTempSamp);
 	}
 #endif
 #if HDR_EYE_ADAPTATION

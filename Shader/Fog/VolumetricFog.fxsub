@@ -1,0 +1,264 @@
+#ifndef _SHADER_VOLUMETRIC_FOG_FXSUB_
+#define _SHADER_VOLUMETRIC_FOG_FXSUB_
+
+#if FOG_ENABLE >= 2
+
+// Number of raymarching steps along camera ray
+#if FOG_ENABLE == 3
+#	define VOLUMETRIC_FOG_STEPS 24
+#else
+#	define VOLUMETRIC_FOG_STEPS 16
+#endif
+
+// =============================================================================
+// Fast Procedural 3D Noise for Animated Mist
+// =============================================================================
+float Hash3D(float3 p)
+{
+	p = frac(p * float3(0.1031f, 0.1030f, 0.0973f));
+	p += dot(p, p.yzx + 33.33f);
+	return frac((p.x + p.y) * p.z);
+}
+
+float ValueNoise3D(float3 p)
+{
+	float3 i = floor(p);
+	float3 f = frac(p);
+	f = f * f * (3.0f - 2.0f * f);
+
+	float n000 = Hash3D(i + float3(0, 0, 0));
+	float n100 = Hash3D(i + float3(1, 0, 0));
+	float n010 = Hash3D(i + float3(0, 1, 0));
+	float n110 = Hash3D(i + float3(1, 1, 0));
+	float n001 = Hash3D(i + float3(0, 0, 1));
+	float n101 = Hash3D(i + float3(1, 0, 1));
+	float n011 = Hash3D(i + float3(0, 1, 1));
+	float n111 = Hash3D(i + float3(1, 1, 1));
+
+	float n00 = lerp(n000, n100, f.x);
+	float n01 = lerp(n001, n101, f.x);
+	float n10 = lerp(n010, n110, f.x);
+	float n11 = lerp(n011, n111, f.x);
+
+	float n0 = lerp(n00, n10, f.y);
+	float n1 = lerp(n01, n11, f.y);
+
+	return lerp(n0, n1, f.z);
+}
+
+float SampleMistNoise(float3 worldPos, float mistAmount, float windSpeed)
+{
+	if (mistAmount <= 1e-4f)
+		return 1.0f;
+
+	float3 windDir = float3(0.3f, 0.05f, 0.15f) * (time * windSpeed * 2.0f);
+	float3 p1 = (worldPos + windDir) * 0.06f;
+	float3 p2 = (worldPos - windDir * 0.5f) * 0.14f;
+
+	float n = ValueNoise3D(p1) * 0.65f + ValueNoise3D(p2) * 0.35f;
+	return saturate(1.0f + (n * 2.0f - 1.0f) * mistAmount);
+}
+
+// =============================================================================
+// Cascaded Shadow Map Single-Point Visibility
+// =============================================================================
+float SampleVolumetricShadow(float3 worldPos, float3 viewPos)
+{
+#if SUN_LIGHT_ENABLE && SUN_SHADOW_QUALITY
+	float4 proj = mul(float4(viewPos, 1.0f), matLightProjectFromCameraView);
+
+	float4 lightPPos01 = proj.xyxy * float4(lightCropParams[0].xy, lightCropParams[1].xy) + float4(lightCropParams[0].zw, lightCropParams[1].zw);
+	float4 lightPPos23 = proj.xyxy * float4(lightCropParams[2].xy, lightCropParams[3].xy) + float4(lightCropParams[2].zw, lightCropParams[3].zw);
+
+	float receiverDepth = dot(float4(viewPos, 1.0f), matLightViewFromCameraView._13_23_33_43);
+	float normalizedReceiverDepth = saturate(receiverDepth / mPSSMDepthZMax);
+
+	float shadowVal = 1.0f;
+
+	if (all(abs(lightPPos01.xy) <= 1.0f))
+	{
+		float2 shadowUV = PosToCoord(lightPPos01.xy) + ShadowMapOffset;
+		shadowVal = tex2Dlod(PSSM1Samp, float4(shadowUV, 0.0f, 0.0f)).r;
+	}
+	else if (all(abs(lightPPos01.zw) <= 1.0f))
+	{
+		float2 shadowUV = PosToCoord(lightPPos01.zw) + ShadowMapOffset;
+		shadowVal = tex2Dlod(PSSM2Samp, float4(shadowUV, 0.0f, 0.0f)).r;
+	}
+	else if (all(abs(lightPPos23.xy) <= 1.0f))
+	{
+		float2 shadowUV = PosToCoord(lightPPos23.xy) + ShadowMapOffset;
+		shadowVal = tex2Dlod(PSSM3Samp, float4(shadowUV, 0.0f, 0.0f)).r;
+	}
+	else if (all(abs(lightPPos23.zw) <= 1.0f))
+	{
+		float2 shadowUV = PosToCoord(lightPPos23.zw) + ShadowMapOffset;
+		shadowVal = tex2Dlod(PSSM4Samp, float4(shadowUV, 0.0f, 0.0f)).r;
+	}
+	else
+	{
+		return 1.0f; // Outside shadow cascades
+	}
+
+	// Bias for air volumes (no surface curvature acne)
+	return (shadowVal + 0.0015f >= normalizedReceiverDepth) ? 1.0f : 0.0f;
+#else
+	return 1.0f;
+#endif
+}
+
+// =============================================================================
+// Volumetric Godrays Raymarcher Pass (Half Resolution)
+// =============================================================================
+void VolumetricFogRaymarchVS(
+	in float4 Position : POSITION,
+	in float2 Texcoord : TEXCOORD0,
+	out float2 oTexcoord : TEXCOORD0,
+	out float3 oViewdir : TEXCOORD1,
+	out float4 oPosition : POSITION)
+{
+	oPosition = Position;
+	oTexcoord = Texcoord;
+	oViewdir = mul(Position, matProjectInverse).xyz;
+}
+
+float4 VolumetricFogRaymarchPS(
+	in float2 coord : TEXCOORD0,
+	in float3 viewdir : TEXCOORD1) : COLOR
+{
+	FogParameters params = GetFogParameters();
+
+	// Sample depth from G-Buffer (half-resolution coords map 1:1 to full-res screen space)
+	float depthOpaque = tex2Dlod(Gbuffer4Map, float4(coord, 0.0f, 0.0f)).x;
+	float depthTrans  = tex2Dlod(Gbuffer8Map, float4(coord, 0.0f, 0.0f)).x;
+
+	float sceneDepth = 0.0f;
+	if (depthTrans > 1e-4f && depthOpaque > 1e-4f)
+		sceneDepth = min(depthTrans, depthOpaque);
+	else if (depthTrans > 1e-4f)
+		sceneDepth = depthTrans;
+	else
+		sceneDepth = depthOpaque;
+
+	bool isSky = (sceneDepth <= 1e-4f);
+	float maxMarchDist = isSky ? mFogRaymarchMaxDistance : min(sceneDepth, mFogRaymarchMaxDistance);
+
+	if (maxMarchDist <= params.startDistance || (params.density <= 1e-7f && params.groundDensity <= 1e-7f))
+	{
+		return float4(0.0f, 0.0f, 0.0f, 1.0f); // Zero inscattering, full transmittance
+	}
+
+	float3 V = normalize(viewdir);
+	float3 L = -SunDirection;
+	float cosTheta = dot(V, L);
+	float phase = ComputePhaseCS(cosTheta, params.miePhase);
+
+	float marchRange = maxMarchDist - params.startDistance;
+	float stepSize = marchRange / float(VOLUMETRIC_FOG_STEPS);
+
+	// Interleaved Gradient Noise jitter to eliminate slice banding
+	float jitter = InterleavedGradientNoise(coord * ViewportSize * 0.5f);
+
+	float accumulatedTransmittance = 1.0f;
+	float3 accumulatedInscattering = 0.0f;
+
+	float3 sunRadiance = params.sunColor * (params.sunIntensity * PI);
+	float3 ambientColor = params.color;
+
+	[unroll]
+	for (int i = 0; i < VOLUMETRIC_FOG_STEPS; ++i)
+	{
+		float t = params.startDistance + (float(i) + jitter) * stepSize;
+		float3 sampleWorldPos = CameraPosition + V * t;
+		float3 sampleViewPos  = V * t;
+
+		// Evaluate dual-layer density at sample position
+		float h1 = sampleWorldPos.y - params.height;
+		float d1 = params.density * exp(-clamp(params.heightFalloff * h1, -30.0f, 30.0f));
+
+		float h2 = sampleWorldPos.y - params.groundHeight;
+		float d2 = params.groundDensity * exp(-clamp(params.groundFalloff * h2, -30.0f, 30.0f));
+
+		float mistMod = SampleMistNoise(sampleWorldPos, params.mistNoise, params.windSpeed);
+		float sampleDensity = (d1 + d2 * mistMod) * params.rayDensity;
+
+		if (sampleDensity > 1e-6f)
+		{
+			float shadowVis = SampleVolumetricShadow(sampleWorldPos, sampleViewPos);
+
+			// Step optical depth
+			float stepTau = sampleDensity * stepSize;
+			float stepTransmittance = exp(-stepTau);
+
+			// Step scattering
+			float3 stepScattering = (shadowVis * sunRadiance * phase * params.godraysIntensity + ambientColor * 0.25f) * sampleDensity * stepSize;
+
+			accumulatedInscattering += accumulatedTransmittance * stepScattering;
+			accumulatedTransmittance *= stepTransmittance;
+		}
+	}
+
+	accumulatedTransmittance = max(accumulatedTransmittance, 1.0f - params.maxOpacity);
+
+	return float4(accumulatedInscattering, accumulatedTransmittance);
+}
+
+// =============================================================================
+// Depth-Aware Cross-Bilateral Blur Passes (Half Resolution)
+// =============================================================================
+void VolumetricFogBlurVS(
+	in float4 Position : POSITION,
+	in float2 Texcoord : TEXCOORD0,
+	out float2 oTexcoord : TEXCOORD0,
+	out float4 oPosition : POSITION)
+{
+	oPosition = Position;
+	oTexcoord = Texcoord;
+}
+
+float4 VolumetricFogBilateralBlur(float2 coord, float2 direction)
+{
+	float2 halfTexel = (1.0f / (ViewportSize * 0.5f)) * direction;
+
+	float4 centerFog = tex2Dlod(FogMapSamp, float4(coord, 0.0f, 0.0f));
+	float centerDepth = tex2Dlod(Gbuffer8Map, float4(coord, 0.0f, 0.0f)).x;
+	if (centerDepth <= 1e-4f) centerDepth = tex2Dlod(Gbuffer4Map, float4(coord, 0.0f, 0.0f)).x;
+
+	static const float kernelWeights[5] = { 0.06136f, 0.24477f, 0.38774f, 0.24477f, 0.06136f };
+	static const float kernelOffsets[5] = { -2.0f, -1.0f, 0.0f, 1.0f, 2.0f };
+
+	float4 accumColor = 0.0f;
+	float totalWeight = 0.0f;
+
+	[unroll]
+	for (int i = 0; i < 5; ++i)
+	{
+		float2 tapUV = coord + halfTexel * kernelOffsets[i];
+		float4 tapFog = tex2Dlod(FogMapSamp, float4(tapUV, 0.0f, 0.0f));
+
+		float tapDepth = tex2Dlod(Gbuffer8Map, float4(tapUV, 0.0f, 0.0f)).x;
+		if (tapDepth <= 1e-4f) tapDepth = tex2Dlod(Gbuffer4Map, float4(tapUV, 0.0f, 0.0f)).x;
+
+		float depthDiff = abs(centerDepth - tapDepth);
+		float depthWeight = exp(-depthDiff / max(1e-3f, mFogBilateralDepthThreshold * max(1.0f, centerDepth * 0.05f)));
+
+		float w = kernelWeights[i] * depthWeight;
+		accumColor += tapFog * w;
+		totalWeight += w;
+	}
+
+	return accumColor / max(1e-4f, totalWeight);
+}
+
+float4 VolumetricFogBilateralXPS(in float2 coord : TEXCOORD0) : COLOR
+{
+	return VolumetricFogBilateralBlur(coord, float2(1.0f, 0.0f));
+}
+
+float4 VolumetricFogBilateralYPS(in float2 coord : TEXCOORD0) : COLOR
+{
+	return VolumetricFogBilateralBlur(coord, float2(0.0f, 1.0f));
+}
+
+#endif // FOG_ENABLE >= 2
+#endif // _SHADER_VOLUMETRIC_FOG_FXSUB_

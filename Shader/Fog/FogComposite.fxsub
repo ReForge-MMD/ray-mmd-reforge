@@ -1,0 +1,113 @@
+#ifndef _SHADER_FOG_COMPOSITE_FXSUB_
+#define _SHADER_FOG_COMPOSITE_FXSUB_
+
+#if FOG_ENABLE
+
+void FogCompositeVS(
+	in float4 Position : POSITION,
+	in float2 Texcoord : TEXCOORD0,
+	out float2 oTexcoord : TEXCOORD0,
+	out float3 oViewdir : TEXCOORD1,
+	out float4 oPosition : POSITION)
+{
+	oPosition = Position;
+	oTexcoord = Texcoord;
+	oViewdir = mul(Position, matProjectInverse).xyz;
+}
+
+float4 FogCompositePS(
+	in float2 coord : TEXCOORD0,
+	in float3 viewdir : TEXCOORD1) : COLOR
+{
+	FogParameters params = GetFogParameters();
+
+	float3 sceneColor = tex2Dlod(ShadingMapPointSamp, float4(coord, 0.0f, 0.0f)).rgb;
+
+	// Determine linear scene depth
+	float depthOpaque = tex2Dlod(Gbuffer4Map, float4(coord, 0.0f, 0.0f)).x;
+	float depthTrans  = tex2Dlod(Gbuffer8Map, float4(coord, 0.0f, 0.0f)).x;
+
+	float sceneDepth = 0.0f;
+	if (depthTrans > 1e-4f && depthOpaque > 1e-4f)
+		sceneDepth = min(depthTrans, depthOpaque);
+	else if (depthTrans > 1e-4f)
+		sceneDepth = depthTrans;
+	else
+		sceneDepth = depthOpaque;
+
+	bool isSky = (sceneDepth <= 1e-4f);
+	float fullRayDistance = isSky ? params.cutoffDistance : sceneDepth;
+
+	float3 finalInscattering = 0.0f;
+	float finalTransmittance = 1.0f;
+
+#if FOG_ENABLE == 1
+	// -------------------------------------------------------------------------
+	// Mode 1: Pure Analytical Dual-Layer Height Fog
+	// -------------------------------------------------------------------------
+	float3 viewDir = normalize(viewdir);
+	float3 worldPos = CameraPosition + viewDir * fullRayDistance;
+
+	EvaluateAnalyticalFog(
+		params,
+		CameraPosition,
+		worldPos,
+		viewDir,
+		fullRayDistance,
+		finalInscattering,
+		finalTransmittance);
+
+#elif FOG_ENABLE >= 2
+	// -------------------------------------------------------------------------
+	// Mode 2 & 3: Volumetric Godrays with Analytical Far-Field Extension
+	// -------------------------------------------------------------------------
+	float4 volFog = tex2Dlod(FogMapSamp, float4(coord, 0.0f, 0.0f));
+	float3 volInscatter = volFog.rgb;
+	float volTransmittance = volFog.a;
+
+	float3 viewDir = normalize(viewdir);
+
+	// If fragment extends beyond the volumetric raymarching range,
+	// extend seamlessly using the analytical closed-form integral
+	if (fullRayDistance > mFogRaymarchMaxDistance)
+	{
+		FogParameters farParams = params;
+		farParams.startDistance = max(params.startDistance, mFogRaymarchMaxDistance);
+
+		float3 farWorldPos = CameraPosition + viewDir * fullRayDistance;
+		float3 farInscatter = 0.0f;
+		float farTransmittance = 1.0f;
+
+		EvaluateAnalyticalFog(
+			farParams,
+			CameraPosition,
+			farWorldPos,
+			viewDir,
+			fullRayDistance,
+			farInscatter,
+			farTransmittance);
+
+		// Combine foreground volumetric with background analytical
+		finalInscattering = volInscatter + volTransmittance * farInscatter;
+		finalTransmittance = volTransmittance * farTransmittance;
+	}
+	else
+	{
+		finalInscattering = volInscatter;
+		finalTransmittance = volTransmittance;
+	}
+#endif
+
+	// Beer-Lambert composite in linear HDR space
+	float3 compositedColor = sceneColor * finalTransmittance + finalInscattering;
+
+	return float4(compositedColor, 1.0f);
+}
+
+float4 FogCopyBackPS(in float2 coord : TEXCOORD0, uniform sampler2D source) : COLOR
+{
+	return tex2Dlod(source, float4(coord, 0.0f, 0.0f));
+}
+
+#endif // FOG_ENABLE
+#endif // _SHADER_FOG_COMPOSITE_FXSUB_
