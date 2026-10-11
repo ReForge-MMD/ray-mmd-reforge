@@ -11,26 +11,6 @@ sampler ScnSamp = sampler_state {
 	MinFilter = POINT; MagFilter = POINT; MipFilter = NONE;
 	AddressU = CLAMP; AddressV = CLAMP;
 };
-#if FOG_ENABLE
-texture FogMap: OFFSCREENRENDERTARGET<
-	string Description = "Multi volumetirc fog map for ray";
-	float2 ViewportRatio = {1.0, 1.0};
-	string Format = "A16B16G16R16F";
-	float4 ClearColor = { 0, 0, 0, 0 };
-	float ClearDepth = 1.0;
-	string DefaultEffect =
-		"GroundFog*.*= ./Fog/GroundFog/ground_fog.fx;"
-		"AtmosphericFog*.*= ./Fog/AtmosphericFog/atmospheric_fog.fx;"
-		"VolumetricCube.pmx =./Fog/VolumetricCube/volumetric_cube.fx;"
-		"VolumetricSphere.pmx =./Fog/VolumetricSphere/volumetric_sphere.fx;"
-		"* = hide;";
->;
-sampler FogMapSamp = sampler_state {
-	texture = <FogMap>;
-	MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = NONE;
-	AddressU = CLAMP; AddressV = CLAMP;
-};
-#endif
 
 #if POST_MOTION_BLUR_ENABLE == 2
 texture VelocityMap: OFFSCREENRENDERTARGET<
@@ -688,6 +668,36 @@ texture SSGIMapHistory : RENDERCOLORTARGET<
 sampler SSGIMapHistorySamp = sampler_state {
 	texture = <SSGIMapHistory>;
 	MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = NONE;
+	AddressU = CLAMP;  AddressV = CLAMP;
+};
+#endif
+
+#if FOG_ENABLE >= 2
+shared texture FogMap : RENDERCOLORTARGET<
+	float2 ViewportRatio = {1.0, 1.0};
+	bool AntiAlias = false;
+	string Format = "A16B16G16R16F";
+	float4 ClearColor = {0, 0, 0, 1};
+>;
+texture FogBlurMap : RENDERCOLORTARGET<
+	float2 ViewportRatio = {1.0, 1.0};
+	bool AntiAlias = false;
+	string Format = "A16B16G16R16F";
+	float4 ClearColor = {0, 0, 0, 1};
+>;
+sampler FogMapSamp = sampler_state {
+	texture = <FogMap>;
+	MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = NONE;
+	AddressU = CLAMP;  AddressV = CLAMP;
+};
+sampler FogBlurMapSamp = sampler_state {
+	texture = <FogBlurMap>;
+	MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = NONE;
+	AddressU = CLAMP;  AddressV = CLAMP;
+};
+sampler FogMapPointSamp = sampler_state {
+	texture = <FogMap>;
+	MinFilter = POINT; MagFilter = POINT; MipFilter = NONE;
 	AddressU = CLAMP;  AddressV = CLAMP;
 };
 #endif
