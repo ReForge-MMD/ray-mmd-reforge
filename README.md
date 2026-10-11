@@ -24,7 +24,7 @@ Requirement :
 * Direct3D 9 With Shader Model 3.0 (ps_3_0)
 * **Powerful GPU recommended** due to advanced shading techniques.
 
-Reforge Exclusive Features (through v1.21.1) :
+Reforge Exclusive Features (through v1.22.0) :
 ------------
 
 **Direct Screen-Space Core & Architecture**
@@ -56,6 +56,7 @@ Reforge Exclusive Features (through v1.21.1) :
 * **Hybrid HBAO / SSDO**: horizon-based and directional occlusion for accurate contact shading.
 
 **Lighting & Shadows**
+* **Physical Volumetric Fog & Atmospheric Godrays Subsystem (`FogController.pmx`)**: comprehensive unified atmospheric engine featuring analytical dual-layer exponential height fog (closed-form UE5/Filament model) and raymarched volumetric godrays coupled to solar zenith angle and CSM shadow cascades, with procedural mist turbulence noise, wind velocity drift, and 42 dedicated controller morphs.
 * **Physical Solar Lighting & Atmospheric Optics Suite**: comprehensive overhaul of directional sunlight physics (`Shader/Lighting/BRDF.fxsub`, `Shader/Lighting/ShadingMaterials.fxsub`):
   * **Eddington Solar Limb Darkening (`SUN_LIMB_DARKENING 1`)**: physical center-to-limb quadratic intensity profile across the solar disk ($0.533^\circ$) in `SphereMaxNoH`, eliminating artificial razor-sharp specular disk borders.
   * **Kulla-Conty Energy Compensation (`SUN_MULTI_SCATTER_COMPENSATION 1`)**: Fdez-Aguéra analytical multi-scattering lobe for GGX and Anisotropic BRDFs, recovering lost energy on rough microfacets and preventing darkening at grazing angles.
@@ -63,12 +64,17 @@ Reforge Exclusive Features (through v1.21.1) :
   * **Perez/CIE Sun-to-Sky Irradiance Coupling (`SUN_SKY_COUPLING 1`)**: dynamic zenith-dependent ratio modulation ensuring direct sunlight and diffuse skylight remain in physical balance across day, golden hour, and sunset.
   * **Planckian Locus Daylight Auto-CCT (`SUN_AUTO_CCT 1`)**: Kang/Kim/Hernandez-Andres polynomial analytical Planckian Blackbody spectrum (2200K–6500K) dynamically computing physical daylight spectral shift from solar zenith angle.
   * **Forward Mie Scattering Corona (`SUN_CORONA_ENABLE 1`)**: view-dependent Mie aerosol diffraction aureole centered around the solar vector for atmospheric camera transitions.
-* **Percentage-Closer Soft Shadows (PCSS) & Contact Shadows**: physically based contact-hardening directional soft shadows with dynamic blocker search, Poisson-disk TAA-jittered filtering, and angular sun radius penumbra expansion. Paired with Screen-Space Contact Shadows (SSCS) resolving sub-millimeter ground and geometry contacts, seamless 4-cascade cross-blending (`CascadeCrossBlend`), and adaptive bias eliminating close-up macro staircasing and light leaks.
+* **Percentage-Closer Soft Shadows (PCSS) & Screen-Space Contact Cone Tracing (SSCT)**: physically based contact-hardening directional soft shadows with dynamic blocker search, Poisson-disk TAA-jittered filtering, Castaño (2013) 4-tap PCF 3x3 filtering for fast cascades, and angular sun radius penumbra expansion. Paired with SSCT cone tracing with distance attenuation and soft penumbra, seamless 4-cascade cross-blending (`CascadeCrossBlend`), and adaptive bias eliminating close-up macro staircasing and light leaks.
 * **Directional Water Caustics**: real-time focused underwater light bands and wave curvature flux concentration with chromatic dispersion and a dedicated controller (`CausticsController.pmx`).
 * **Screen-Space Global Shadows (SSGS)**: long-range directional raymarched shadows with distance-adaptive soft penumbra expansion, grounding characters and geometry without shadow map dependence.
 * **Volumetric Atmosphere & Dynamic Clouds 2.0**: SA_DirectX 3.0 cumulus cloudscapes with Frostbite/Nubis lighting, Beer-Powder scattering, Silver Lining, planetary horizon curvature, and **Adaptive Empty Space Skipping** (2.25x stride with 0.75x boundary refinement) for high-framerate rendering in clear sky regions without edge slicing or visual quality loss.
 
 **Materials & BRDF**
+* **Belcour & Barla (2017) Thin-Film Spectral Iridescence**: physical wave interference through dielectric thin films using convolved Gaussians against CIE XYZ / Rec.709 curves for clear coat, automotive finishes, and pearl sheen (`EvaluateIridescenceSensitivity`, `ThinFilmIridescence`).
+* **Physical Clear Coat Energy Conservation**: $(1.0 - F_c)$ Fresnel energy attenuation scaling underlying substrate diffuse and base specular reflectance based on top coat reflection.
+* **4-Wavelength Spectral Dispersion & Beer-Lambert Optical Absorption**: physical exponential depth attenuation ($T = e^{-\sigma_{\text{abs}} \cdot d}$) and 4-spectral wavelength dispersion ($K_0..K_3$ at 486.1, 546.1, 589.3, 656.3 nm) with temporal jitter for glass and deep water bodies.
+* **Google Filament Shading Enhancements**: Colored Penumbra (Filament fake SSS) warming shadow terminators on skin and cloth, and Jimenez Specular Multi-Bounce AO for colored metals (gold, copper).
+* **Kulla-Conty Specular IBL Energy Compensation & Spherical Caps AO**: multi-bounce specular energy recovery in IBL and Oat & Sander / Jimenez analytical spherical caps intersection for Specular AO.
 * **Dedicated Unshadowed Eye Shading Model (`SHADINGMODELID_EYE 10`, `CUSTOM_ENABLE 10`)**: purpose-built eye shading architecture replacing the legacy emissive glow workaround. Bypasses cast shadow maps (hair, bangs, eyelids), geometric terminator falloff, SSAO/SSDO, and orbital socket occlusion so eyes remain vibrant and clear under all lighting conditions, while maintaining full incident illuminance scaling and physical clearcoat corneal specular reflections without false flashlight-like self-glow in darkness.
 * **Energy-Preserving Oren-Nayar (EON) BRDF**: exact Portsmouth, Kutz & Hill (JCGT 2025) diffuse model preserving energy across all roughness levels.
 * **Unified UE Artist Skin SSS Toolchain**: WrappedDiffuse (`w=1/3, n=1.5`), AO-scaled BackScatter, view-dependent InScatter, Beer-Lambert transmission with HSV hue shift, Henyey-Greenstein backlit forward glow (`SubsurfaceShadingBacklitGlow`), and explicit sRGB transmittance authoring.
@@ -91,15 +97,21 @@ Reforge Exclusive Features (through v1.21.1) :
   * `LightingController.pmx`: dedicated lighting & shadow control (`SunLight+/-`, `MultiLight+/-`, `SSAO+/-`, `SSAORadius+/-`, `SSDO+/-`, `SSSS+/-`, `SSGI+/-`).
   * `CameraController.pmx`: physical lens DOF (aperture `Fstop+/-`, `FocalLength+/-`, `FocalDistance+/-`, `FocalRegion+/-`, iris `BladeCount-`), lens optical artifacts (`Vignette`, `Dispersion`, `DispersionRadius`), and focus calibration modes (`TestMode`, `MeasureMode`).
   * `BloomController.pmx`: HDR bloom threshold, radius, HSV tint (`BloomColorAllH/S/V`), and star diffraction burst (`BloomStarFade`).
+  * `FogController.pmx`: comprehensive physical exponential height fog, volumetric godrays, mist turbulence noise, and wind dynamics.
   * `ColorGradingController.pmx`: 60-morph studio color grading suite (Lift/Gamma/Gain, 2D white balance, creative film presets, exposure).
   * `SkyVisibilityController.pmx`: bent-normal celestial sky occlusion.
   * `CausticsController.pmx`: real-time directional water caustics wave simulation.
   * `DebugController.pmx`: real-time G-buffer, shadow cascade, and SSGS inspection.
   * *Streamlined Architecture*: the bloated monolithic `ray_controller.pmx` has been completely decommissioned and replaced by clean, focused, high-performance specialized controllers.
+* **Next-Gen HDR Tonemapping & Color Science**:
+  * **Gran Turismo 7 (GT7) (`HDR_TONEMAP_OPERATOR 11`)**: Polyphony Digital SIGGRAPH 2025 physically based tone curve calibrated to 250 nits paper white.
+  * **AgX Golden Look (`HDR_TONEMAP_OPERATOR 12`)**: Troy Sobotka's AgX filmic response with warm golden highlight roll-off and rich tonality.
+  * **AgX Punchy & Khronos PBR Neutral (`HDR_TONEMAP_OPERATOR 9 / 10`)**: high-contrast filmic look and color-neutral PBR preservation.
+  * **AgX Base (Default)**: official Blender 4.0 6th-order polynomial S-curve with pure highlights.
+  * **TPDF Triangular RGB Dithering**: Morten S. Mikkelsen / Gjøl (2016) triangular probability density function dithering eliminating 8-bit banding without colored chroma grain.
 * **Studio Color Grading Engine & Dedicated Controller (`ColorGradingController.pmx`)**: built-in linear HDR 3-way split-toning (Lift/Gamma/Gain for Shadows, Midtones, and Highlights) with perceptual Naka-Rushton luma partitioning, 2D white balance (Correlated Color Temperature + Green/Magenta Tint), smart skin-preserving Vibrance, branchless 3D Rodrigues Hue rotation, and cinematic creative presets (Teal & Orange, Bleach Bypass, Cross Process, Monochrome) controlled via a dedicated 60-morph PMX controller.
 * **G-DLAA Anti-Aliasing**: hybrid geometric and directionally adaptive anti-aliasing (`AA_QUALITY 7`) preserving sharp silhouette edges.
 * **Temporal Anti-Aliasing (TAA)**: 5-tap Catmull-Rom bicubic history reconstruction, Karis luma weighting, variance clipping, and depth-validated history.
-* **AgX Tone Mapping**: exact 6th-order polynomial implementation of the official Blender 4.0 AgX mapper (default), with an ACES-fitted option.
 * **Camera & Object Motion Blur**: cinematic screen-space velocity motion blur reconstructed from camera view-projection history and animated mesh velocity maps with isotropic screen-unit clamping.
 * **CineStill 800T Multi-Scale Halation & Spectral Bloom**: physical radial wavelength dispersion and multi-octave red-amber emulsion highlight bleed simulating real 35mm film base back-scattering (`FILMIC_HALATION_MODE 2`).
 * **Cinematic Bokeh DOF**: hexagonal and cinematic bokeh with Cat's Eye optical mechanical vignetting deformation.
