@@ -114,6 +114,10 @@ float SampleVolumetricShadow(float3 worldPos, float3 viewPos)
 	// Smooth cascade distance fadeout near cascade 4 boundary
 	float cascadeDistFade = saturate((mPSSMCascadeZMax - viewPos.z) / 40.0f);
 
+	// Empty space in shadow map (clear color 0.0f) indicates unoccluded sky/air
+	if (shadowVal <= 1e-5f)
+		return cascadeDistFade;
+
 	// Direct sunlight visibility with air volume depth bias
 	float vis = (shadowVal + 0.0015f >= normalizedReceiverDepth) ? 1.0f : 0.0f;
 	return vis * cascadeDistFade;
@@ -168,7 +172,7 @@ float4 VolumetricFogRaymarchPS(
 	float accumulatedTransmittance = 1.0f;
 	float3 accumulatedInscattering = 0.0f;
 
-	float3 sunRadiance = params.sunColor * (params.sunIntensity * PI);
+	float3 sunRadiance = GetFogSunRadiance(params);
 	float3 ambientColor = params.color;
 
 	// Scale factor of active fog density to extinguish godrays when fog is turned down

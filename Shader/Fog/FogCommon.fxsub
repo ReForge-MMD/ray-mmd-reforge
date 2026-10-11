@@ -225,6 +225,24 @@ FogParameters GetFogParameters()
 	return p;
 }
 
+/**
+ * Evaluates physical direct solar radiance reaching the atmosphere.
+ * Accounts for solar zenith angle, multi-spectral atmospheric extinction,
+ * Chappuis ozone absorption, and Planckian CCT color temperature shifting (commit 3b316c09).
+ */
+float3 GetFogSunRadiance(FogParameters params)
+{
+#if SUN_LIGHT_ENABLE == 2
+	float zenithCos = dot(float3(0.0f, 1.0f, 0.0f), -SunDirection);
+	float3 sunSpectralTransmittance = ComputeSunIntensity(zenithCos, PI);
+	return params.sunColor * (params.sunIntensity * PI) * sunSpectralTransmittance;
+#elif SUN_LIGHT_ENABLE == 1
+	return params.sunColor * (params.sunIntensity * PI);
+#else
+	return 0.0f;
+#endif
+}
+
 // =============================================================================
 // Analytical Closed-Form Line Integral Mathematics (UE5 / Filament)
 // =============================================================================
@@ -342,8 +360,8 @@ void EvaluateAnalyticalFog(
 	float phase = ComputePhaseCS(cosTheta, params.miePhase);
 	float sunCos = saturate(dot(viewDir, L));
 	float sunAureole = pow(sunCos, 8.0f);
-
-	float3 directionalRadiance = params.sunColor * (params.sunIntensity * (min(phase, 2.5f) * 0.35f + sunAureole * 0.65f));
+	float3 sunRadiance = GetFogSunRadiance(params);
+	float3 directionalRadiance = (sunRadiance * (1.0f / PI)) * (min(phase, 2.5f) * 0.35f + sunAureole * 0.65f);
 
 	// Inscattering: ambient body haze + forward sunlight scattering
 	float3 ambientInscattering = params.color * opacity;
