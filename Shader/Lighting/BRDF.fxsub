@@ -836,24 +836,70 @@ float4 SpecularBRDF_ClearCoat(float nh, float nl, float vh, float nv, float roug
 	return float4(spec, spec, spec, fresnel);
 }
 
-// Physically-Based Thin-Film Wave Interference (Airy spectral equations approximation)
-// Computes multi-spectral constructive/destructive phase interference for thin dielectric films
+// Belcour & Barla 2017, "A Practical Extension to Microfacet Theory for the Modeling of Varying Iridescence"
+// Pre-folded Fourier-space Gaussian sensitivity evaluation fitted to CIE XYZ / Rec.709 color matching functions
+float3 EvaluateIridescenceSensitivity(float opd, float3 shift)
+{
+	// opd is in nanometers [100..2000]
+	const float3 kPos = float3(0.010562f, 0.011280f, 0.013876f); // position * 2 * PI * 1e-9
+	const float3 kVar = float3(1.7085e-7f, 3.6733e-7f, 2.6100e-7f); // variance * 4 * PI^2 * 1e-18
+	const float3 kAmp = float3(0.8466f, 1.0002f, 1.0010f);
+
+	float opdSq = opd * opd;
+	float3 xyz = kAmp * cos(kPos * opd + shift) * exp(-kVar * opdSq);
+
+	// Second Gaussian lobe of CIE x
+	xyz.x += 0.1539f * cos(0.014073f * opd + shift.x) * exp(-1.7877e-7f * opdSq);
+
+	// Convert CIE XYZ to Rec.709 / sRGB
+	float3 rgb = float3(
+		 3.2404542f * xyz.x - 1.5371385f * xyz.y - 0.4985314f * xyz.z,
+		-0.9692660f * xyz.x + 1.8760108f * xyz.y + 0.0415560f * xyz.z,
+		 0.0556434f * xyz.x - 0.2040259f * xyz.y + 1.0572252f * xyz.z
+	);
+	return rgb;
+}
+
 float3 ThinFilmIridescence(float nv, float filmThickness = 380.0f, float filmIOR = 1.45f)
 {
-	// Snell's law refraction angle inside thin dielectric film
-	float sinTheta2_sq = (1.0f - nv * nv) / max(filmIOR * filmIOR, 1.01f);
-	float cosTheta2 = sqrt(max(1.0f - sinTheta2_sq, 0.0f));
+	float outsideIOR = 1.0f;
+	// Snell's law refraction through thin dielectric film
+	float sinTheta2Sq = (1.0f - nv * nv) / max(filmIOR * filmIOR, 1.01f);
+	if (sinTheta2Sq >= 1.0f)
+		return 1.0f; // total internal reflection
+	float cosTheta2 = sqrt(1.0f - sinTheta2Sq);
 
 	// Optical path difference (OPD) in nanometers
 	float opd = 2.0f * filmIOR * filmThickness * cosTheta2;
 
-	// Multi-spectral phase shift for standard RGB primary wavelengths (Red: 650nm, Green: 532nm, Blue: 450nm)
-	const float3 wavelength = float3(650.0f, 532.0f, 450.0f);
-	float3 phi = (2.0f * PI * opd) / wavelength;
+	// Fresnel at interface 1 (air -> film)
+	float f0_12 = pow2((filmIOR - outsideIOR) / (filmIOR + outsideIOR));
+	float R12 = f0_12 + (1.0f - f0_12) * pow5(saturate(1.0f - nv));
+	float T121 = 1.0f - R12;
 
-	// Cosine wave interference envelope
-	float3 interference = 0.5f + 0.5f * cos(phi);
-	return saturate(interference);
+	// Phase shift: half a turn (PI) entering denser medium
+	float3 phi = float3(PI, PI, PI);
+
+	// Substrate base reflectance
+	float f0_23 = 0.04f;
+	float R23 = f0_23 + (1.0f - f0_23) * pow5(saturate(1.0f - cosTheta2));
+
+	float R123 = clamp(R12 * R23, 1e-5f, 0.999f);
+	float r123 = sqrt(R123);
+	float Rs = (T121 * T121) * R23 / (1.0f - R123);
+
+	float3 I = (R12 + Rs).xxx;
+	float Cm = Rs - T121;
+
+	// Multi-bounce spectral interference series (Belcour & Barla 2nd order)
+	[unroll]
+	for (int m = 1; m <= 2; ++m)
+	{
+		Cm *= r123;
+		I += Cm * 2.0f * EvaluateIridescenceSensitivity(float(m) * opd, float(m) * phi);
+	}
+
+	return saturate(I);
 }
 
 // Polynomial approximation of refraction blend factor for normal component of VoH with fixed Eta (1/1.5):

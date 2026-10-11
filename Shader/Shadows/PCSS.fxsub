@@ -176,4 +176,46 @@ float PCF_Standard(
 	return shadowSum * (1.0f / 16.0f);
 }
 
+// Castaño 2013, "Shadow Mapping Summary Part 1" (Google Filament ShadowSample_PCF_Low)
+// Reconstructs a full 3x3 gaussian PCF footprint using only 4 bilinear texture taps
+float PCF_Castano3x3(
+	sampler shadowMap,
+	float2 uv,
+	float receiverDepth,
+	float2 texelSize)
+{
+	float2 size = 1.0f / texelSize;
+	float2 offset = float2(0.5f, 0.5f);
+	float2 pixelUV = (uv * size) + offset;
+	float2 base = (floor(pixelUV) - offset) * texelSize;
+	float2 st = frac(pixelUV);
+
+	float2 uw = float2(3.0f - 2.0f * st.x, 1.0f + 2.0f * st.x);
+	float2 vw = float2(3.0f - 2.0f * st.y, 1.0f + 2.0f * st.y);
+
+	float2 u = float2((2.0f - st.x) / uw.x - 1.0f, st.x / uw.y + 1.0f) * texelSize.x;
+	float2 v = float2((2.0f - st.y) / vw.x - 1.0f, st.y / vw.y + 1.0f) * texelSize.y;
+
+	float4 w = float4(
+		uw.x * vw.x,
+		uw.y * vw.x,
+		uw.x * vw.y,
+		uw.y * vw.y
+	);
+
+	float d0 = tex2Dlod(shadowMap, float4(base + float2(u.x, v.x), 0, 0)).r;
+	float d1 = tex2Dlod(shadowMap, float4(base + float2(u.y, v.x), 0, 0)).r;
+	float d2 = tex2Dlod(shadowMap, float4(base + float2(u.x, v.y), 0, 0)).r;
+	float d3 = tex2Dlod(shadowMap, float4(base + float2(u.y, v.y), 0, 0)).r;
+
+	float4 lit = float4(
+		(d0 <= 1e-5f) ? 1.0f : ((d0 >= receiverDepth) ? 1.0f : 0.0f),
+		(d1 <= 1e-5f) ? 1.0f : ((d1 >= receiverDepth) ? 1.0f : 0.0f),
+		(d2 <= 1e-5f) ? 1.0f : ((d2 >= receiverDepth) ? 1.0f : 0.0f),
+		(d3 <= 1e-5f) ? 1.0f : ((d3 >= receiverDepth) ? 1.0f : 0.0f)
+	);
+
+	return dot(lit, w) * 0.0625f; // w sum = 16, so 1/16 = 0.0625
+}
+
 #endif // _SHADOWS_PCSS_FXSUB_

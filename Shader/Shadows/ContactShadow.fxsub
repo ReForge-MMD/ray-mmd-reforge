@@ -75,6 +75,10 @@ float TraceScreenSpaceShadow(
 	float4 clipStart = mul(float4(rayOrigin, 1.0f), matProject);
 	float4 clipEnd = mul(float4(rayEnd, 1.0f), matProject);
 
+	// Screen-Space Cone Tracing (SSCT / Naughty Dog - The Last of Us Part II / Google Filament)
+	const float tanConeAngle = 0.055f;
+	float vsEndRadius = tanConeAngle * maxDistance;
+
 	[loop]
 	for (int stepIndex = 0; stepIndex < CONTACT_SHADOW_STEP_COUNT; ++stepIndex)
 	{
@@ -92,15 +96,18 @@ float TraceScreenSpaceShadow(
 			break;
 
 		float travelDist = rayT * maxDistance;
-		float thickness = max(0.015f, travelDist * 0.08f + normalBias * 1.5f);
+		float coneRadius = max(0.004f, vsEndRadius * rayT + normalBias * 0.4f);
+		float coneThickness = coneRadius * 2.2f + 0.008f;
 
 		float sceneDepth = ContactShadowSampleDepth(sampleUV);
 		float penetration = rayZ - sceneDepth;
 
-		if (penetration > 0.0f && penetration <= thickness)
+		if (penetration > 0.0f && penetration <= coneThickness)
 		{
-			float weight = 1.0f - abs(penetration / thickness - 0.5f) * 2.0f;
-			float softOccl = saturate(weight * 1.4f) * terminatorFade;
+			// Soft penumbra attenuation: fragments closer to cone axis produce deeper shadowing
+			float weight = 1.0f - abs(penetration / coneThickness - 0.5f) * 2.0f;
+			float contactFalloff = saturate(1.0f - travelDist / maxDistance);
+			float softOccl = saturate(weight * 1.5f) * terminatorFade * contactFalloff;
 			if (softOccl > occlusion)
 			{
 				occlusion = softOccl;

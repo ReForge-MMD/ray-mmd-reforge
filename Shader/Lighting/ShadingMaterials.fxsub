@@ -272,6 +272,14 @@ void ShadingMaterial(MaterialParam material, float3 V, float3 L, float2 coord, o
 	float3 subsurface = SubsurfaceShading(material, material.normal, L, V, coord, material.visibility, shadow);
 
 	bool isSkinMat = (material.lightModel == SHADINGMODELID_SKIN || material.lightModel == SHADINGMODELID_SUBSURFACE);
+
+	// Filament Colored Penumbra: saturate and warm diffuse color across shadow terminator to simulate subsurface scattering
+	if (!isEyeMat && (material.lightModel == SHADINGMODELID_DEFAULT || material.lightModel == SHADINGMODELID_CLOTH || isSkinMat))
+	{
+		float3 penumbraColor = min(1.0f / PI, baseDiffuse / max(2.0f * (1.0f - material.albedo), 1e-4f));
+		baseDiffuse = lerp(penumbraColor, baseDiffuse, pow4(saturate(shadowTerm)));
+	}
+
 	diffuse = (baseDiffuse + subsurface * shadow) * lightColor;
 
 
@@ -335,7 +343,14 @@ void ShadingImageBasedLighting(sampler source, MaterialParam material, float4 sc
 	float dirSpecOcc  = ComputeDirectionalSpecularOcclusion(R, bentNormal, effectiveAO, roughness);
 	float gtso        = saturate(pow(max(NdotV + effectiveAO, 1e-5f), roughness * roughness) - 1.0f + effectiveAO);
 	float specOcc     = min(lerp(baseSpecOcc, max(baseSpecOcc * 0.5f, dirSpecOcc), saturate(roughness * 2.5f)), gtso);
-	specular *= isSkin ? lerp(1.0f, specOcc, SKIN_AO_STRENGTH) : (isEyeMat ? 1.0f : specOcc);
+
+	// Jimenez multi-bounce specular AO: preserves metallic hue and saturation in occluded crevices
+	float3 aSpecBounce = 2.0404f * material.specular - 0.3324f;
+	float3 bSpecBounce = -4.7951f * material.specular + 0.6417f;
+	float3 cSpecBounce = 2.7552f * material.specular + 0.6903f;
+	float3 multiBounceSpecAO = saturate(((specOcc * aSpecBounce + bSpecBounce) * specOcc + cSpecBounce) * specOcc);
+	float3 finalSpecOcc = lerp(specOcc.xxx, multiBounceSpecAO, 0.5f);
+	specular *= isSkin ? lerp(1.0f.xxx, finalSpecOcc, SKIN_AO_STRENGTH) : (isEyeMat ? 1.0f.xxx : finalSpecOcc);
 
 	// Jimenez multi-bounce diffuse AO applied in-material: AO is computed before
 	// shading, so direct sun, IBL and the GI composite all consume it consistently
@@ -624,25 +639,68 @@ float4 ShadingTransparentPS(
 	// normal.xy is zero, eliminating false lateral displacement and preventing object duplication.
 	float2 screenNormal = float2(material.normal.x, -material.normal.y);
 	float2 ior = (material.lightModel != SHADINGMODELID_GLASS) ? 0 : screenNormal * (refrMultiplier * 0.002f);
+	float2 dispersion = screenNormal * (refrMultiplier * 0.0006f);
 	float3 prefilteredRefract;
 
 	if (material.lightModel == SHADINGMODELID_GLASS)
 	{
 		float glassRoughness = saturate(1.0f - material.smoothness);
-		float2 dispersion = screenNormal * (refrMultiplier * 0.0004f);
-		float2 iorR = ior + dispersion;
-		float2 iorG = ior;
-		float2 iorB = ior - dispersion;
+		float dispersionAmt = refrMultiplier * 0.0006f;
+		float2 dispersionDir = dispersion;
 
-		float3 bgR = tex2Dlod(ShadingMapTempPointSamp, float4(coord + iorR, 0, 0)).rgb;
-		float3 bgG = tex2Dlod(ShadingMapTempPointSamp, float4(coord + iorG, 0, 0)).rgb;
-		float3 bgB = tex2Dlod(ShadingMapTempPointSamp, float4(coord + iorB, 0, 0)).rgb;
+		// 4 optimized spectral wavelengths (486.1nm, 546.1nm, 589.3nm, 656.3nm)
+		// collapsed color-matching transforms into K0-K3 column vectors (Filament specgen)
+		static const float3 K0_c0 = float3( 0.00581637f, -0.11782236f, -0.45422013f);
+		static const float3 K0_c1 = float3( 0.02312851f,  0.11316202f,  0.04493517f);
+		static const float3 K0_c2 = float3( 0.01689631f,  0.11098148f,  0.98249798f);
 
-		bgR = any(bgR) ? bgR : srgb2linear(tex2Dlod(ScnSamp, float4(coord + iorR, 0, 0)).rgb);
-		bgG = any(bgG) ? bgG : srgb2linear(tex2Dlod(ScnSamp, float4(coord + iorG, 0, 0)).rgb);
-		bgB = any(bgB) ? bgB : srgb2linear(tex2Dlod(ScnSamp, float4(coord + iorB, 0, 0)).rgb);
+		static const float3 K1_c0 = float3( 0.14291703f, -0.27560148f,  0.06839811f);
+		static const float3 K1_c1 = float3( 0.10429778f,  0.57678541f,  0.02732891f);
+		static const float3 K1_c2 = float3(-0.01556522f, -0.06412244f,  0.01602064f);
 
-		prefilteredRefract = float3(bgR.r, bgG.g, bgB.b);
+		static const float3 K2_c0 = float3( 0.70106120f,  0.29545674f,  0.31884400f);
+		static const float3 K2_c1 = float3(-0.09440402f,  0.29931852f, -0.05627069f);
+		static const float3 K2_c2 = float3(-0.00241699f, -0.04351961f,  0.00083808f);
+
+		static const float3 K3_c0 = float3( 0.15020522f,  0.09796715f,  0.06697807f);
+		static const float3 K3_c1 = float3(-0.03302213f,  0.01073410f, -0.01599341f);
+		static const float3 K3_c2 = float3( 0.00108589f, -0.00333946f,  0.00064333f);
+
+		static const float offsets[4] = { 0.70795215f, 0.24790980f, 0.00000000f, -0.29204785f };
+
+		// Interleaved gradient jitter along dispersion trajectory to fill spectral gaps
+		float jitter = (InterleavedGradientNoise(coord * ViewportSize, 0) - 0.5f) * 0.35f * dispersionAmt;
+
+		float2 uv0 = coord + ior + dispersionDir * offsets[0] + screenNormal * jitter;
+		float2 uv1 = coord + ior + dispersionDir * offsets[1] + screenNormal * jitter;
+		float2 uv2 = coord + ior + dispersionDir * offsets[2] + screenNormal * jitter;
+		float2 uv3 = coord + ior + dispersionDir * offsets[3] + screenNormal * jitter;
+
+		float3 s0 = tex2Dlod(ShadingMapTempPointSamp, float4(uv0, 0, 0)).rgb;
+		float3 s1 = tex2Dlod(ShadingMapTempPointSamp, float4(uv1, 0, 0)).rgb;
+		float3 s2 = tex2Dlod(ShadingMapTempPointSamp, float4(uv2, 0, 0)).rgb;
+		float3 s3 = tex2Dlod(ShadingMapTempPointSamp, float4(uv3, 0, 0)).rgb;
+
+		s0 = any(s0) ? s0 : srgb2linear(tex2Dlod(ScnSamp, float4(uv0, 0, 0)).rgb);
+		s1 = any(s1) ? s1 : srgb2linear(tex2Dlod(ScnSamp, float4(uv1, 0, 0)).rgb);
+		s2 = any(s2) ? s2 : srgb2linear(tex2Dlod(ScnSamp, float4(uv2, 0, 0)).rgb);
+		s3 = any(s3) ? s3 : srgb2linear(tex2Dlod(ScnSamp, float4(uv3, 0, 0)).rgb);
+
+		// Beer-Lambert physical volumetric absorption
+		float glassThickness = max(0.2f, refrMultiplier * 1.5f);
+		float3 absorptionCoeff = -log(max(material.albedo, 0.02f));
+		float3 transmittance = saturate(exp(-absorptionCoeff * glassThickness));
+		s0 *= transmittance;
+		s1 *= transmittance;
+		s2 *= transmittance;
+		s3 *= transmittance;
+
+		// 4-wavelength spectral integration (collapsed into Rec.709 sRGB)
+		float3 specInt0 = s0.x * K0_c0 + s0.y * K0_c1 + s0.z * K0_c2;
+		float3 specInt1 = s1.x * K1_c0 + s1.y * K1_c1 + s1.z * K1_c2;
+		float3 specInt2 = s2.x * K2_c0 + s2.y * K2_c1 + s2.z * K2_c2;
+		float3 specInt3 = s3.x * K3_c0 + s3.y * K3_c1 + s3.z * K3_c2;
+		prefilteredRefract = max(0.0f, specInt0 + specInt1 + specInt2 + specInt3);
 
 		// Rough glass transmittance multi-tap diffusion blur
 		if (glassRoughness > 0.01f)

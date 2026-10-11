@@ -19,6 +19,11 @@ float2 pow2(float2 x) { return x * x; }
 float3 pow2(float3 x) { return x * x; }
 float4 pow2(float4 x) { return x * x; }
 
+float  pow4(float x)  { float  xx = x * x; return xx * xx; }
+float2 pow4(float2 x) { float2 xx = x * x; return xx * xx; }
+float3 pow4(float3 x) { float3 xx = x * x; return xx * xx; }
+float4 pow4(float4 x) { float4 xx = x * x; return xx * xx; }
+
 float  pow5(float x)  { float  xx = x * x; return xx * xx * x; }
 float2 pow5(float2 x) { float2 xx = x * x; return xx * xx * x; }
 float3 pow5(float3 x) { float3 xx = x * x; return xx * xx * x; }

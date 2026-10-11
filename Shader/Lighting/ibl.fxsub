@@ -35,7 +35,9 @@ float3 EnvironmentSpecularCloth(float nv, float smoothness, float3 specular)
 float3 EnvironmentSpecularLUT(sampler lut, float nv, float smoothness, float3 specular)
 {
 	float2 brdf = tex2Dlod(lut, float4(nv, smoothness, 0, 0)).rg;
-	return specular * brdf.r + brdf.g;	
+	float Eo = saturate(brdf.r + brdf.g);
+	float3 energyCompensation = 1.0f + specular * ((1.0f - Eo) / max(Eo, 0.05f));
+	return (specular * brdf.r + brdf.g) * energyCompensation;	
 }
 
 float3 EnvironmentSpecularUnreal4(float nv, float smoothness, float3 specular)
@@ -45,7 +47,9 @@ float3 EnvironmentSpecularUnreal4(float nv, float smoothness, float3 specular)
 	float4 r = (1.0 - smoothness) * c0 + c1;
 	float a004 = min(r.x * r.x, exp2(-9.28 * nv)) * r.x + r.y;
 	float2 AB = float2(-1.04, 1.04) * a004 + r.zw;
-	return specular * AB.x + AB.y;
+	float Eo = saturate(AB.x + AB.y);
+	float3 energyCompensation = 1.0f + specular * ((1.0f - Eo) / max(Eo, 0.05f));
+	return (specular * AB.x + AB.y) * energyCompensation;
 }
 
 float EnvironmentSpecularUnreal4(float nv, float smoothness)
@@ -61,17 +65,58 @@ float ComputeSpecularOcclusion(float nv, float ao, float smoothness)
 	return saturate(pow(max(nv + ao, 1e-5f), smoothness) - 1.0f + ao);
 }
 
+// Fast polynomial arc-cosine approximations (Jimenez et al. 2016 / Filament)
+float acosFast(float x)
+{
+	float negate = float(x < 0.0f);
+	x = abs(x);
+	float ret = -0.0187293f;
+	ret = ret * x + 0.0742610f;
+	ret = ret * x - 0.2121144f;
+	ret = ret * x + 1.5707288f;
+	ret = ret * sqrt(max(1.0f - x, 0.0f));
+	ret = ret - 2.0f * negate * ret;
+	return negate * 3.14159265358979f + ret;
+}
+
+float acosFastPositive(float x)
+{
+	float p = -0.0187293f;
+	p = p * x + 0.0742610f;
+	p = p * x - 0.2121144f;
+	p = p * x + 1.5707288f;
+	return p * sqrt(max(1.0f - x, 0.0f));
+}
+
+// Oat and Sander 2007 / Jimenez et al. 2016, "Ambient Aperture Lighting"
+// Evaluates analytical intersection of two spherical cone caps without 3D integration
+float SphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance)
+{
+	float r1 = acosFastPositive(cosCap1);
+	float r2 = acosFastPositive(cosCap2);
+	float d  = acosFast(cosDistance);
+
+	if (min(r1, r2) <= max(r1, r2) - d)
+		return 1.0f - max(cosCap1, cosCap2);
+	else if (r1 + r2 <= d)
+		return 0.0f;
+
+	float delta = abs(r1 - r2);
+	float x = 1.0f - saturate((d - delta) / max(r1 + r2 - delta, 1e-4f));
+	float area = (x * x) * (-2.0f * x + 3.0f);
+	return area * (1.0f - max(cosCap1, cosCap2));
+}
+
 float ComputeDirectionalSpecularOcclusion(float3 R, float3 bentNormal, float ao, float roughness)
 {
-	// Directional Cone-Tracing Specular Occlusion (Lagarde / Frostbite 2014)
-	// Tests reflection ray against unoccluded visibility cone oriented along the bent normal
-	float coneAngleCos = sqrt(saturate(1.0f - ao));
-	float RdotBentN = dot(R, bentNormal);
-	float specOcclusion = saturate((RdotBentN - coneAngleCos) / max(1.0f - coneAngleCos, 1e-4f));
+	// Specular Cone-AO (Oat & Sander 2007, Jimenez et al. 2016 / Google Filament)
+	// Intersects the roughness reflection cone against the unoccluded visibility cone
+	float cosAv = sqrt(saturate(1.0f - ao));
+	float cosAs = exp2(-3.321928f * (roughness * roughness));
+	float cosB  = dot(bentNormal, R);
 
-	// Fade directional occlusion based on surface roughness (diffuse surfaces are less directionally selective)
-	float scalarOcclusion = saturate(pow(max(abs(dot(bentNormal, R)) + ao, 1e-5f), 1.0f - roughness) - 1.0f + ao);
-	return lerp(specOcclusion, scalarOcclusion, saturate(roughness * 1.5f));
+	float coneAO = SphericalCapsIntersection(cosAv, cosAs, cosB) / max(1.0f - cosAs, 1e-4f);
+	return lerp(1.0f, saturate(coneAO), smoothstep(0.01f, 0.09f, roughness));
 }
 
 float4 EncodeYcbcr(float4 screenPosition, float3 color1, float3 color2)

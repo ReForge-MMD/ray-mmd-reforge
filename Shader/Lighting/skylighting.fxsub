@@ -160,7 +160,9 @@ void ShadingMaterial(MaterialParam material, float3 worldView, out float3 diffus
 	if (material.lightModel == SHADINGMODELID_CLEAR_COAT || material.lightModel == SHADINGMODELID_EYE)
 	{
 		float4 clearcost = ImageBasedLightClearCost(material, nv, coord2);
-		specular = lerp(specular, clearcost.rgb, clearcost.a);
+		float attenuation = 1.0f - clearcost.a;
+		diffuse *= attenuation;
+		specular = specular * attenuation + clearcost.rgb * clearcost.a;
 	}
 	else if (material.lightModel == SHADINGMODELID_SKIN ||
 			 material.lightModel == SHADINGMODELID_SUBSURFACE ||

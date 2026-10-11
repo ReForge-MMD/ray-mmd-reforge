@@ -37,6 +37,8 @@ float SampleCascadeSingle(
 {
 #if SUN_SHADOW_PCSS
 	return PCSS_Evaluate(source, coord, receiverDepth, lightSizeUV, receiverPlaneBias, rotation, ShadowMapTexelSize.x);
+#elif SUN_SHADOW_QUALITY == 1
+	return PCF_Castano3x3(source, coord, receiverDepth, ShadowMapTexelSize);
 #else
 	return PCF_Standard(source, coord, receiverDepth, receiverPlaneBias, rotation, lightSizeUV);
 #endif
