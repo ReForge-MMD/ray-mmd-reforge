@@ -112,6 +112,10 @@ float3 EncodeYcbcr(float3 col)
 
 float3 DecodeYcbcr(float3 YCbCr)
 {
+	[flatten]
+	if (YCbCr.x <= 1e-5f)
+		return 0.0f;
+
 	YCbCr = float3(YCbCr.x, YCbCr.y / MIDPOINT_8_BIT - 1, YCbCr.z / MIDPOINT_8_BIT - 1);
 	float R = YCbCr.x + 1.402 * YCbCr.z;
 	float G = dot(float3( 1, -0.3441, -0.7141 ), YCbCr.xyz);

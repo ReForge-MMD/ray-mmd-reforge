@@ -87,6 +87,8 @@ texture EnvLightMap: OFFSCREENRENDERTARGET<
 	float ClearDepth = 1.0;
 	string DefaultEffect =
 		"sky*box*.* =./Skybox/skylighting_none.fx;"
+		"*sky*.*    =./Skybox/skylighting_none.fx;"
+		"*dome*.*   =./Skybox/skylighting_none.fx;"
 		"*= hide;";
 >;
 shared texture EnvLightAlphaMap: RENDERCOLORTARGET<
@@ -555,10 +557,12 @@ texture ShadingMapTemp2 : RENDERCOLORTARGET<
 	bool AntiAlias = false;
 	string Format = "A8R8G8B8";
 >;
+#if SSSS_QUALITY
 texture ShadingMapTempSpecular : RENDERCOLORTARGET<
 	float2 ViewportRatio = {1.0, 1.0};
 	string Format = "A16B16G16R16F";
 >;
+#endif
 // Dedicated LDR tonemapped buffer consumed by all AA passes (SMAA, TAA, DLAA, FXAA).
 // Kept as A8R8G8B8 so POINT-sampled reads (SMAA edge detection, tex2Dlod in TAA/DLAA)
 // work correctly on AMD D3D9 drivers that mis-read float16 RT via the point path.
@@ -594,11 +598,13 @@ sampler ShadingMapTempPointSamp = sampler_state {
 	MinFilter = POINT; MagFilter = POINT; MipFilter = NONE;
 	AddressU = CLAMP; AddressV = CLAMP;
 };
+#if SSSS_QUALITY
 sampler ShadingMapTempSpecularSamp = sampler_state {
 	texture = <ShadingMapTempSpecular>;
 	MinFilter = POINT; MagFilter = POINT; MipFilter = NONE;
 	AddressU = CLAMP; AddressV = CLAMP;
 };
+#endif
 // Linear sampler for AA passes that bilinearly reconstruct (SMAA neighborhood blend,
 // TAA Catmull-Rom history, FXAA sub-pixel reconstruction).
 sampler ShadingMapLDRSamp = sampler_state {

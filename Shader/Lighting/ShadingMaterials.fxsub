@@ -485,11 +485,13 @@ float4 ShadingOpacityAlbedoPS(in float2 coord: TEXCOORD0) : COLOR
 	return float4(albedo, 0);
 }
 
+#if SSSS_QUALITY
 float4 ShadingOpacitySpecularPS(in float2 coord: TEXCOORD0) : COLOR
 {
 	float3 specular = tex2Dlod(ShadingMapTempSpecularSamp, float4(coord, 0, 0)).rgb;
 	return float4(specular, 0);
 }
+#endif
 
 #if GLASS_REFRACTION
 /**

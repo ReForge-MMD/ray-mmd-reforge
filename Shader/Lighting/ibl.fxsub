@@ -137,16 +137,19 @@ float4 EncodeYcbcr(float4 screenPosition, float3 color1, float3 color2)
 float EdgeFilter(float2 center, float2 a0, float2 a1, float2 a2, float2 a3)
 {
 	const float THRESH = 30./255.;
-	float4 lum = float4(a0.x, a1.x , a2.x, a3.x);
-	// Linear taper instead of a binary step: neighbors near the luma threshold
-	// previously flipped in and out of the kernel at full weight, making the
-	// reconstructed chroma jump pixel-to-pixel wherever the ambient field had a
-	// gradient close to THRESH (read as desaturated gray-blue blotches on warm
-	// skin). The ramp keeps the same cutoff semantics but blends the rejection.
-	float4 w = saturate(1.0f - abs(lum - center.x) / THRESH);
+	// Adapt threshold to local luminance so HDR specular highlights don't collapse all weights to zero
+	float dynamicThresh = max(THRESH, center.x * 0.25f);
+	float4 lum = float4(a0.x, a1.x, a2.x, a3.x);
+	float4 w = saturate(1.0f - abs(lum - center.x) / dynamicThresh);
 	float W = w.x + w.y + w.z + w.w;
-	w.x = (W < 1e-4f) ? 1.0f : w.x;
-	W   = (W < 1e-4f) ? 1.0f : W;
+	// When variance exceeds threshold across all neighbors, fall back to symmetric box average
+	// rather than a single biased neighbor (which causes checkerboard flickering under camera movement)
+	[flatten]
+	if (W < 1e-4f)
+	{
+		w = 0.25f;
+		W = 1.0f;
+	}
 	return (w.x * a0.y + w.y * a1.y + w.z * a2.y + w.w * a3.y) / W;
 }
 

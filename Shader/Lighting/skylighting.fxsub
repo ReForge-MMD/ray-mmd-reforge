@@ -153,6 +153,12 @@ void ShadingMaterial(MaterialParam material, float3 worldView, out float3 diffus
 	prefilteredDiffuse = ColorBalance(prefilteredDiffuse, mBalanceDiffuse);
 	prefilteredSpeculr = ColorBalance(prefilteredSpeculr, mBalanceSpecular);
 
+	// Specular highlight luminance clamping to suppress temporal flickering and subpixel fireflies (Karis 2013)
+	float specLuma = dot(prefilteredSpeculr, float3(0.299f, 0.587f, 0.114f));
+	float maxSpecLuma = 100.0f / max(roughness, 0.02f);
+	if (specLuma > maxSpecLuma)
+		prefilteredSpeculr *= maxSpecLuma / specLuma;
+
 	diffuse = prefilteredDiffuse * mEnvIntensityDiff;
 	specular = prefilteredSpeculr * fresnel;
 
