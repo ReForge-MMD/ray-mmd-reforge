@@ -48,7 +48,11 @@ float3 EnvironmentSpecularUnreal4(float nv, float smoothness, float3 specular)
 	float a004 = min(r.x * r.x, exp2(-9.28 * nv)) * r.x + r.y;
 	float2 AB = float2(-1.04, 1.04) * a004 + r.zw;
 	float Eo = saturate(AB.x + AB.y);
-	float3 energyCompensation = 1.0f + specular * ((1.0f - Eo) / max(Eo, 0.05f));
+	// Kulla-Conty energy compensation: clamp Eo denominator more conservatively (0.15
+	// vs original 0.05) and fade out compensation as NdotV→0 to prevent the ~19x
+	// specular spike on silhouette edges that caused the white halo artifact.
+	float edgeFade = saturate(nv / 0.1f);
+	float3 energyCompensation = 1.0f + specular * ((1.0f - Eo) / max(Eo, 0.15f)) * edgeFade;
 	return (specular * AB.x + AB.y) * energyCompensation;
 }
 
