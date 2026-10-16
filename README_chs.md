@@ -37,6 +37,34 @@ Ray-MMD
 * [MikuMikuEffect](https://bowlroll.net/file/35012) - 037ver (x64)
 * Direct3D 9 With Shader Model 3.0 (ps_3_0)
 
+快速上手与控制器指南 :
+--------------------------------
+> **写给原版 Ray-MMD 用户的说明：**  
+> 在 **Ray-MMD Reforge** 中，原版庞大的单个 `ray_controller.pmx` 已被完全解耦并重构为模块化的专用控制器。这种模块化架构使得着色器在引入新功能时能够拥有独立的控制面板，而无需修改或膨胀同一个臃肿的文件。
+
+### 基础场景最小推荐控制器（核心 4 件套）
+在常规场景中，你**不需要**加载全部控制器。只需通过 MMD 的 `模型控制 (Model Manipulation)` -> `载入` 加载以下 **4 个** 控制器即可满足绝大多数需求：
+1. **`LightingController.pmx`** — 太阳光强度、SSAO/SSDO 接触阴影、多光源缩放、次表面散射 (SSSS) 以及 SSGI/SSPT 间接光强度。
+2. **`CameraController.pmx`** — 电影级镜头景深 (光圈 F-stop、焦距、对焦距离)、镜头色散与暗角。
+3. **`ColorGradingController.pmx`** — 影棚级调色系统 (暗部/中间调/高光 Lift/Gamma/Gain 三向调色、2D 白平衡、曝光度、自然饱和度与电影预设)。
+4. **`FogController.pmx`** — 地面雾气、物理双层指数大气高度雾、体积光 (Godrays) 与风场扰动。
+
+### 可选与进阶控制器
+仅在场景需要使用特定特效时加载：
+* **`BloomController.pmx`** — HDR 泛光阈值、半径、星芒衍射与色彩调整。
+* **`SkyVisibilityController.pmx`** — 遮挡区域 (屋顶、桥下、室内) 的宏观天光环境光遮蔽 (Snowdrop 引擎方案)。
+* **`CausticsController.pmx`** — 水面材质的方向性水下焦散与波浪模拟。
+
+### 诊断与调试控制器
+* **`DebugController.pmx`** — 实时视口 G-Buffer、阴影级联与 SSGS 光线步进诊断。
+* **`SSRDebugController.pmx`** — SIMD SSR 屏幕空间反射光线步进诊断 (步数、置信度、粗糙度、法线)。
+
+### 4 步基础场景工作流
+1. **载入主着色器：** 将 `ray.x` 拖入 MMD (附件控制 -> 载入)。
+2. **载入天空盒：** 载入 `Skybox/` 目录下的天空盒 (例如 `Helipad GoldenHour.pmx`)，并在 MME 的 `EnvLightMap` 标签页为其分配对应的 lighting 着色器。
+3. **载入基础控制器：** 载入 `LightingController.pmx`、`CameraController.pmx`、`ColorGradingController.pmx` 和 `FogController.pmx` (模型控制 -> 载入)。
+4. **分配模型与材质：** 载入你的模型，在 MME `Main` 标签页分配 `Main/main.fx`，并在 `MaterialMap` 标签页为各个材质槽分配对应的材质 (`Materials/Skin/`、`Materials/Hair/` 等)。
+
 特性:
 ------------
 * 基于物理的材质: 基本色, 金属性, 光滑/粗糙度, 反射率, 自发光, 等 

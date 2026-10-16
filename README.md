@@ -24,6 +24,34 @@ Requirement :
 * Direct3D 9 With Shader Model 3.0 (ps_3_0)
 * **Powerful GPU recommended** due to advanced shading techniques.
 
+Quick Start & Controller Guide :
+--------------------------------
+> **Notice for Official Ray-MMD Users:**  
+> In **Ray-MMD Reforge**, the monolithic `ray_controller.pmx` has been decentralized into specialized, domain-specific controllers. This modular architecture allows new shader features to be introduced and configured independently without breaking or bloating a single monolithic file.
+
+### Minimal Recommended Setup (Essential 4)
+For a standard scene, you do **not** need to load every controller. Load only these **four** controllers via `Model Manipulation` -> `Load`:
+1. **`LightingController.pmx`** — Direct Sun Light, SSAO/SSDO crevice shadowing, MultiLight scaling, SSSS, and SSGI/SSPT bounce strength.
+2. **`CameraController.pmx`** — Bokeh Depth of Field (aperture F-stop, focal length, focus distance), lens optical dispersion, and vignette.
+3. **`ColorGradingController.pmx`** — Comprehensive studio color correction (Lift/Gamma/Gain split toning, 2D white balance, exposure, vibrance, and film presets).
+4. **`FogController.pmx`** — Ground mist, physical exponential atmospheric height fog, volumetric godrays, and wind turbulence.
+
+### Optional & Specialized Controllers
+Load these only when your scene utilizes their specific effects:
+* **`BloomController.pmx`** — HDR bloom threshold, radius, star diffraction burst, and color tinting.
+* **`SkyVisibilityController.pmx`** — Macro celestial sky occlusion under canopies, roofs, and covered areas.
+* **`CausticsController.pmx`** — Directional underwater light caustics and wave simulation for water materials.
+
+### Diagnostic / Debug Controllers
+* **`DebugController.pmx`** — Viewport G-Buffer, shadow cascade, and SSGS raymarching diagnostics.
+* **`SSRDebugController.pmx`** — Real-time SIMD SSR raymarching inspection (steps, confidence, roughness, normals).
+
+### 4-Step Basic Scene Workflow
+1. **Load Engine:** Drag & drop `ray.x` into MMD (`Accessory Manipulation` -> `Load`).
+2. **Load Environment:** Load any skybox from `Skybox/` (e.g., `Helipad GoldenHour.pmx`) and assign its lighting shader in MME (`EnvLightMap` tab).
+3. **Load Essential Controllers:** Load `LightingController.pmx`, `CameraController.pmx`, `ColorGradingController.pmx`, and `FogController.pmx` (`Model Manipulation` -> `Load`).
+4. **Assign Models & Materials:** Load your model, assign `Main/main.fx` in the `Main` tab, and assign material shaders in `MaterialMap` tab (`Materials/Skin/`, `Materials/Hair/`, etc.).
+
 Reforge Exclusive Features (through v1.22.0) :
 ------------
 
