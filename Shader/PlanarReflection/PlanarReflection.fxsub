@@ -1,0 +1,109 @@
+/**
+ * Ray-MMD ReForge: single-plane HDR planar reflection resolve.
+ *
+ * ray.x's world transform defines the plane. Local +Y is its normal. The
+ * off-screen capture is composited only on nearby, sufficiently glossy surfaces.
+ * SSR and IBL remain fallback sources where the capture has no coverage.
+ */
+
+#ifndef RAY_MMD_PLANAR_REFLECTION_FXSUB
+#define RAY_MMD_PLANAR_REFLECTION_FXSUB
+
+float4x4 PlanarReflectionWorld : CONTROLOBJECT < string name = "(self)"; >;
+
+float4 PlanarReflection_ResolvePS(in float2 coord : TEXCOORD0, in float3 viewdir : TEXCOORD1) : COLOR
+{
+	float4 gbuffAlbedo   = tex2Dlod(Gbuffer5Map, float4(coord, 0.0f, 0.0f));
+	float4 gbuffNormal   = tex2Dlod(Gbuffer6Map, float4(coord, 0.0f, 0.0f));
+	float4 gbuffSpecular = tex2Dlod(Gbuffer7Map, float4(coord, 0.0f, 0.0f));
+	float4 gbuffDepth    = tex2Dlod(Gbuffer8Map, float4(coord, 0.0f, 0.0f));
+
+	MaterialParam surfaceMat;
+	DecodeGbuffer(gbuffAlbedo, gbuffNormal, gbuffSpecular, gbuffDepth, surfaceMat);
+	if (gbuffDepth.x <= 0.0f || surfaceMat.lightModel == SHADINGMODELID_EMISSIVE)
+		return 0.0f;
+
+	float3 viewPosition = GetViewPosition(GetProjConstant(), coord, surfaceMat.linearDepth);
+	float3 worldPosition = mul(float4(viewPosition, 1.0f), matViewInverse).xyz;
+	float3 worldNormal = normalize(mul(surfaceMat.normal, (float3x3)matViewInverse));
+
+	float3 planeOrigin = PlanarReflectionWorld._41_42_43;
+	float3x3 planeRotation = (float3x3)PlanarReflectionWorld;
+	float3 planeNormal = normalize(mul(float3(0.0f, 1.0f, 0.0f), planeRotation));
+	if (dot(CameraPosition - planeOrigin, planeNormal) < 0.0f)
+		planeNormal = -planeNormal;
+	float3 planeAxisX = normalize(mul(float3(1.0f, 0.0f, 0.0f), planeRotation));
+	float3 planeAxisZ = normalize(mul(float3(0.0f, 0.0f, 1.0f), planeRotation));
+	float planeDistance = abs(dot(worldPosition - planeOrigin, planeNormal));
+	float planeFade = 1.0f - smoothstep(mPlanarReflectionPlaneFadeStart, mPlanarReflectionPlaneFadeEnd, planeDistance);
+	float extentX = mPlanarReflectionHalfExtentX * length(PlanarReflectionWorld._11_12_13);
+	float extentZ = mPlanarReflectionHalfExtentZ * length(PlanarReflectionWorld._31_32_33);
+	float distanceX = abs(dot(worldPosition - planeOrigin, planeAxisX));
+	float distanceZ = abs(dot(worldPosition - planeOrigin, planeAxisZ));
+	float extentFadeX = 1.0f - smoothstep(max(extentX - mPlanarReflectionExtentFade, 0.0f), max(extentX, 1e-4f), distanceX);
+	float extentFadeZ = 1.0f - smoothstep(max(extentZ - mPlanarReflectionExtentFade, 0.0f), max(extentZ, 1e-4f), distanceZ);
+
+	// Wider facing gate (0.1 → 0.7): allows near-grazing angles to receive the
+	// planar capture while remaining physically plausible (was 0.35 → 0.85).
+	float facingFade = smoothstep(0.1f, 0.7f, dot(worldNormal, planeNormal));
+
+	// Apply the global SSR gloss bias so planar roughness cutoff tracks the SSR slider.
+	float gloss = saturate(surfaceMat.smoothness + mSSRSmoothness * 0.5f);
+	float roughness = 1.0f - gloss;
+	float roughnessFade = 1.0f - smoothstep(mPlanarReflectionRoughnessFadeStart, mPlanarReflectionRoughnessFadeEnd, roughness);
+	float receiverFade = planeFade * extentFadeX * extentFadeZ * facingFade * roughnessFade;
+	if (receiverFade <= 1e-4f)
+		return 0.0f;
+
+	float receiverVisibility = 1.0f;
+	float blurMask = 0.0f;
+#if SSR_QUALITY
+	receiverVisibility = tex2Dlod(SSRMapSamp, float4(coord, 0.0f, 0.0f)).a;
+	blurMask = tex2Dlod(SSRBlurMapSamp, float4(coord, 0.0f, 0.0f)).a;
+#endif
+	roughness = saturate(roughness + blurMask * (1.0f - roughness));
+
+	float2 reflectionTexel = 1.0f / ViewportSize;
+#if PLANAR_REFLECTION_QUALITY == 1
+	reflectionTexel *= 2.0f;
+#endif
+
+	// Normal-driven UV perturbation: project the world normal onto the plane's
+	// tangent basis to derive a screen-space warp. Rougher surfaces warp more,
+	// so water and brushed metal show a convincing wobbly reflection.
+	float3 normalInPlane = worldNormal - dot(worldNormal, planeNormal) * planeNormal;
+	float2 normalScreenOffset = float2(
+		dot(normalInPlane, planeAxisX),
+		-dot(normalInPlane, planeAxisZ)
+	);
+	float perturbStrength = roughness * mPlanarReflectionBlurRadius * 0.35f;
+	float2 reflectionUV = float2(1.0f - coord.x, coord.y)
+	                    + normalScreenOffset * reflectionTexel * perturbStrength;
+
+	// 9-tap Gaussian roughness blur.
+	// Weights approx Gaussian σ=1 in the ±1 ring and σ≈1.4 on diagonals, normalized.
+	float blurRadius = roughness * mPlanarReflectionBlurRadius;
+	float2 bX = float2(reflectionTexel.x * blurRadius, 0.0f);
+	float2 bY = float2(0.0f, reflectionTexel.y * blurRadius);
+	float4 reflection =
+		tex2D(PlanarReflectionMapSamp, reflectionUV          ) * 0.2963f +
+		tex2D(PlanarReflectionMapSamp, reflectionUV + bX     ) * 0.1778f +
+		tex2D(PlanarReflectionMapSamp, reflectionUV - bX     ) * 0.1778f +
+		tex2D(PlanarReflectionMapSamp, reflectionUV + bY     ) * 0.1778f +
+		tex2D(PlanarReflectionMapSamp, reflectionUV - bY     ) * 0.1778f +
+		tex2D(PlanarReflectionMapSamp, reflectionUV + bX + bY) * 0.0370f +
+		tex2D(PlanarReflectionMapSamp, reflectionUV + bX - bY) * 0.0370f +
+		tex2D(PlanarReflectionMapSamp, reflectionUV - bX + bY) * 0.0370f +
+		tex2D(PlanarReflectionMapSamp, reflectionUV - bX - bY) * 0.0370f;
+
+	float NdotV = abs(dot(normalize(surfaceMat.normal), normalize(viewdir)));
+	float3 specularBRDF = EnvironmentSpecularUnreal4(NdotV, gloss, surfaceMat.specular);
+	float fresnelWeight = lerp(luminance(specularBRDF), 1.0f, saturate(mSSRFresnel));
+
+	float combinedFade = receiverFade * receiverVisibility;
+	float3 reflectedRadiance = reflection.rgb * specularBRDF * combinedFade * mPlanarReflectionIntensity;
+	float reflectionAlpha = saturate(reflection.a * combinedFade * fresnelWeight);
+	return float4(reflectedRadiance, reflectionAlpha);
+}
+
+#endif // RAY_MMD_PLANAR_REFLECTION_FXSUB

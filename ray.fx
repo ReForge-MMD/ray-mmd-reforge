@@ -539,6 +539,10 @@ static float mCausticsDispScale  = lerp(lerp(1.0f, 3.0f, mCstDispersionP), 0.0f,
 #	include "shader/SSR/SSR_Main.fxsub"
 #endif
 
+#if PLANAR_REFLECTION_QUALITY > 0
+#	include "shader/PlanarReflection/PlanarReflection.fxsub"
+#endif
+
 #if GI_ENABLE
 #	include "shader/GI/SSGI/PostProcessSSGI.fxsub"
 #endif
@@ -745,6 +749,11 @@ technique DeferredLighting<
 	"RenderColorTarget=SSRLightX4Map;	  Pass=SSR_BlurY4;"
 
 	"RenderColorTarget=ShadingMap;		  Pass=SSR_Resolve;"
+#endif
+
+#if PLANAR_REFLECTION_QUALITY > 0
+	// Planar capture wins where valid; SSR and IBL remain visible outside its coverage.
+	"RenderColorTarget=ShadingMap; Pass=PlanarReflection_Resolve;"
 #endif
 
 #if BOKEH_MODE == 1
@@ -1129,6 +1138,15 @@ technique DeferredLighting<
 		SrcBlend = ONE; DestBlend = INVSRCALPHA;
 		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
 		PixelShader  = compile ps_3_0 SSR_ResolvePS();
+	}
+#endif
+#if PLANAR_REFLECTION_QUALITY > 0
+	pass PlanarReflection_Resolve<string Script= "Draw=Buffer;";>{
+		AlphaBlendEnable = true; AlphaTestEnable = false;
+		ZEnable = false; ZWriteEnable = false;
+		SrcBlend = ONE; DestBlend = INVSRCALPHA;
+		VertexShader = compile vs_3_0 ScreenSpaceQuadVS();
+		PixelShader  = compile ps_3_0 PlanarReflection_ResolvePS();
 	}
 #endif
 #if GI_ENABLE

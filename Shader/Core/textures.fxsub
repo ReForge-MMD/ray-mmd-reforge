@@ -106,6 +106,44 @@ sampler EnvLightAlphaMapSamp = sampler_state {
 	AddressU = CLAMP; AddressV = CLAMP;
 };
 #endif
+#if PLANAR_REFLECTION_QUALITY > 0
+#if PLANAR_REFLECTION_QUALITY == 1
+#define PLANAR_REFLECTION_VIEWPORT_RATIO 0.5
+#define PLANAR_REFLECTION_ANTIALIAS false
+#else
+#define PLANAR_REFLECTION_VIEWPORT_RATIO 1.0
+#define PLANAR_REFLECTION_ANTIALIAS true
+#endif
+texture PlanarReflectionMap : OFFSCREENRENDERTARGET<
+	string Description = "HDR planar reflection capture for ray";
+	float2 ViewportRatio = {PLANAR_REFLECTION_VIEWPORT_RATIO, PLANAR_REFLECTION_VIEWPORT_RATIO};
+	float4 ClearColor = {0.0, 0.0, 0.0, 0.0};
+	float ClearDepth = 1.0;
+	bool AntiAlias = PLANAR_REFLECTION_ANTIALIAS;
+	int MipLevels = 4;
+	string Format = "A16B16G16R16F";
+	string DefaultEffect =
+		"self = hide;"
+		"*fog.pmx = hide;"
+		"*controller*.pmx = hide;"
+		"*editor*.pmx = hide;"
+		"Volumetric*.pmx = hide;"
+		"sky*box*.* = hide;"
+		"*sky*.* = hide;"
+		"*dome*.* = hide;"
+		"*.pmd = ./Shader/PlanarReflection/PlanarReflectionCapture.fx;"
+		"*.pmx = ./Shader/PlanarReflection/PlanarReflectionCapture.fx;"
+		"*.x = ./Shader/PlanarReflection/PlanarReflectionCapture.fx;"
+		"* = hide;";
+>;
+sampler PlanarReflectionMapSamp = sampler_state {
+	texture = <PlanarReflectionMap>;
+	MinFilter = LINEAR; MagFilter = LINEAR; MipFilter = LINEAR;
+	AddressU = CLAMP; AddressV = CLAMP;
+};
+#undef PLANAR_REFLECTION_VIEWPORT_RATIO
+#undef PLANAR_REFLECTION_ANTIALIAS
+#endif
 shared texture MaterialMap: OFFSCREENRENDERTARGET<
 	string Description = "Material cache map for ray";
 	float2 ViewportRatio = {1.0, 1.0};
