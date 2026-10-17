@@ -239,6 +239,49 @@ const float4 BackColor = float4(0,0,0,0);
 const float4 IBLColor  = float4(0,MIDPOINT_8_BIT,0,MIDPOINT_8_BIT);
 
 shared texture EnvLightAlphaMap : RENDERCOLORTARGET;
+shared texture SkyLightMap : RENDERCOLORTARGET;
+
+void SkyLightVS(
+	in float4 Position : POSITION,
+	out float4 oPosition : POSITION)
+{
+	oPosition = Position;
+}
+
+float4 GenSkyLightPS() : COLOR0
+{
+	float zenithCos = dot(float3(0, 1, 0), -SunDirection);
+	float cosTheta = clamp(zenithCos, -1.0f, 1.0f);
+	float thetaRad = acos(cosTheta);
+	float thetaDeg = thetaRad * (180.0f / PI);
+
+	float airMass = 1.0f / max(cosTheta + 0.15f * pow(max(93.885f - thetaDeg, 0.001f), -1.253f), 0.02f);
+
+	static const float3 TAU_RAYLEIGH = float3(0.058f, 0.135f, 0.331f);
+	static const float3 TAU_OZONE = float3(0.065f, 0.188f, 0.008f);
+	static const float3 TAU_MIE = float3(0.050f, 0.070f, 0.100f);
+
+	float3 tauTotal = TAU_RAYLEIGH + TAU_OZONE + TAU_MIE;
+	float3 transmittance = exp(-tauTotal * airMass);
+	float horizonCutoff = smoothstep(-0.04f, 0.02f, cosTheta);
+
+	float3 result = transmittance * horizonCutoff;
+
+	float T = lerp(2200.0f, 6500.0f, pow(saturate(cosTheta), 0.55f));
+	float t = T / 100.0f;
+	float r = (t <= 66.0f) ? 1.0f : saturate(1.292936f * pow(max(t - 60.0f, 0.1f), -0.1332f));
+	float g = (t <= 66.0f) ? saturate(0.39008f * log(max(t, 1.0f)) - 0.63184f)
+	                       : saturate(1.12989f * pow(max(t - 60.0f, 0.1f), -0.07551f));
+	float b = (t >= 66.0f) ? 1.0f : ((t <= 19.0f) ? 0.0f : saturate(0.54320f * log(max(t - 10.0f, 1.0f)) - 1.19625f));
+	float3 cctColor = float3(r, g, b);
+	cctColor /= max(max(cctColor.r, cctColor.g), max(cctColor.b, 1e-4f));
+	result *= cctColor;
+
+	float sunCoupling = saturate(1.0f - exp(-4.5f * saturate(cosTheta)));
+	result *= sunCoupling;
+
+	return float4(result, 1.0f);
+}
 
 #define OBJECT_TEC(name, mmdpass) \
 	technique name < string MMDPass = mmdpass;  string Subset="0";\
@@ -254,6 +297,9 @@ shared texture EnvLightAlphaMap : RENDERCOLORTARGET;
 		"RenderColorTarget=DiffuseMap;" \
 		"Clear=Color;"\
 		"Pass=GenDiffuseMap;" \
+		"RenderColorTarget=SkyLightMap;" \
+		"Clear=Color;" \
+		"Pass=GenSkyLight;" \
 		"RenderColorTarget=;" \
 		"RenderColorTarget1=EnvLightAlphaMap;" \
 		"ClearSetColor=IBLColor;"\
@@ -269,6 +315,13 @@ shared texture EnvLightAlphaMap : RENDERCOLORTARGET;
 			AlphaBlendEnable = false; AlphaTestEnable = false;\
 			VertexShader = compile vs_3_0 GenDiffuseMapVS(); \
 			PixelShader  = compile ps_3_0 GenDiffuseMapPS(); \
+		} \
+		pass GenSkyLight < string Script = "Draw=Buffer;"; > { \
+			AlphaBlendEnable = false; AlphaTestEnable = false;\
+			ZEnable = false; ZWriteEnable = false;\
+			CullMode = NONE;\
+			VertexShader = compile vs_3_0 SkyLightVS(); \
+			PixelShader  = compile ps_3_0 GenSkyLightPS(); \
 		} \
 		pass ImageBasedLighting { \
 			AlphaBlendEnable = false; AlphaTestEnable = false;\

@@ -174,6 +174,21 @@ const float4 BackColor = float4(0,0,0,0);
 const float4 IBLColor  = float4(0,MIDPOINT_8_BIT,0,MIDPOINT_8_BIT);
 
 shared texture EnvLightAlphaMap : RENDERCOLORTARGET;
+shared texture SkyLightMap : RENDERCOLORTARGET;
+
+void SkyLightVS(
+	in float4 Position : POSITION,
+	out float4 oPosition : POSITION)
+{
+	oPosition = Position;
+}
+
+float4 GenSkyLightPS() : COLOR0
+{
+	float zenithCos = dot(float3(0, 1, 0), -SunDirection);
+	float horizonFade = smoothstep(-0.04f, 0.04f, zenithCos);
+	return float4(saturate(mMediumColor * 2.0f) * horizonFade, 1.0f);
+}
 
 #define OBJECT_TEC(name, mmdpass) \
 	technique name<string MMDPass = mmdpass; \
@@ -181,11 +196,19 @@ shared texture EnvLightAlphaMap : RENDERCOLORTARGET;
 		"ClearSetColor=BackColor;"\
 		"RenderColorTarget0=LightAlphaMap; Clear=Color;"\
 		"RenderColorTarget0=LightSpecMap;  Clear=Color;"\
+		"RenderColorTarget0=SkyLightMap; Clear=Color; Pass=GenSkyLight;"\
 		"RenderColorTarget0=; RenderColorTarget1=EnvLightAlphaMap;"\
 		"ClearSetColor=IBLColor;"\
 		"Clear=Color;"\
 		"Pass=DrawObject;"\
 ;>{\
+	pass GenSkyLight < string Script = "Draw=Buffer;"; > {\
+		AlphaBlendEnable = false; AlphaTestEnable = false;\
+		ZEnable = false; ZWriteEnable = false;\
+		CullMode = NONE;\
+		VertexShader = compile vs_3_0 SkyLightVS();\
+		PixelShader  = compile ps_3_0 GenSkyLightPS();\
+	}\
 	pass DrawObject {\
 		AlphaBlendEnable = false; AlphaTestEnable = false;\
 		CullMode = CCW;\

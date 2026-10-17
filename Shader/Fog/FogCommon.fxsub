@@ -233,11 +233,10 @@ FogParameters GetFogParameters()
 float3 GetFogSunRadiance(FogParameters params)
 {
 #if SUN_LIGHT_ENABLE == 2
-	float zenithCos = dot(float3(0.0f, 1.0f, 0.0f), -SunDirection);
-	float3 sunSpectralTransmittance = ComputeSunIntensity(zenithCos, PI);
-	return params.sunColor * (params.sunIntensity * PI) * sunSpectralTransmittance;
+	float3 skyLight = tex2Dlod(SkyLightMapSamp, float4(0.5f, 0.5f, 0.0f, 0.0f)).rgb;
+	return params.sunColor * SunColor * (params.sunIntensity * PI) * skyLight;
 #elif SUN_LIGHT_ENABLE == 1
-	return params.sunColor * (params.sunIntensity * PI);
+	return params.sunColor * SunColor * (params.sunIntensity * PI);
 #else
 	return 0.0f;
 #endif

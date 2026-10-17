@@ -252,6 +252,33 @@ const float4 BackColor = float4(0,0,0,0);
 const float4 IBLColor  = float4(0,0.5,0,0.5);
 
 shared texture EnvLightAlphaMap : RENDERCOLORTARGET;
+shared texture SkyLightMap : RENDERCOLORTARGET;
+
+void SkyLightVS(
+	in float4 Position : POSITION,
+	out float4 oPosition : POSITION)
+{
+	oPosition = Position;
+}
+
+float4 GenSkyLightPS() : COLOR0
+{
+	float zenithCos = dot(float3(0, 1, 0), -SunDirection);
+	float cosTheta = clamp(zenithCos, -1.0f, 1.0f);
+	float thetaRad = acos(cosTheta);
+	float thetaDeg = thetaRad * (180.0f / PI);
+
+	// Neutral optical air mass extinction without spectral sunset reddening
+	float airMass = 1.0f / max(cosTheta + 0.15f * pow(max(93.885f - thetaDeg, 0.001f), -1.253f), 0.02f);
+	float extinction = exp(-0.12f * airMass);
+	float horizonFade = smoothstep(-0.02f, 0.06f, cosTheta);
+
+	// Moonlight cool spectral tone (silvery pale blue, Purkinje shift)
+	static const float3 MOON_COLOR = float3(0.85f, 0.94f, 1.08f);
+	float3 result = MOON_COLOR * (extinction * horizonFade);
+
+	return float4(result, 1.0f);
+}
 
 #define OBJECT_TEC(name, mmdpass) \
 	technique name < string MMDPass = mmdpass;\
@@ -267,6 +294,9 @@ shared texture EnvLightAlphaMap : RENDERCOLORTARGET;
 		"RenderColorTarget=SkyDiffuseMap;" \
 		"Clear=Color;"\
 		"Pass=GenDiffuseMap;" \
+		"RenderColorTarget=SkyLightMap;" \
+		"Clear=Color;" \
+		"Pass=GenSkyLight;" \
 		"RenderColorTarget=;" \
 		"RenderColorTarget1=EnvLightAlphaMap;" \
 		"ClearSetColor=IBLColor;"\
@@ -282,6 +312,13 @@ shared texture EnvLightAlphaMap : RENDERCOLORTARGET;
 			AlphaBlendEnable = false; AlphaTestEnable = false;\
 			VertexShader = compile vs_3_0 GenDiffuseMapVS(); \
 			PixelShader  = compile ps_3_0 GenDiffuseMapPS(); \
+		} \
+		pass GenSkyLight < string Script = "Draw=Buffer;"; > { \
+			AlphaBlendEnable = false; AlphaTestEnable = false;\
+			ZEnable = false; ZWriteEnable = false;\
+			CullMode = NONE;\
+			VertexShader = compile vs_3_0 SkyLightVS(); \
+			PixelShader  = compile ps_3_0 GenSkyLightPS(); \
 		} \
 		pass ImageBasedLighting { \
 			AlphaBlendEnable = false; AlphaTestEnable = false;\

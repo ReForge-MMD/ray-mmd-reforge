@@ -106,6 +106,18 @@ sampler EnvLightAlphaMapSamp = sampler_state {
 	AddressU = CLAMP; AddressV = CLAMP;
 };
 #endif
+#if SUN_LIGHT_ENABLE
+shared texture SkyLightMap : RENDERCOLORTARGET<
+	int2 Dimensions = { 1, 1 };
+	string Format = "A16B16G16R16F";
+	float4 ClearColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+>;
+sampler SkyLightMapSamp = sampler_state {
+	texture = <SkyLightMap>;
+	MinFilter = POINT; MagFilter = POINT; MipFilter = NONE;
+	AddressU = CLAMP; AddressV = CLAMP;
+};
+#endif
 shared texture MaterialMap: OFFSCREENRENDERTARGET<
 	string Description = "Material cache map for ray";
 	float2 ViewportRatio = {1.0, 1.0};

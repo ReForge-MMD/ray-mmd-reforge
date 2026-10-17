@@ -3,9 +3,11 @@
 shared texture LightSpecMap : RENDERCOLORTARGET;
 shared texture LightAlphaMap : RENDERCOLORTARGET;
 shared texture EnvLightAlphaMap : RENDERCOLORTARGET;
+shared texture SkyLightMap : RENDERCOLORTARGET;
 
 const float4 BackColor = float4(0,0,0,0);
 const float4 IBLColor = float4(0, MIDPOINT_8_BIT, 0, MIDPOINT_8_BIT);
+const float4 DefaultSkyLightColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
 
 #define OBJECT_TEC(name, mmdpass)\
 	technique name < string MMDPass = mmdpass;\
@@ -13,6 +15,8 @@ const float4 IBLColor = float4(0, MIDPOINT_8_BIT, 0, MIDPOINT_8_BIT);
 		"ClearSetColor=BackColor;"\
 		"RenderColorTarget0=LightAlphaMap; Clear=Color;"\
 		"RenderColorTarget0=LightSpecMap;  Clear=Color;"\
+		"ClearSetColor=DefaultSkyLightColor;"\
+		"RenderColorTarget0=SkyLightMap; Clear=Color;"\
 		"RenderColorTarget0=; RenderColorTarget1=EnvLightAlphaMap; ClearSetColor=IBLColor; Clear=Color;"\
 	;> { \
 	}
