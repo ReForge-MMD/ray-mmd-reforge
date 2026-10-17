@@ -206,7 +206,7 @@ float4 ScreenSpaceDirOccPassPS(in float4 uv : TEXCOORD0, in float2 screen : SV_P
 		float horizonCos0 = lowHorizonCos0;
 		float horizonCos1 = lowHorizonCos1;
 
-		[unroll]
+		[loop]
 		for (int j = 0; j < GTAO_STEPS_PER_SLICE; ++j)
 		{
 			// Low-discrepancy R1 sequence noise per step
