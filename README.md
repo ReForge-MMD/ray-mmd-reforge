@@ -52,7 +52,7 @@ Load these only when your scene utilizes their specific effects:
 3. **Load Essential Controllers:** Load `LightingController.pmx`, `CameraController.pmx`, `ColorGradingController.pmx`, and `FogController.pmx` (`Model Manipulation` -> `Load`).
 4. **Assign Models & Materials:** Load your model, assign `Main/main.fx` in the `Main` tab, and assign material shaders in `MaterialMap` tab (`Materials/Skin/`, `Materials/Hair/`, etc.).
 
-Reforge Exclusive Features (through v1.22.0) :
+Reforge Exclusive Features (through v1.22.1) :
 ------------
 
 **Direct Screen-Space Core & Architecture**
