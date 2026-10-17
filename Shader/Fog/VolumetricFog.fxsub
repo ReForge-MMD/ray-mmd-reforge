@@ -178,7 +178,7 @@ float4 VolumetricFogRaymarchPS(
 	// Scale factor of active fog density to extinguish godrays when fog is turned down
 	float densityScale = saturate((params.density + params.groundDensity) / max(1e-4f, mFogDensityDefault + mGroundFogDensityDefault));
 
-	[unroll]
+	[loop]
 	for (int i = 0; i < VOLUMETRIC_FOG_STEPS; ++i)
 	{
 		float t = params.startDistance + (float(i) + jitter) * stepSize;
