@@ -96,19 +96,31 @@ float3 ComputeSunIntensity(float zenithAngleCos, float EE = 10.0f)
 
 #if SUN_CORONA_ENABLE
 /**
- * Forward Mie scattering solar corona / diffraction aureole.
- * Evaluates forward-scattering atmospheric phase function when looking towards the sun vector.
+ * Forward Mie scattering solar/lunar corona & diffraction aureole.
+ * Evaluates Henyey-Greenstein forward phase function modulated by the skybox light spectrum.
+ * Adapts anisotropy dynamically: sharp solar aureole (g=0.96) for daytime, softer lunar halo (g=0.90) for night.
  */
-float3 ComputeSunCorona(float3 V, float3 L, float3 lightColor)
+float3 ComputeSunCorona(float3 V, float3 L, float3 lightColor, float shadow)
 {
-	// -L is the direction pointing toward the sun in view space
+	// -L is the direction pointing toward the sun/moon in view space
 	float cosGaze = saturate(dot(V, -L));
-	float g = mSunCoronaAnisotropy;
+
+	// Detect lunar vs solar spectrum: lunar light in SkyLightMap has higher blue-to-red ratio
+	bool isMoon = (lightColor.b > lightColor.r * 1.05f);
+
+	// Lunar corona has wider angular dispersion (cirrus ice crystal / water droplet diffraction)
+	float g = isMoon ? (mSunCoronaAnisotropy * 0.94f) : mSunCoronaAnisotropy;
 	float g2 = g * g;
 	float denom = 1.0f + g2 - 2.0f * g * cosGaze;
 	float hgPhase = (1.0f - g2) / (4.0f * PI * pow(max(denom, 0.005f), 1.5f));
-	float angleGate = smoothstep(0.85f, 0.999f, cosGaze);
-	return lightColor * (hgPhase * angleGate * (mSunCoronaIntensity * 0.08f));
+
+	// Softer gate for moon halo to allow gentle lunar glow
+	float angleGate = isMoon ? smoothstep(0.75f, 0.999f, cosGaze) : smoothstep(0.85f, 0.999f, cosGaze);
+
+	// Corona bleeds around silhouette edges, modulated by shadow visibility
+	float coronaVis = lerp(0.15f, 1.0f, saturate(shadow));
+
+	return lightColor * (hgPhase * angleGate * (mSunCoronaIntensity * 0.08f) * coronaVis);
 }
 #endif
 
@@ -310,7 +322,7 @@ void ShadingMaterial(MaterialParam material, float3 V, float3 L, float2 coord, o
 	}
 
 #if SUN_CORONA_ENABLE
-	float3 corona = ComputeSunCorona(V, L, lightColor);
+	float3 corona = ComputeSunCorona(V, L, lightColor, shadow);
 	diffuse += corona;
 #endif
 
