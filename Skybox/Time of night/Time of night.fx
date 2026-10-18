@@ -1,3 +1,6 @@
+#define ATM_CLOUD_ENABLE 1
+#define MILKYWAY_ENABLE 1
+
 #include "Time of night.conf"
 
 #include "../../shader/Core/math.fxsub"
@@ -7,8 +10,7 @@
 #include "shader/common.fxsub"
 #include "shader/stars.fxsub"
 #include "shader/atmospheric.fxsub"
-
-#define MILKYWAY_ENABLE 1
+#include "shader/cloud.fxsub"
 
 static const float3 moonScaling = 2800;
 static const float3 moonTranslate = 60000;
@@ -170,6 +172,44 @@ float4 ScatteringPS(
 	return linear2srgb(insctrColor);
 }
 
+void CloudsVS(
+	in float4 Position    : POSITION,
+	out float3 oTexcoord0 : TEXCOORD0,
+	out float3 oTexcoord1 : TEXCOORD1,
+	out float4 oPosition  : POSITION)
+{
+	oTexcoord0 = normalize(Position.xyz);
+	oTexcoord1 = ComputeWaveLengthMie(mWaveLength, mCloudColor, mCloudTurbidity, 4);
+	oPosition = mul(Position + float4(CameraPosition, 0), matViewProject);
+}
+
+float4 CloudsPS(
+	in float3 viewdir : TEXCOORD0,
+	in float3 cloudLambda : TEXCOORD1) : COLOR
+{
+	float3 V = normalize(viewdir);
+
+	ScatteringParams setting;
+	setting.sunSize = mSunRadius;
+	setting.sunRadiance = mSunRadiance;
+	setting.mieG = mMiePhase;
+	setting.mieHeight = mMieHeight * 1000;
+	setting.rayleighHeight = mRayleighHeight * 1000;
+	setting.waveLambda = mWaveLength;
+	setting.waveLambdaMie = cloudLambda;
+	setting.waveLambdaRayleigh = 0;
+	setting.earthRadius = mEarthRadius * mUnitDistance;
+	setting.earthAtmTopRadius = mEarthAtmoRadius * mUnitDistance;
+	setting.earthCenter = float3(0, -setting.earthRadius, 0);
+	setting.cloud = mCloudDensity;
+	setting.cloudTop = 9.6 * mUnitDistance;
+	setting.cloudBottom = 8.0 * mUnitDistance;
+	setting.clouddir = float3(1315.7, 0, -3000) * mCloudSpeed;
+	setting.cloudLambda = cloudLambda;
+
+	return RenderNightClouds(setting, CameraPosition + float3(0, mEarthPeopleHeight * mUnitDistance, 0), V, SunDirection);
+}
+
 #define SKYBOX_TEC(name, mmdpass) \
 	technique name<string MMDPass = mmdpass;>\
 	{ \
@@ -191,6 +231,13 @@ float4 ScatteringPS(
 			SrcBlend = ONE; DestBlend = SRCALPHA;\
 			VertexShader = compile vs_3_0 ScatteringVS(); \
 			PixelShader  = compile ps_3_0 ScatteringPS(); \
+		} \
+		pass DrawClouds { \
+			AlphaBlendEnable = true; AlphaTestEnable = false;\
+			ZEnable = false; ZWriteEnable = false;\
+			SrcBlend = ONE; DestBlend = INVSRCALPHA;\
+			VertexShader = compile vs_3_0 CloudsVS(); \
+			PixelShader  = compile ps_3_0 CloudsPS(); \
 		} \
 	}
 

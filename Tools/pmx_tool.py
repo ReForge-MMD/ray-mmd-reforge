@@ -268,8 +268,8 @@ def parse_and_add_morphs(filepath, new_morph_names, output_filepath=None):
             # Assign proper panel category based on morph name
             if any(k in new_name for k in ('Blade', 'Fstop', 'Focal', 'Measure', 'Alpha')):
                 panel_id = 3 # Mouth / Lip (Camera / Alpha G-buffers)
-            elif any(k in new_name for k in ('SSGI', 'GI')):
-                panel_id = 4 # Other (GI controls)
+            elif any(k in new_name for k in ('SSGI', 'GI', 'Cloud', 'Star', 'Meteor')):
+                panel_id = 4 # Other (GI controls, Sky & Clouds)
             elif any(k in new_name for k in ('Shadow', 'PSSM', 'Cascade', 'SSGS', 'SSAO', 'SSDO', 'SSR', 'Outline', 'Contact')):
                 panel_id = 1 # Brows (Shadows & Post-Effects)
             else:
@@ -345,9 +345,17 @@ def parse_and_add_morphs(filepath, new_morph_names, output_filepath=None):
     print(f"[SUCCESS] Updated PMX saved to {output_filepath}")
 
 if __name__ == '__main__':
-    target = r'LightingController.pmx'
+    target = r'Skybox/Time of night/Time of night.pmx'
     if len(sys.argv) > 1:
         target = sys.argv[1]
     
-    new_morphs = ['SSGI+', 'SSGI-']
-    parse_and_add_morphs(target, new_morphs)
+    cloud_morphs = [
+        'Cloud+', 'Cloud-',
+        'CloudSpeed+', 'CloudSpeed-',
+        'CloudTurbidity+', 'CloudTurbidity-',
+        'CloudBias+', 'CloudBias-'
+    ]
+    if len(sys.argv) > 2:
+        cloud_morphs = sys.argv[2:]
+
+    parse_and_add_morphs(target, cloud_morphs)

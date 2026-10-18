@@ -28,6 +28,8 @@ float mCloudSpeedP : CONTROLOBJECT<string name="(self)"; string item = "CloudSpe
 float mCloudSpeedM : CONTROLOBJECT<string name="(self)"; string item = "CloudSpeed-";>;
 float mCloudBiasP : CONTROLOBJECT<string name="(self)"; string item = "CloudBias+";>;
 float mCloudBiasM : CONTROLOBJECT<string name="(self)"; string item = "CloudBias-";>;
+float mCloudTurbidityP : CONTROLOBJECT<string name="(self)"; string item = "CloudTurbidity+";>;
+float mCloudTurbidityM : CONTROLOBJECT<string name="(self)"; string item = "CloudTurbidity-";>;
 
 static float mSunRadius      = lerp(lerp(mSunRadiusParams.x, mSunRadiusParams.z, mSunRadiusP), mSunRadiusParams.y, mSunRadiusM);
 static float mSunRadiance    = lerp(lerp(mSunRadianceParams.x, mSunRadianceParams.z, mSunRadianceP), mSunRadianceParams.y, mSunRadianceM);
@@ -38,6 +40,10 @@ static float mRayleighHeight = lerp(lerp(mRayleighHeightTopParams.x, mRayleighHe
 static float mStarSaturation = lerp(lerp(mStarSaturationParams.x, mStarSaturationParams.z, mStarSaturationP), mStarSaturationParams.y, mStarSaturationM);
 static float mStarBrightness = lerp(lerp(mStarBrightnessParams.x, mStarBrightnessParams.z, mStarBrightnessP), mStarBrightnessParams.y, mStarBrightnessM);
 static float mMeteor 		 = lerp(lerp(mMeteorParams.x, mMeteorParams.z, mMeteorP), mMeteorParams.y, mMeteorM);
+static float mCloudDensity   = lerp(lerp(mCloudDensityParams.x, mCloudDensityParams.z, mCloudP), mCloudDensityParams.y, mCloudM);
+static float mCloudSpeed     = lerp(lerp(mCloudSpeedParams.x, mCloudSpeedParams.z, mCloudSpeedP), mCloudSpeedParams.y, mCloudSpeedM) * time;
+static float mCloudTurbidity = lerp(lerp(mCloudTurbidityParams.x, mCloudTurbidityParams.z, max(mCloudTurbidityP, mCloudBiasP)), mCloudTurbidityParams.y, max(mCloudTurbidityM, mCloudBiasM));
 
 static float3 mMieColor = float3(0.686, 0.678, 0.666) * SunColor;
+static float3 mCloudColor = SunColor;
 static float3 mRayleighColor = hsv2rgb(float3(mRayleighColorHP, mRayleighColorSP, lerp(lerp(1, 2, mRayleighColorVP), 0, mRayleighColorVM)));

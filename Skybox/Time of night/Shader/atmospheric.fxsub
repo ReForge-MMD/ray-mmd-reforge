@@ -12,7 +12,37 @@ struct ScatteringParams
 	float3 waveLambdaMie;
 	float3 waveLambdaRayleigh;
 
+	float earthRadius;
+	float earthAtmTopRadius;
+	float3 earthCenter;
+
+	float cloud;
+	float cloudTop;
+	float cloudBottom;
+	float3 clouddir;
+	float3 cloudLambda;
 };
+
+float2 ComputeRaySphereIntersection(float3 position, float3 dir, float3 center, float radius)
+{
+	float3 origin = position - center;
+	float B = dot(origin, dir);
+	float C = dot(origin, origin) - radius * radius;
+	float D = B * B - C;
+
+	float2 minimaxIntersections;
+	if (D < 0.0)
+	{
+		minimaxIntersections = float2(-1.0, -1.0);
+	}
+	else
+	{
+		D = sqrt(D);
+		minimaxIntersections = float2(-B - D, -B + D);
+	}
+
+	return minimaxIntersections;
+}
 
 float ComputeOpticalMass(float cosAngle)
 {

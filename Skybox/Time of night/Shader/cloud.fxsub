@@ -1,0 +1,391 @@
+// ==============================================================================
+// ADVANCED VOLUMETRIC CLOUDS (NIGHT ADAPTATION)
+// Adapted for Time of Night Skybox
+// Moonlight illumination, lunar phase scattering, nocturnal ambient, star occlusion
+// ==============================================================================
+
+#define NUMS_SAMPLES_CLOUD 24
+#define NUM_LIGHT_STEPS 3
+#define NUM_MS_OCTAVES 2
+
+// Multi-octave cloud textures
+texture CloudMacroMap<string ResourceName = "Shader/Textures/clouds1.png";>; 
+sampler CloudMacroMapSamp = sampler_state {
+	texture = <CloudMacroMap>;
+	MINFILTER = LINEAR; MAGFILTER = LINEAR; MIPFILTER = LINEAR;
+	ADDRESSU = WRAP; ADDRESSV = WRAP;
+};
+
+texture CloudCoverMap<string ResourceName = "Shader/Textures/clouds2.png";>; 
+sampler CloudCoverMapSamp = sampler_state {
+	texture = <CloudCoverMap>;
+	MINFILTER = LINEAR; MAGFILTER = LINEAR; MIPFILTER = LINEAR;
+	ADDRESSU = WRAP; ADDRESSV = WRAP;
+};
+
+texture CloudDetailMap<string ResourceName = "Shader/Textures/clouds3.png";>; 
+sampler CloudDetailMapSamp = sampler_state {
+	texture = <CloudDetailMap>;
+	MINFILTER = LINEAR; MAGFILTER = LINEAR; MIPFILTER = LINEAR;
+	ADDRESSU = WRAP; ADDRESSV = WRAP;
+};
+
+// ==============================================================================
+// QUINTIC 3D NOISE (C2-CONTINUOUS, ELIMINATES MACH BANDS)
+// ==============================================================================
+
+float noise3D(in float3 p)
+{
+	float3 ip = floor(p);
+	float3 fp = frac(p);
+	// Quintic Hermite: f(t) = 6t^5 - 15t^4 + 10t^3
+	fp = fp * fp * fp * (fp * (fp * 6.0f - 15.0f) + 10.0f);
+	
+	float2 uv0 = (ip.xz + float2(37.0f, 17.0f) * ip.y) + fp.xz;
+	float2 uv1 = uv0 + float2(37.0f, 17.0f);
+
+	float n0 = tex2Dlod(CloudMacroMapSamp, float4((uv0 + 0.5f) / 256.0f, 0, 0)).r;
+	float n1 = tex2Dlod(CloudMacroMapSamp, float4((uv1 + 0.5f) / 256.0f, 0, 0)).r;
+
+	return lerp(n0, n1, fp.y);
+}
+
+float DensityRemap(float x, float a, float b, float c, float d)
+{
+	return saturate(((x - a) / max(b - a, 0.001f)) * (d - c) + c);
+}
+
+// ==============================================================================
+// CUMULUS HEIGHT GRADIENT - VERTICAL PROFILE
+// ==============================================================================
+
+float CumulusHeightGradient(float h)
+{
+	float base = smoothstep(0.0f, 0.07f, h);
+	float body = 1.0f - smoothstep(0.20f, 0.50f, h) * 0.12f;
+	float top = smoothstep(1.0f, 0.55f, h);
+	float anvil = smoothstep(0.85f, 1.0f, h) * 0.25f;
+	return base * body * (top + anvil);
+}
+
+// ==============================================================================
+// 3D VOLUMETRIC DENSITY EVALUATION
+// ==============================================================================
+
+float EvaluateCloudDensity(ScatteringParams setting, float3 positionPS, out float cloudHeight)
+{
+	float r = length(positionPS - setting.earthCenter);
+	float cloudThickness = max(setting.cloudTop - setting.cloudBottom, 1.0f);
+	cloudHeight = saturate((r - (setting.earthRadius + setting.cloudBottom)) / cloudThickness);
+
+	float heightGradient = CumulusHeightGradient(cloudHeight);
+	if (heightGradient <= 1e-4f) return 0.0f;
+
+	// 1. Wind & atmospheric drift
+	float3 p = positionPS + setting.clouddir;
+
+	// 2. Three-scale weather system
+	const float2x2 rotA = float2x2(0.8508f, -0.5255f, 0.5255f, 0.8508f);
+	const float2x2 rotB = float2x2(0.6691f, 0.7431f, -0.7431f, 0.6691f);
+
+	float2 uvW1 = (p.xz + setting.clouddir.xz * 0.15f) * 0.0000055f;  // ~180 km synoptic
+	float2 uvW2 = mul(p.xz, rotA) * 0.000016f;                         // ~62 km mesoscale
+	float2 uvW3 = mul(p.xz, rotB) * 0.000042f;                         // ~24 km local
+
+	float w1 = tex2Dlod(CloudCoverMapSamp, float4(uvW1, 0, 0)).r;
+	float w2 = tex2Dlod(CloudCoverMapSamp, float4(uvW2 + 0.35f, 0, 0)).r;
+	float w3 = tex2Dlod(CloudDetailMapSamp, float4(uvW3 + 0.17f, 0, 0)).r;
+	float weatherField = w1 * 0.50f + w2 * 0.32f + w3 * 0.18f;
+
+	// Weather coverage thresholding
+	float cov = saturate(setting.cloud);
+	float weatherThreshold = 1.0f - cov * 0.92f - 0.04f;
+	float coverageMask = saturate((weatherField - weatherThreshold) / max(1.0f - weatherThreshold, 0.01f));
+	if (coverageMask <= 0.001f) return 0.0f;
+
+	// 3. Multi-scale 3D base shaping (3 octaves)
+	float3 shapePos = p * 0.00052f;
+	float s0 = noise3D(shapePos);
+	float s1 = noise3D(shapePos * 2.35f + float3(0.31f, 0.73f, 0.17f));
+	float s2 = noise3D(shapePos * 5.50f + float3(0.83f, 0.21f, 0.59f));
+	float shapeNoise = s0 * 0.53f + s1 * 0.30f + s2 * 0.17f;
+
+	float densityPower = lerp(0.70f, 1.30f, coverageMask);
+	float threshold = 1.0f - coverageMask * heightGradient * densityPower;
+	float baseCloud = DensityRemap(shapeNoise, threshold, 1.0f, 0.0f, 1.0f);
+	if (baseCloud <= 0.001f) return 0.0f;
+
+	// 4. Height-adaptive dual-octave erosion
+	float erosionStrength = lerp(0.28f, 0.58f, cloudHeight);
+	float3 erosionPos = (p + setting.clouddir * 0.5f) * 0.0030f;
+	float e0 = noise3D(erosionPos);
+	float e1 = noise3D(erosionPos * 2.8f + float3(0.44f, 0.12f, 0.67f));
+	float erosionNoise = e0 * 0.62f + e1 * 0.38f;
+
+	float erodedCloud = DensityRemap(baseCloud, erosionNoise * erosionStrength, 1.0f, 0.0f, 1.0f);
+	return erodedCloud * 2.8f;
+}
+
+// Lightweight evaluation for light rays
+float EvaluateCloudDensityCheap(ScatteringParams setting, float3 positionPS)
+{
+	float r = length(positionPS - setting.earthCenter);
+	float cloudHeight = saturate((r - (setting.earthRadius + setting.cloudBottom)) / max(setting.cloudTop - setting.cloudBottom, 1.0f));
+
+	float heightGradient = CumulusHeightGradient(cloudHeight);
+	if (heightGradient <= 1e-4f) return 0.0f;
+
+	float3 p = positionPS + setting.clouddir;
+	float2 uvWeather = (p.xz + setting.clouddir.xz * 0.15f) * 0.0000055f;
+	float weather1 = tex2Dlod(CloudCoverMapSamp, float4(uvWeather, 0, 0)).r;
+
+	float cov = saturate(setting.cloud);
+	float weatherThreshold = 1.0f - cov * 0.92f - 0.04f;
+	float coverageMask = saturate((weather1 - weatherThreshold) / max(1.0f - weatherThreshold, 0.01f));
+	if (coverageMask <= 0.001f) return 0.0f;
+
+	float shapeNoise = noise3D(p * 0.00052f);
+	float threshold = 1.0f - coverageMask * heightGradient;
+	float density = DensityRemap(shapeNoise, threshold, 1.0f, 0.0f, 1.0f);
+
+	return density * 2.2f;
+}
+
+float ComputeClound(ScatteringParams setting, float3 P)
+{
+	float cloudHeight;
+	return EvaluateCloudDensity(setting, P, cloudHeight);
+}
+
+float HitCloudsTest(ScatteringParams setting, float3 eye, float3 V, float3 L)
+{
+	float2 outer = ComputeRaySphereIntersection(eye, V, setting.earthCenter, setting.earthRadius + setting.cloudTop);
+	float2 inner = ComputeRaySphereIntersection(eye, V, setting.earthCenter, setting.earthRadius + setting.cloudBottom);
+	if (inner.y > 0) outer.x = inner.y;
+	float3 cloudsStart = eye + V * max(0, outer.x);
+	float cloudHeight;
+	return exp(-0.002f * EvaluateCloudDensity(setting, cloudsStart, cloudHeight));
+}
+
+// ==============================================================================
+// ADVANCED LIGHTING: PHASE FUNCTIONS & DIRECTIONAL POWDER
+// ==============================================================================
+
+float PowderEffect(float density, float cosAngle)
+{
+	float powder = 1.0f - exp(-density * 4.5f);
+	float angleFactor = saturate((-cosAngle * 0.5f) + 0.5f);
+	return lerp(1.0f, saturate(powder * 2.0f), angleFactor * 0.75f);
+}
+
+float HenyeyGreenstein(float g, float cosTheta)
+{
+	float g2 = g * g;
+	return (1.0f - g2) / (4.0f * PI * pow(max(1.0f + g2 - 2.0f * g * cosTheta, 0.001f), 1.5f));
+}
+
+// Dual-lobe phase: forward silver lining / lunar halo + backward glory
+float DualLobePhase(float g, float cosTheta)
+{
+	float forwardHG = HenyeyGreenstein(g, cosTheta);
+	float backwardHG = HenyeyGreenstein(-g * 0.35f, cosTheta);
+	return forwardHG * 0.70f + backwardHG * 0.20f + (0.10f / (4.0f * PI));
+}
+
+// Evaluates moonlight transmittance and multi-scattering towards the sample
+float3 EvaluateMoonTransmittance(ScatteringParams setting, float3 positionPS, float3 moonDirection, float cosAngle, float localDensity)
+{
+	float cloudThickness = max(setting.cloudTop - setting.cloudBottom, 1.0f);
+	float totalLightDistance = cloudThickness * 0.85f;
+	float intervalSize = totalLightDistance / float(NUM_LIGHT_STEPS);
+
+	float opticalDepth = 0.0f;
+
+	[unroll]
+	for (int j = 0; j < NUM_LIGHT_STEPS; j++)
+	{
+		float dist = intervalSize * (0.25f + j);
+		float density = EvaluateCloudDensityCheap(setting, positionPS + moonDirection * dist);
+		opticalDepth += density * 0.004f;
+	}
+
+	float distantDensity = EvaluateCloudDensityCheap(setting, positionPS + moonDirection * (intervalSize * 6.0f));
+	opticalDepth += distantDensity * 0.003f;
+
+	float lightExtinction = intervalSize * opticalDepth;
+
+	// Wrenninge/Frostbite multi-scattering octaves
+	static const float MS_ATTENUATION  = 0.5f;
+	static const float MS_CONTRIBUTION = 0.5f;
+	static const float MS_ECCENTRICITY = 0.5f;
+
+	float3 totalScattering = 0.0f;
+	float attenuationAccum  = 1.0f;
+	float contributionAccum = 1.0f;
+	float eccentricityAccum = 1.0f;
+
+	[unroll]
+	for (int oct = 0; oct < NUM_MS_OCTAVES; oct++)
+	{
+		float phaseG = setting.mieG * eccentricityAccum;
+		float phase = DualLobePhase(phaseG, cosAngle);
+		float transmittance = exp(-lightExtinction * attenuationAccum);
+
+		totalScattering += contributionAccum * phase * transmittance;
+
+		attenuationAccum  *= MS_ATTENUATION;
+		contributionAccum *= MS_CONTRIBUTION;
+		eccentricityAccum *= MS_ECCENTRICITY;
+	}
+
+	float powder = PowderEffect(localDensity, cosAngle);
+	return totalScattering * powder;
+}
+
+// ==============================================================================
+// VOLUMETRIC INTEGRATION - NOCTURNAL MOON & AMBIENT
+// ==============================================================================
+
+void ComputeNightCloudsIntegral(
+	ScatteringParams setting,
+	float3 start,
+	float3 end,
+	float3 V,
+	float3 moonDir,
+	inout float opticalDepth,
+	inout float3 accumulatedScattering)
+{
+	float totalDist = length(end - start);
+	float stepLength = totalDist / float(NUMS_SAMPLES_CLOUD);
+	float3 rayDir = (end - start) / totalDist;
+	float3 sampleStep = rayDir * stepLength;
+
+	// High-frequency ray jittering to eliminate step slicing/banding
+	float randomJitter = frac(sin(dot(V.xyz, float3(12.9898f, 78.233f, 151.7182f))) * 43758.5453123f);
+	float3 currentPositionPS = start + sampleStep * randomJitter;
+	float marchedDistance = stepLength * randomJitter;
+
+	float transmittance = 1.0f;
+	float cosAngle = dot(V, moonDir);
+
+	// Direct moonlight spectrum (cool silvery Purkinje shift)
+	static const float3 MOON_SPECTRUM = float3(0.85f, 0.94f, 1.08f);
+
+	// Moon elevation and smooth horizon cutoff
+	float moonElevation = moonDir.y;
+	float moonHorizonFade = smoothstep(-0.04f, 0.05f, moonElevation);
+
+	// Atmospheric extinction for moonlight
+	float moonAirMass = 1.0f / max(moonElevation + 0.15f * pow(max(93.885f - degrees(acos(saturate(moonElevation))), 0.001f), -1.253f), 0.02f);
+	float moonAtmExtinction = exp(-0.15f * moonAirMass);
+
+	// Direct moonlight illumination (reactive to SunColor, moonRadiance, and moon elevation)
+	float3 directMoonColor = mCloudColor * MOON_SPECTRUM * (setting.sunRadiance * moonAtmExtinction * moonHorizonFade * 0.75f);
+
+	// Ambient nocturnal lighting:
+	// Moonlit sky dome ambient (when moon is up) + subtle starlight / airglow floor
+	float3 skyAmbient = MOON_SPECTRUM * (setting.sunRadiance * moonHorizonFade * 0.025f) + float3(0.003f, 0.005f, 0.009f);
+	float3 groundAmbient = skyAmbient * float3(0.40f, 0.45f, 0.50f);
+
+	int zeroConsecutive = 0;
+
+	[loop]
+	for (int i = 0; i < NUMS_SAMPLES_CLOUD; ++i)
+	{
+		if (transmittance < 0.008f || marchedDistance >= totalDist) break;
+
+		float cloudHeight;
+		float density = EvaluateCloudDensity(setting, currentPositionPS, cloudHeight);
+
+		if (density > 0.001f)
+		{
+			if (zeroConsecutive >= 2)
+			{
+				currentPositionPS -= sampleStep * 0.75f;
+				marchedDistance -= stepLength * 0.75f;
+				density = EvaluateCloudDensity(setting, currentPositionPS, cloudHeight);
+			}
+			zeroConsecutive = 0;
+
+			float sampleExtinction = density * 0.0035f;
+			float stepTransmittance = exp(-sampleExtinction * stepLength);
+
+			// Direct moonlight scattering (silver lining + forward lunar halo)
+			float3 moonInscatter = EvaluateMoonTransmittance(setting, currentPositionPS, moonDir, cosAngle, density);
+			float3 moonLuminance = directMoonColor * moonInscatter;
+
+			// Night sky & ground ambient with height gradation
+			float3 ambientColor = lerp(groundAmbient, skyAmbient, smoothstep(0.0f, 0.60f, cloudHeight));
+			float cavityAO = lerp(0.55f, 1.0f, exp(-density * 1.5f));
+			float3 ambientLuminance = ambientColor * cavityAO;
+
+			// Energy-conserving analytical integration
+			float integrationFactor = transmittance - transmittance * stepTransmittance;
+			accumulatedScattering += (moonLuminance + ambientLuminance) * integrationFactor;
+
+			transmittance *= stepTransmittance;
+			opticalDepth += sampleExtinction * stepLength;
+
+			currentPositionPS += sampleStep;
+			marchedDistance += stepLength;
+		}
+		else
+		{
+			zeroConsecutive++;
+			float emptyStepScale = (zeroConsecutive >= 2) ? 2.25f : 1.0f;
+			currentPositionPS += sampleStep * emptyStepScale;
+			marchedDistance += stepLength * emptyStepScale;
+		}
+	}
+}
+
+// ==============================================================================
+// NIGHT CLOUDS ENTRY POINT
+// ==============================================================================
+
+float4 RenderNightClouds(ScatteringParams setting, float3 eye, float3 V, float3 sunDir)
+{
+	// Early exit when clouds are disabled or facing underground
+	if (setting.cloud <= 0.005f || V.y < -0.05f) return float4(0, 0, 0, 0);
+
+	// Moon is placed in the direction -sunDir
+	float3 moonDir = normalize(-sunDir);
+
+	float2 outer = ComputeRaySphereIntersection(eye, V, setting.earthCenter, setting.earthRadius + setting.cloudTop);
+	float2 inner = ComputeRaySphereIntersection(eye, V, setting.earthCenter, setting.earthRadius + setting.cloudBottom);
+
+	if (outer.y <= 0.0f) return float4(0, 0, 0, 0);
+
+	float tStart = max(0.0f, inner.y > 0.0f ? inner.y : outer.x);
+	float tEnd = outer.y;
+	if (inner.x > 0.0f) tEnd = min(tEnd, inner.x);
+
+	if (tEnd <= tStart) return float4(0, 0, 0, 0);
+
+	float3 cloudsStart = eye + V * tStart;
+	float3 cloudsEnd   = eye + V * tEnd;
+
+	float marchDist = min(length(cloudsEnd - cloudsStart), 42000.0f);
+	cloudsEnd = cloudsStart + V * marchDist;
+
+	float cloudsOpticalLength = 0.0f;
+	float3 cloudsMie = 0.0f;
+	ComputeNightCloudsIntegral(setting, cloudsStart, cloudsEnd, V, moonDir, cloudsOpticalLength, cloudsMie);
+
+	if (cloudsOpticalLength <= 1e-4f) return float4(0, 0, 0, 0);
+
+	// Aerial perspective fade near horizon
+	float horizonFade = saturate(abs(V.y) * 6.0f + 0.12f) * step(0.0f, V.y);
+	float cloudTransmittance = exp(-cloudsOpticalLength * 4.0f);
+	float cloudAlpha = saturate((1.0f - cloudTransmittance) * horizonFade);
+
+	// Highlight compression for intense silver lining around moon
+	float maxLum = max(cloudsMie.r, max(cloudsMie.g, cloudsMie.b));
+	if (maxLum > 0.8f)
+	{
+		float mappedLum = 0.8f + 0.2f * (1.0f - exp(-(maxLum - 0.8f) * 1.25f));
+		cloudsMie *= (mappedLum / maxLum);
+	}
+
+	return float4(linear2srgb(cloudsMie * horizonFade), cloudAlpha);
+}
