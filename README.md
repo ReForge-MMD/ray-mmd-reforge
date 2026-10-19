@@ -52,7 +52,7 @@ Load these only when your scene utilizes their specific effects:
 3. **Load Essential Controllers:** Load `LightingController.pmx`, `CameraController.pmx`, `ColorGradingController.pmx`, and `FogController.pmx` (`Model Manipulation` -> `Load`).
 4. **Assign Models & Materials:** Load your model, assign `Main/main.fx` in the `Main` tab, and assign material shaders in `MaterialMap` tab (`Materials/Skin/`, `Materials/Hair/`, etc.).
 
-Reforge Exclusive Features (through v1.22.1) :
+Reforge Exclusive Features (through v1.23.0) :
 ------------
 
 **Direct Screen-Space Core & Architecture**
@@ -91,7 +91,9 @@ Reforge Exclusive Features (through v1.22.1) :
   * **Backlit Hair Transmission (`SUN_HAIR_TRANSMISSION 1`)**: Marschner TT-mode forward scattering through hair fibers (`SHADINGMODELID_ANISOTROPY`), simulating warm fiber luminescence when illuminated against strong sunlight.
   * **Perez/CIE Sun-to-Sky Irradiance Coupling (`SUN_SKY_COUPLING 1`)**: dynamic zenith-dependent ratio modulation ensuring direct sunlight and diffuse skylight remain in physical balance across day, golden hour, and sunset.
   * **Planckian Locus Daylight Auto-CCT (`SUN_AUTO_CCT 1`)**: Kang/Kim/Hernandez-Andres polynomial analytical Planckian Blackbody spectrum (2200K–6500K) dynamically computing physical daylight spectral shift from solar zenith angle.
-  * **Forward Mie Scattering Corona (`SUN_CORONA_ENABLE 1`)**: view-dependent Mie aerosol diffraction aureole centered around the solar vector for atmospheric camera transitions.
+  * **Dynamic Forward Mie Corona & Lunar Halo (`SUN_CORONA_ENABLE 1`)**: view-dependent Mie aerosol diffraction aureole centered around the solar or lunar vector (dynamically detected from `SkyLightMap` B/R ratio), dynamically switching between sharp daytime solar aureole ($g=0.96$) and soft silvery lunar diffraction halo ($g=0.90$) with shadow occlusion gating.
+* **Decoupled Solar/Lunar Directional Light & Volumetric Fog (`SkyLightMap`)**: dedicated 1x1 FP16 shared render target dynamically populated by skybox lighting passes, decoupling direct surface shading and volumetric fog godrays between daylight multi-spectral solar extinction and nocturnal lunar spectra (preventing false sunset reddening on low moon elevations).
+* **Night-Adapted Volumetric Clouds (`Time of night`)**: comprehensive adaptation of Frostbite/Nubis volumetric raymarched cloudscapes (`cloud.fxsub`) tuned for nocturnal environments, featuring moonlight illumination with Purkinje spectral shift, lunar forward scattering, nocturnal ambient lighting (sky dome + starlight floor + cavity AO), and pre-multiplied alpha star/Milky Way/Moon occlusion, with dedicated morphs injected into `Time of night.pmx`.
 * **Percentage-Closer Soft Shadows (PCSS) & Screen-Space Contact Cone Tracing (SSCT)**: physically based contact-hardening directional soft shadows with dynamic blocker search, Poisson-disk TAA-jittered filtering, Castaño (2013) 4-tap PCF 3x3 filtering for fast cascades, and angular sun radius penumbra expansion. Paired with SSCT cone tracing with distance attenuation and soft penumbra, seamless 4-cascade cross-blending (`CascadeCrossBlend`), and adaptive bias eliminating close-up macro staircasing and light leaks.
 * **Directional Water Caustics**: real-time focused underwater light bands and wave curvature flux concentration with chromatic dispersion and a dedicated controller (`CausticsController.pmx`).
 * **Screen-Space Global Shadows (SSGS)**: long-range directional raymarched shadows with distance-adaptive soft penumbra expansion, grounding characters and geometry without shadow map dependence.
