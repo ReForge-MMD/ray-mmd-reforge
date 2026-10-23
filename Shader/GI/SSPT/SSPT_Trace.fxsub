@@ -15,15 +15,15 @@
 
 #if IBL_QUALITY
 /**
- * Minimal 2-tap decode of the checkerboard-packed EnvLightMap.
+ * Samples environment / sky radiance from the scene background.
  */
 float3 SampleSkyRadiance(float2 skyUv)
 {
-	float4 packed = tex2Dlod(EnvLightMapSamp, float4(skyUv, 0.0f, 0.0f));
-	float4 neighbor = tex2Dlod(EnvLightMapSamp, float4(skyUv + float2(ViewportOffset2.x, 0.0f), 0.0f, 0.0f));
-	bool pattern = (frac((skyUv.x * ViewportSize.x + skyUv.y * ViewportSize.y) * 0.5f) < 0.5f);
-	float3 ycbcr = pattern ? float3(packed.rg, neighbor.g) : float3(packed.r, neighbor.g, packed.g);
-	return DecodeYcbcr(ycbcr);
+	return srgb2linear(tex2Dlod(ScnSamp, float4(skyUv, 0.0f, 0.0f)).rgb);
+
+
+
+
 }
 #endif
 

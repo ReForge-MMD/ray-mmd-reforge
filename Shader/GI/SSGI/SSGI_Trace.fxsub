@@ -14,22 +14,22 @@
 
 #if IBL_QUALITY
 /**
- * Minimal 2-tap decode of the checkerboard-packed EnvLightMap.
+ * Samples environment / sky radiance from the scene background.
  *
- * ibl.fxsub's DecodeYcbcr costs 5 taps plus chroma edge filtering and blew the
- * ps_3_0 temp register budget (X4505) when inlined into the gather loop.  The
- * env map is pre-blurred, so the edge filter is unnecessary here - only the
- * neighbouring pixel's interleaved chroma channel is required.
+
+
+
+
  */
 float3 SampleSkyRadiance(float2 skyUv)
 {
-	float4 packed = tex2Dlod(EnvLightMapSamp, float4(skyUv, 0.0f, 0.0f));
-	float4 neighbor = tex2Dlod(EnvLightMapSamp, float4(skyUv + float2(ViewportOffset2.x, 0.0f), 0.0f, 0.0f));
-	// Checkerboard parity of the pixel: parities are equal iff (x+y) is even.
-	// frac-based test avoids the fragile float == comparison of fmod(a)==fmod(b).
-	bool pattern = (frac((skyUv.x * ViewportSize.x + skyUv.y * ViewportSize.y) * 0.5f) < 0.5f);
-	float3 ycbcr = pattern ? float3(packed.rg, neighbor.g) : float3(packed.r, neighbor.g, packed.g);
-	return DecodeYcbcr(ycbcr);
+	return srgb2linear(tex2Dlod(ScnSamp, float4(skyUv, 0.0f, 0.0f)).rgb);
+
+
+
+
+
+
 }
 #endif
 
