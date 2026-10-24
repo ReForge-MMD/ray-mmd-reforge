@@ -5,9 +5,9 @@
 
 // Number of raymarching steps along camera ray
 #if FOG_ENABLE == 3
-#	define VOLUMETRIC_FOG_STEPS 24
+#	define VOLUMETRIC_FOG_STEPS 32
 #else
-#	define VOLUMETRIC_FOG_STEPS 16
+#	define VOLUMETRIC_FOG_STEPS 20
 #endif
 
 // =============================================================================
@@ -119,7 +119,8 @@ float SampleVolumetricShadow(float3 worldPos, float3 viewPos)
 		return cascadeDistFade;
 
 	// Direct sunlight visibility with air volume depth bias
-	float vis = (shadowVal + 0.0015f >= normalizedReceiverDepth) ? 1.0f : 0.0f;
+	float depthDelta = (shadowVal + 0.0015f) - normalizedReceiverDepth;
+	float vis = saturate(depthDelta / 0.0035f + 0.5f);
 	return vis * cascadeDistFade;
 #else
 	return 1.0f;
@@ -241,16 +242,18 @@ float4 VolumetricFogBilateralBlur(float2 coord, float2 direction, uniform sample
 	float4 centerFog = tex2Dlod(source, float4(coord, 0.0f, 0.0f));
 	float centerDepth = tex2Dlod(Gbuffer8Map, float4(coord, 0.0f, 0.0f)).x;
 	if (centerDepth <= 1e-4f) centerDepth = tex2Dlod(Gbuffer4Map, float4(coord, 0.0f, 0.0f)).x;
+	centerDepth = (centerDepth <= 1e-4f) ? mFogRaymarchMaxDistance : min(centerDepth, mFogRaymarchMaxDistance);
 
 	static const float kernelWeights[9] = {
-		0.0205f, 0.0598f, 0.1245f, 0.1907f, 0.2090f, 0.1907f, 0.1245f, 0.0598f, 0.0205f
+		0.0135f, 0.0477f, 0.1173f, 0.2011f, 0.2408f, 0.2011f, 0.1173f, 0.0477f, 0.0135f
 	};
 	static const float kernelOffsets[9] = {
-		-4.0f, -3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f, 4.0f
+		-6.0f, -4.5f, -3.0f, -1.5f, 0.0f, 1.5f, 3.0f, 4.5f, 6.0f
 	};
 
 	float4 accumColor = 0.0f;
 	float totalWeight = 0.0f;
+	float depthTolerance = max(1.5f, centerDepth * max(0.05f, mFogBilateralDepthThreshold));
 
 	[unroll]
 	for (int i = 0; i < 9; ++i)
@@ -260,9 +263,10 @@ float4 VolumetricFogBilateralBlur(float2 coord, float2 direction, uniform sample
 
 		float tapDepth = tex2Dlod(Gbuffer8Map, float4(tapUV, 0.0f, 0.0f)).x;
 		if (tapDepth <= 1e-4f) tapDepth = tex2Dlod(Gbuffer4Map, float4(tapUV, 0.0f, 0.0f)).x;
+		tapDepth = (tapDepth <= 1e-4f) ? mFogRaymarchMaxDistance : min(tapDepth, mFogRaymarchMaxDistance);
 
 		float depthDiff = abs(centerDepth - tapDepth);
-		float depthWeight = exp(-depthDiff / max(1e-3f, mFogBilateralDepthThreshold * max(1.0f, centerDepth * 0.08f)));
+		float depthWeight = exp(-depthDiff / depthTolerance);
 
 		float w = kernelWeights[i] * depthWeight;
 		accumColor += tapFog * w;
