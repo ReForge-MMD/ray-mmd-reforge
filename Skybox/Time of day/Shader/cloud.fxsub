@@ -188,7 +188,11 @@ float HitCloudsTest(ScatteringParams setting, float3 eye, float3 V, float3 L)
 	if (inner.y > 0) outer.x = inner.y;
 	float3 cloudsStart = eye + V * max(0, outer.x);
 	float cloudHeight;
-	return exp(-0.002f * EvaluateCloudDensity(setting, cloudsStart, cloudHeight));
+
+	// Single-sample optical-depth surrogate for cloud shadows. The old 0.002
+	// coefficient capped attenuation at ~0.6% and was visually inert.
+	static const float CloudShadowExtinction = 0.35f;
+	return exp(-CloudShadowExtinction * EvaluateCloudDensity(setting, cloudsStart, cloudHeight));
 }
 
 // ==============================================================================
@@ -288,9 +292,11 @@ void ComputeCloudsInsctrIntegral(ScatteringParams setting, float3 start, float3 
 
 	float3 accumulatedScattering = 0.0f;
 	float transmittance = 1.0f;
+
+	// The caller passes -SunDirection, i.e. the direction towards the sun.
 	float cosAngle = dot(V, L);
 
-	// Atmospheric spectral sunlight transmittance based on actual sun elevation L.y
+	// Atmospheric spectral sunlight transmittance based on actual sun elevation
 	float ch = GetOpticalDepthSchueler(setting.cloudBottom, setting.rayleighHeight, setting.earthRadius, max(L.y, 0.001f));
 	float3 sunAtmosphereTransmittance = exp(-(setting.waveLambdaMie + setting.waveLambdaRayleigh + setting.waveLambdaOzone) * ch);
 

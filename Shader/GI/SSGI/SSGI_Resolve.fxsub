@@ -63,10 +63,6 @@ float4 SSGIFinalCombinePS(in float2 uvCoord : TEXCOORD0, in float3 viewDir : TEX
 		// Brightness compensation: recover the photometric loss, capped at +10%
 		rawGi *= 1.0f + SKIN_GI_COMPENSATION * saturate(dot(rawGi, float3(0.299f, 0.587f, 0.114f)));
 	}
-	else if (mat.lightModel == SHADINGMODELID_GLASS)
-	{
-		rawGi *= max(0.02f, mat.albedo) * (1.0f - saturate(pow(1.0f - NdV, 5.0f))) * mat.alpha;
-	}
 	else if (mat.lightModel == SHADINGMODELID_CLOTH)
 	{
 		rawGi *= mat.albedo + mat.customDataB * (pow(1.0f - NdV, 4.0f) * mat.customDataA);

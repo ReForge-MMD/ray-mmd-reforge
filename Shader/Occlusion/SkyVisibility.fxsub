@@ -164,10 +164,9 @@ float ComputeSkyVisibilityCheap(float3 worldPos)
 	if (any(uv < 0.0f) || any(uv > 1.0f))
 		return 1.0f;
 
+	// SkyVisibilityMap is R32F: there is no meaningful alpha channel, and
+	// cleared texels are marked by a very low height sentinel.
 	float4 data = tex2Dlod(SkyVisibilityMapSamp, float4(uv, 0.0f, 0.0f));
-	if (data.a < 0.5f)
-		return 1.0f;
-
 	float heightAboveSample = max(data.r - worldPos.y, 0.0f);
 	return saturate(1.0f - heightAboveSample / max(mSkyVisibilityMaxHeight, 1.0f));
 }

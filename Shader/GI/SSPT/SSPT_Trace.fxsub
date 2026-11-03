@@ -94,8 +94,10 @@ float4 SSPTPassPS(in float4 uvCoord : TEXCOORD0, in float3 viewDir : TEXCOORD1) 
 		sampleDir = mul(sampleDir, SSPT_ROTX);
 
 #if SSPT_ISOMETRIC_SAMPLING
+		// Cap the isometric correction: as rayDirXY -> 0 the analytic factor
+		// would otherwise extend the ray by orders of magnitude.
 		float rayDirXY = length(rayDir.xy);
-		float currentRayDist = maxWorldDistance * rsqrt(rayDirXY * rayDirXY + 1e-6f);
+		float currentRayDist = maxWorldDistance * rsqrt(max(rayDirXY * rayDirXY, 0.01f));
 #else
 		float currentRayDist = maxWorldDistance;
 #endif

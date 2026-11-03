@@ -172,7 +172,7 @@ float4 ScreenSpaceDirOccPassPS(in float4 uv : TEXCOORD0, in float2 screen : SV_P
 	float maxRadiusPixels = mAmbientOcclusionMaxRadiusPixelPercentage * ViewportSize.y;
 
 	// Perspective-correct screen-space radius projection: Radius_px = (R_world * projScale) / Z
-	float projScale = ViewportSize.y * 0.5f * matProject._m11;
+	float projScale = ViewportSize.y * 0.5f * matProject._m22;
 	float radiusPixels = clamp((maxRadius * projScale) / max(samplePosition.z, 0.1f), (float)HBAO_SAMPLER_COUNT, maxRadiusPixels);
 
 	float4 occlusion = 0.0f;

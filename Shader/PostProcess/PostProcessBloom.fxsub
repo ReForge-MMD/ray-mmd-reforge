@@ -223,10 +223,10 @@ float4 GlareDetectionPS(
 	float3 bloom = saturate(color - mBloomThreshold);
 #elif HDR_BLOOM_MODE == 3
 	float lum = luminance(color) * coord1.z;
-	float3 bloom = saturate(color * (lum - mBloomThreshold) / lum);
+	float3 bloom = saturate(color * (lum - mBloomThreshold) / max(lum, 1e-5f));
 #elif HDR_BLOOM_MODE == 4
 	float lum = luminance(color) * coord1.z;
-	float3 bloom = clamp(color * saturate((lum - mBloomThreshold) / lum), 0, 8);
+	float3 bloom = clamp(color * saturate((lum - mBloomThreshold) / max(lum, 1e-5f)), 0, 8);
 #endif
 
 	bloom *= mBloomColorAll;
@@ -242,7 +242,10 @@ float4 GlareDetectionPS(
 	float3 emissive0 = DecodeGBufferEmissive(MRT3, MRT4);
 	float3 emissive1 = DecodeGBufferEmissive(MRT7, MRT8);
 
-	bloom += max(0.0, lerp(emissive0, emissive1, MRT8.a) - 1.0);
+	// Gbuffer8.a packs lightModel plus the alpha fraction, so it is not a
+	// 0..1 layer blend weight. Use the decoded alpha as the layer presence flag.
+	float alphaLayerPresent = step(1e-4f, frac(MRT8.a));
+	bloom += max(0.0, lerp(emissive0, emissive1, alphaLayerPresent) - 1.0);
 
 	return float4(bloom, 0);
 }

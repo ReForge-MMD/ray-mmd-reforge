@@ -139,7 +139,7 @@ float4 ScreenSpaceDirOccPassPS(in float4 uv : TEXCOORD0, in float2 screen : SV_P
 	float baseRadius = lerp(lerp(1.5f, 3.5f, mSSAORadiusP), 0.5f, mSSAORadiusM);
 	float effectRadius = baseRadius;
 
-	float projScale = ViewportSize.y * 0.5f * matProject._m11;
+	float projScale = ViewportSize.y * 0.5f * matProject._m22;
 	float maxRadiusPixels = mAmbientOcclusionMaxRadiusPixelPercentage * ViewportSize.y;
 	float screenspaceRadius = clamp((effectRadius * projScale) / max(centerDepth, 0.1f), (float)GTAO_STEPS_PER_SLICE, maxRadiusPixels);
 

@@ -12,6 +12,13 @@
 #include "shader/GI/SSGI/SSGI_Common.fxsub"
 #include "shader/Core/BilateralCommon.fxsub"
 
+#ifndef GI_FILTER_RADIUS
+#	define GI_FILTER_RADIUS 16
+#endif
+#ifndef GI_PREFILTER_RADIUS
+#	define GI_PREFILTER_RADIUS 2
+#endif
+
 /**
  * Geometry-aware radiance outlier clamp and stochastic speckle prefilter.
  * Employs Karis luminance weighting and cross-bilateral geometry gating
@@ -38,11 +45,11 @@ float4 SSGIOutlierRejectPS(
 	float3 totalC = 0.0f;
 
 	[unroll]
-	for (int y = -2; y <= 2; ++y)
+	for (int y = -GI_PREFILTER_RADIUS; y <= GI_PREFILTER_RADIUS; ++y)
 	{
 		float wy = (y == 0) ? 6.0f : ((abs(y) == 1) ? 4.0f : 1.0f);
 		[unroll]
-		for (int x = -2; x <= 2; ++x)
+		for (int x = -GI_PREFILTER_RADIUS; x <= GI_PREFILTER_RADIUS; ++x)
 		{
 			float wx = (x == 0) ? 6.0f : ((abs(x) == 1) ? 4.0f : 1.0f);
 			float2 tapUv = uvCoord + float2(x, y) * tapStep;
@@ -102,14 +109,14 @@ float4 SSGIBlurPS(
 	float planeThreshold = max(zCenter * (0.050f * stepActual), 0.50f * stepActual);
 	float depthTolerance = max(zCenter * (0.080f * stepActual), 0.80f * stepActual);
 
-	float blurSigma = float(SSGI_RADIUS) * 0.5f;
+	float blurSigma = float(GI_FILTER_RADIUS) * 0.5f;
 	float spatialFalloff = 1.0f / (2.0f * blurSigma * blurSigma);
 
 	float totalW = 1.0f;
 	float3 totalC = clamp(tex2Dlod(source, float4(uvCoord, 0.0f, 0.0f)).rgb, 0.0f, 100.0f);
 
 	[loop]
-	for (int i = 1; i <= SSGI_RADIUS; ++i)
+	for (int i = 1; i <= GI_FILTER_RADIUS; ++i)
 	{
 		float spatialWeight = exp(-float(i * i) * spatialFalloff);
 		float2 shift = blurDir * float(i);

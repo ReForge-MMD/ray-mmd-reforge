@@ -12,6 +12,10 @@
 #include "shader/GI/SSPT/SSPT_Common.fxsub"
 #include "shader/Core/BilateralCommon.fxsub"
 
+#ifndef GI_PREFILTER_RADIUS
+#	define GI_PREFILTER_RADIUS 2
+#endif
+
 /**
  * Geometry-aware radiance outlier clamp and stochastic speckle prefilter.
  * Employs Karis luminance weighting and cross-bilateral geometry gating
@@ -38,11 +42,11 @@ float4 SSPTOutlierRejectPS(
 	float3 totalC = 0.0f;
 
 	[unroll]
-	for (int y = -2; y <= 2; ++y)
+	for (int y = -GI_PREFILTER_RADIUS; y <= GI_PREFILTER_RADIUS; ++y)
 	{
 		float wy = (y == 0) ? 3.0f : ((abs(y) == 1) ? 2.0f : 1.0f);
 		[unroll]
-		for (int x = -2; x <= 2; ++x)
+		for (int x = -GI_PREFILTER_RADIUS; x <= GI_PREFILTER_RADIUS; ++x)
 		{
 			float wx = (x == 0) ? 3.0f : ((abs(x) == 1) ? 2.0f : 1.0f);
 			float2 tapUv = uvCoord + float2(x, y) * tapStep;
