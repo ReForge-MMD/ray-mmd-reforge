@@ -3,11 +3,22 @@
 
 #if FOG_ENABLE >= 2
 
-// Number of raymarching steps along camera ray
-#if FOG_ENABLE == 3
+// Number of raymarching steps along camera ray (see FOG_QUALITY in ray.conf)
+#if FOG_QUALITY == 0
+#	define VOLUMETRIC_FOG_STEPS 12
+#elif FOG_QUALITY == 1
+#	define VOLUMETRIC_FOG_STEPS 20
+#elif FOG_QUALITY == 2
 #	define VOLUMETRIC_FOG_STEPS 32
 #else
-#	define VOLUMETRIC_FOG_STEPS 20
+#	define VOLUMETRIC_FOG_STEPS 48
+#endif
+
+// Bilateral blur tap count (5-tap only for the fast preset)
+#if FOG_QUALITY >= 1
+#	define FOG_BLUR_TAPS 9
+#else
+#	define FOG_BLUR_TAPS 5
 #endif
 
 // =============================================================================
@@ -48,21 +59,41 @@ float ValueNoise3D(float3 p)
 
 float SampleMistNoise(float3 worldPos, float mistAmount, float windSpeed)
 {
-	if (mistAmount <= 1e-4f)
-		return 1.0f;
-
+	// Two octaves drift in the same direction at different speeds. The old
+	// opposite-direction pair produced a boiling shear rather than wind.
 	float3 windDir = float3(0.3f, 0.05f, 0.15f) * (time * windSpeed * 2.0f);
 	float3 p1 = (worldPos + windDir) * 0.06f;
-	float3 p2 = (worldPos - windDir * 0.5f) * 0.14f;
+	float3 p2 = (worldPos + windDir * 0.6f) * 0.14f;
 
 	float n = ValueNoise3D(p1) * 0.65f + ValueNoise3D(p2) * 0.35f;
-	return saturate(1.0f + (n * 2.0f - 1.0f) * mistAmount);
+
+	// Keep the modulation unbiased over [0, 1]: no upper clamp, so the mean
+	// stays at 1.0 instead of silently thinning the fog.
+	return max(0.0f, 1.0f + (n * 2.0f - 1.0f) * mistAmount);
 }
 
 // =============================================================================
 // Cascaded Shadow Map Single-Point Visibility
 // =============================================================================
-float SampleVolumetricShadow(float3 worldPos, float3 viewPos)
+float ReadVolumetricShadowCascade(sampler source, float2 lightPos, float receiverDepth, float bias, float ramp)
+{
+	float2 shadowUV = PosToCoord(lightPos) + ShadowMapOffset;
+	float shadowVal = tex2Dlod(source, float4(shadowUV, 0.0f, 0.0f)).r;
+
+	// Empty space in the shadow map (clear color 0.0f) is unoccluded sky/air.
+	if (shadowVal <= 1e-5f)
+		return 1.0f;
+
+	float depthDelta = (shadowVal + bias) - receiverDepth;
+	return saturate(depthDelta / max(ramp, 1e-6f) + 0.5f);
+}
+
+/**
+ * Raw cascade visibility for a view-space sample. Uses a distance-scaled depth
+ * bias and cross-cascade blending, matching the surface shadow path.
+ * Returns 1.0 outside the cascade range instead of clamping unrelated texels.
+ */
+float SampleVolumetricShadowRaw(float3 viewPos)
 {
 #if SUN_LIGHT_ENABLE && SUN_SHADOW_QUALITY
 	float4 proj = mul(float4(viewPos, 1.0f), matLightProjectFromCameraView);
@@ -72,71 +103,103 @@ float SampleVolumetricShadow(float3 worldPos, float3 viewPos)
 
 	float receiverDepth = dot(float4(viewPos, 1.0f), matLightViewFromCameraView._13_23_33_43);
 	if (receiverDepth <= 0.0f)
-		return 0.0f;
+		return 1.0f;
 
 	float normalizedReceiverDepth = saturate(receiverDepth / mPSSMDepthZMax);
 	if (normalizedReceiverDepth >= 1.0f)
-		return 0.0f;
+		return 1.0f;
 
-	float shadowVal = 1.0f;
+	float bias = (mFogShadowBiasBase + mFogShadowBiasScale * max(viewPos.z, 0.0f)) / mPSSMDepthZMax;
+	float ramp = mFogShadowRamp / mPSSMDepthZMax;
 
-	if (all(abs(lightPPos01.xy) <= 1.0f))
+	float e0 = min(1.0f - abs(lightPPos01.x), 1.0f - abs(lightPPos01.y));
+	float e1 = min(1.0f - abs(lightPPos01.z), 1.0f - abs(lightPPos01.w));
+	float e2 = min(1.0f - abs(lightPPos23.x), 1.0f - abs(lightPPos23.y));
+	float e3 = min(1.0f - abs(lightPPos23.z), 1.0f - abs(lightPPos23.w));
+
+	const float kCascadeBlendThreshold = 0.15f;
+
+	[branch]
+	if (e0 >= 0.0f)
 	{
-		float2 shadowUV = PosToCoord(lightPPos01.xy) + ShadowMapOffset;
-		shadowVal = tex2Dlod(PSSM1Samp, float4(shadowUV, 0.0f, 0.0f)).r;
-	}
-	else if (all(abs(lightPPos01.zw) <= 1.0f))
-	{
-		float2 shadowUV = PosToCoord(lightPPos01.zw) + ShadowMapOffset;
-		shadowVal = tex2Dlod(PSSM2Samp, float4(shadowUV, 0.0f, 0.0f)).r;
-	}
-	else if (all(abs(lightPPos23.xy) <= 1.0f))
-	{
-		float2 shadowUV = PosToCoord(lightPPos23.xy) + ShadowMapOffset;
-		shadowVal = tex2Dlod(PSSM3Samp, float4(shadowUV, 0.0f, 0.0f)).r;
-	}
-	else if (all(abs(lightPPos23.zw) <= 1.0f))
-	{
-		float2 shadowUV = PosToCoord(lightPPos23.zw) + ShadowMapOffset;
-		shadowVal = tex2Dlod(PSSM4Samp, float4(shadowUV, 0.0f, 0.0f)).r;
-	}
-	else if (viewPos.z < mPSSMCascadeZMax)
-	{
-		// Peripheral geometry fallback clamped to cascade 4
-		float2 shadowUV = clamp(PosToCoord(lightPPos23.zw), 0.002f, 0.998f) + ShadowMapOffset;
-		shadowVal = tex2Dlod(PSSM4Samp, float4(shadowUV, 0.0f, 0.0f)).r;
-	}
-	else
-	{
-		return 0.0f;
+		float shadow0 = ReadVolumetricShadowCascade(PSSM1Samp, lightPPos01.xy, normalizedReceiverDepth, bias, ramp);
+		[branch]
+		if (e0 < kCascadeBlendThreshold && e1 >= 0.0f)
+		{
+			float shadow1 = ReadVolumetricShadowCascade(PSSM2Samp, lightPPos01.zw, normalizedReceiverDepth, bias, ramp);
+			return lerp(shadow1, shadow0, saturate(e0 / kCascadeBlendThreshold));
+		}
+		return shadow0;
 	}
 
-	// Smooth cascade distance fadeout near cascade 4 boundary
-	float cascadeDistFade = saturate((mPSSMCascadeZMax - viewPos.z) / 40.0f);
+	[branch]
+	if (e1 >= 0.0f)
+	{
+		float shadow1 = ReadVolumetricShadowCascade(PSSM2Samp, lightPPos01.zw, normalizedReceiverDepth, bias, ramp);
+		[branch]
+		if (e1 < kCascadeBlendThreshold && e2 >= 0.0f)
+		{
+			float shadow2 = ReadVolumetricShadowCascade(PSSM3Samp, lightPPos23.xy, normalizedReceiverDepth, bias, ramp);
+			return lerp(shadow2, shadow1, saturate(e1 / kCascadeBlendThreshold));
+		}
+		return shadow1;
+	}
 
-	// Empty space in shadow map (clear color 0.0f) indicates unoccluded sky/air
-	if (shadowVal <= 1e-5f)
-		return cascadeDistFade;
+	[branch]
+	if (e2 >= 0.0f)
+	{
+		float shadow2 = ReadVolumetricShadowCascade(PSSM3Samp, lightPPos23.xy, normalizedReceiverDepth, bias, ramp);
+		[branch]
+		if (e2 < kCascadeBlendThreshold && e3 >= 0.0f)
+		{
+			float shadow3 = ReadVolumetricShadowCascade(PSSM4Samp, lightPPos23.zw, normalizedReceiverDepth, bias, ramp);
+			return lerp(shadow3, shadow2, saturate(e2 / kCascadeBlendThreshold));
+		}
+		return shadow2;
+	}
 
-	// Direct sunlight visibility with air volume depth bias
-	float depthDelta = (shadowVal + 0.0015f) - normalizedReceiverDepth;
-	float vis = saturate(depthDelta / 0.0035f + 0.5f);
-	return vis * cascadeDistFade;
+	[branch]
+	if (e3 >= 0.0f)
+		return ReadVolumetricShadowCascade(PSSM4Samp, lightPPos23.zw, normalizedReceiverDepth, bias, ramp);
+
+	// Outside every cascade: treat as unoccluded instead of sampling a clamped,
+	// unrelated texel from cascade 4.
+	return 1.0f;
 #else
 	return 1.0f;
 #endif
 }
 
+/**
+ * Cascade visibility with a smooth fade to lit beyond the cascade range.
+ */
+float SampleVolumetricShadow(float3 viewPos)
+{
+	float visibility = SampleVolumetricShadowRaw(viewPos);
+	float cascadeFade = saturate((mPSSMCascadeZMax - viewPos.z) / 40.0f);
+	return lerp(1.0f, visibility, cascadeFade);
+}
+
 // =============================================================================
-// Volumetric Godrays Raymarcher Pass (Half Resolution)
+// Volumetric Godrays Raymarcher Pass
 // =============================================================================
-float4 VolumetricFogRaymarchPS(
-	in float2 coord : TEXCOORD0,
-	in float3 viewdir : TEXCOORD1) : COLOR
+
+float ExpNegSmall(float x)
+{
+	x = max(x, 0.0f);
+
+	// Step optical depth is tiny in normal fog. A 4th-order expansion avoids
+	// one exp() per raymarch step; dense volumes fall back to the exact value.
+	if (x < 0.5f)
+		return 1.0f - x * (1.0f - x * (0.5f - x * (1.0f / 6.0f - x * (1.0f / 24.0f))));
+
+	return exp(-x);
+}
+
+float4 VolumetricFogRaymarchPS(in float2 coord : TEXCOORD0) : COLOR
 {
 	FogParameters params = GetFogParameters();
 
-	// Sample depth from G-Buffer (half-resolution coords map 1:1 to full-res screen space)
 	float depthOpaque = tex2Dlod(Gbuffer4Map, float4(coord, 0.0f, 0.0f)).x;
 	float depthTrans  = tex2Dlod(Gbuffer8Map, float4(coord, 0.0f, 0.0f)).x;
 
@@ -149,20 +212,25 @@ float4 VolumetricFogRaymarchPS(
 		sceneDepth = depthOpaque;
 
 	bool isSky = (sceneDepth <= 1e-4f);
-	float maxMarchDist = isSky ? mFogRaymarchMaxDistance : min(sceneDepth, mFogRaymarchMaxDistance);
 
-	if (maxMarchDist <= params.startDistance || (params.density <= 1e-7f && params.groundDensity <= 1e-7f))
+	// Reconstruct the view ray canonically (positive Y up, positive Z forward).
+	float4 projConstant = GetProjConstant();
+	float3 viewRay = normalize(float3(coord * projConstant.xy + projConstant.zw, 1.0f));
+	float3 worldRay = mul(viewRay, (float3x3)matViewInverse);
+
+	// G-Buffer depth is view-space Z; raymarch distance is Euclidean length.
+	float depthToRayDistance = rcp(max(viewRay.z, 1e-4f));
+	float maxMarchDist = isSky ? mFogRaymarchMaxDistance : min(sceneDepth * depthToRayDistance, mFogRaymarchMaxDistance);
+	maxMarchDist = min(maxMarchDist, params.cutoffDistance);
+
+	if (maxMarchDist <= params.startDistance)
 	{
 		return float4(0.0f, 0.0f, 0.0f, 1.0f); // Zero inscattering, full transmittance
 	}
 
-	// Reconstruct view ray canonically via projection constants (positive Y up, positive Z forward)
-	float4 projConstant = GetProjConstant();
-	float3 viewRay = normalize(float3(coord * projConstant.xy + projConstant.zw, 1.0f));
-	float3 worldRay = mul(viewRay, (float3x3)matViewInverse);
 	float3 L = -SunDirection;
 	float cosTheta = dot(worldRay, L);
-	float phase = ComputePhaseCS(cosTheta, params.miePhase);
+	float phase = min(ComputePhaseCS(cosTheta, params.miePhase), mFogPhaseMax);
 
 	float marchRange = maxMarchDist - params.startDistance;
 	float stepSize = marchRange / float(VOLUMETRIC_FOG_STEPS);
@@ -179,34 +247,41 @@ float4 VolumetricFogRaymarchPS(
 	// Scale factor of active fog density to extinguish godrays when fog is turned down
 	float densityScale = saturate((params.density + params.groundDensity) / max(1e-4f, mFogDensityDefault + mGroundFogDensityDefault));
 
+	// Exponential height layers are updated multiplicatively: two exp() calls
+	// for the whole ray instead of two per step.
+	float t = params.startDistance + jitter * stepSize;
+	float3 sampleWorldPos = CameraPosition + worldRay * t;
+	float3 sampleViewPos = viewRay * t;
+
+	float d1 = params.density * exp(-clamp(params.heightFalloff * (sampleWorldPos.y - params.height), -30.0f, 30.0f));
+	float d2 = params.groundDensity * exp(-clamp(params.groundFalloff * (sampleWorldPos.y - params.groundHeight), -30.0f, 30.0f));
+	float stepExp1 = exp(-clamp(params.heightFalloff * worldRay.y * stepSize, -30.0f, 30.0f));
+	float stepExp2 = exp(-clamp(params.groundFalloff * worldRay.y * stepSize, -30.0f, 30.0f));
+
+	bool useMist = params.mistNoise > 1e-4f;
+
 	[loop]
 	for (int i = 0; i < VOLUMETRIC_FOG_STEPS; ++i)
 	{
-		float t = params.startDistance + (float(i) + jitter) * stepSize;
-		float3 sampleWorldPos = CameraPosition + worldRay * t;
-		float3 sampleViewPos  = viewRay * t;
-
-		// Evaluate dual-layer density at sample position
-		float h1 = sampleWorldPos.y - params.height;
-		float d1 = params.density * exp(-clamp(params.heightFalloff * h1, -30.0f, 30.0f));
-
-		float h2 = sampleWorldPos.y - params.groundHeight;
-		float d2 = params.groundDensity * exp(-clamp(params.groundFalloff * h2, -30.0f, 30.0f));
-
-		float mistMod = SampleMistNoise(sampleWorldPos, params.mistNoise, params.windSpeed);
+		float mistMod = 1.0f;
+		[branch]
+		if (useMist)
+			mistMod = SampleMistNoise(sampleWorldPos, params.mistNoise, params.windSpeed);
 
 		// Smooth start-distance near fade to eliminate hard circular/plane cutout
 		float nearFade = (params.startDistance > 1e-3f) ? saturate((t - params.startDistance) / max(5.0f, params.startDistance * 0.25f)) : 1.0f;
 
 		// 1. Ambient fog density (creates background mist & extinction)
-		float ambientDensity = (d1 + d2 * mistMod) * nearFade;
+		float localDensity = SampleFogVolumeDensity(sampleWorldPos);
+		float ambientDensity = (d1 + d2 * mistMod + localDensity) * nearFade;
 
 		// 2. Godrays scattering density (crepuscular rays scatter from fog/mist particles)
-		float godrayDensity = (ambientDensity * 2.0f + 0.0008f * densityScale * nearFade) * params.rayDensity * params.godraysIntensity;
+		float godraySeedDensity = mFogGodraySeed * densityScale * nearFade;
+		float godrayDensity = (ambientDensity * 2.0f + godraySeedDensity) * params.rayDensity * params.godraysIntensity;
 
 		if (godrayDensity > 1e-6f || ambientDensity > 1e-6f)
 		{
-			float shadowVis = SampleVolumetricShadow(sampleWorldPos, sampleViewPos);
+			float shadowVis = SampleVolumetricShadow(sampleViewPos);
 
 			// Direct sun ray scattering
 			float3 sunScattering = (shadowVis * sunRadiance * phase) * godrayDensity;
@@ -217,14 +292,20 @@ float4 VolumetricFogRaymarchPS(
 			// Combined step scattering
 			float3 stepScattering = (sunScattering + ambientScattering) * stepSize;
 
-			// Optical extinction: ambient fog attenuates background; godrays have low extinction (high single-scattering albedo)
-			float extinctionDensity = ambientDensity + godrayDensity * 0.06f;
+			// Extinction stays physical: artistic godray gains must not thicken the fog.
+			float extinctionDensity = ambientDensity + godraySeedDensity * 0.5f;
 			float stepTau = extinctionDensity * stepSize;
-			float stepTransmittance = exp(-stepTau);
+			float stepTransmittance = ExpNegSmall(stepTau);
 
 			accumulatedInscattering += accumulatedTransmittance * stepScattering;
 			accumulatedTransmittance *= stepTransmittance;
 		}
+
+		d1 = min(d1 * stepExp1, 1e6f);
+		d2 = min(d2 * stepExp2, 1e6f);
+		t += stepSize;
+		sampleWorldPos += worldRay * stepSize;
+		sampleViewPos += viewRay * stepSize;
 	}
 
 	accumulatedTransmittance = clamp(accumulatedTransmittance, 1.0f - params.maxOpacity, 1.0f);
@@ -233,30 +314,38 @@ float4 VolumetricFogRaymarchPS(
 }
 
 // =============================================================================
-// Depth-Aware Cross-Bilateral Blur Passes (Full Resolution 9-Tap)
+// Depth-Aware Cross-Bilateral Blur Passes
 // =============================================================================
 float4 VolumetricFogBilateralBlur(float2 coord, float2 direction, uniform sampler2D source)
 {
 	float2 texel = ViewportOffset2 * direction;
 
-	float4 centerFog = tex2Dlod(source, float4(coord, 0.0f, 0.0f));
 	float centerDepth = tex2Dlod(Gbuffer8Map, float4(coord, 0.0f, 0.0f)).x;
 	if (centerDepth <= 1e-4f) centerDepth = tex2Dlod(Gbuffer4Map, float4(coord, 0.0f, 0.0f)).x;
 	centerDepth = (centerDepth <= 1e-4f) ? mFogRaymarchMaxDistance : min(centerDepth, mFogRaymarchMaxDistance);
 
+#if FOG_BLUR_TAPS == 9
 	static const float kernelWeights[9] = {
 		0.0135f, 0.0477f, 0.1173f, 0.2011f, 0.2408f, 0.2011f, 0.1173f, 0.0477f, 0.0135f
 	};
 	static const float kernelOffsets[9] = {
 		-6.0f, -4.5f, -3.0f, -1.5f, 0.0f, 1.5f, 3.0f, 4.5f, 6.0f
 	};
+#else
+	static const float kernelWeights[5] = {
+		0.0545f, 0.2442f, 0.4026f, 0.2442f, 0.0545f
+	};
+	static const float kernelOffsets[5] = {
+		-4.0f, -2.0f, 0.0f, 2.0f, 4.0f
+	};
+#endif
 
 	float4 accumColor = 0.0f;
 	float totalWeight = 0.0f;
-	float depthTolerance = max(1.5f, centerDepth * max(0.05f, mFogBilateralDepthThreshold));
+	float depthTolerance = clamp(centerDepth * max(0.05f, mFogBilateralDepthThreshold), 1.5f, mFogBilateralMaxTolerance);
 
 	[unroll]
-	for (int i = 0; i < 9; ++i)
+	for (int i = 0; i < FOG_BLUR_TAPS; ++i)
 	{
 		float2 tapUV = coord + texel * kernelOffsets[i];
 		float4 tapFog = tex2Dlod(source, float4(tapUV, 0.0f, 0.0f));
@@ -266,7 +355,8 @@ float4 VolumetricFogBilateralBlur(float2 coord, float2 direction, uniform sample
 		tapDepth = (tapDepth <= 1e-4f) ? mFogRaymarchMaxDistance : min(tapDepth, mFogRaymarchMaxDistance);
 
 		float depthDiff = abs(centerDepth - tapDepth);
-		float depthWeight = exp(-depthDiff / depthTolerance);
+		float ratio = depthDiff / depthTolerance;
+		float depthWeight = 1.0f / (1.0f + ratio * ratio);
 
 		float w = kernelWeights[i] * depthWeight;
 		accumColor += tapFog * w;

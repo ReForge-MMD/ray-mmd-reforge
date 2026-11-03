@@ -4,9 +4,7 @@
 #if FOG_ENABLE
 
 
-float4 FogCompositePS(
-	in float2 coord : TEXCOORD0,
-	in float3 viewdir : TEXCOORD1) : COLOR
+float4 FogCompositePS(in float2 coord : TEXCOORD0) : COLOR
 {
 	FogParameters params = GetFogParameters();
 
@@ -25,28 +23,30 @@ float4 FogCompositePS(
 		sceneDepth = depthOpaque;
 
 	bool isSky = (sceneDepth <= 1e-4f);
-	float fullRayDistance = isSky ? params.cutoffDistance : sceneDepth;
-
-	float3 finalInscattering = 0.0f;
-	float finalTransmittance = 1.0f;
 
 	// Reconstruct view ray canonically via projection constants (positive Y up, positive Z forward)
 	float4 projConstant = GetProjConstant();
 	float3 viewRay = normalize(float3(coord * projConstant.xy + projConstant.zw, 1.0f));
 	float3 viewDir = mul(viewRay, (float3x3)matViewInverse);
 
+	// G-Buffer depth is view-space Z; the raymarcher and analytical model use
+	// Euclidean ray distance, so convert once and share the same value.
+	float rayDistance = isSky ? params.cutoffDistance : sceneDepth / max(viewRay.z, 1e-4f);
+	float fullRayDistance = min(rayDistance, params.cutoffDistance);
+
+	float3 finalInscattering = 0.0f;
+	float finalTransmittance = 1.0f;
+
 #if FOG_ENABLE == 1
 	// -------------------------------------------------------------------------
 	// Mode 1: Pure Analytical Dual-Layer Height Fog
 	// -------------------------------------------------------------------------
-	float3 worldPos = CameraPosition + viewDir * fullRayDistance;
-
 	EvaluateAnalyticalFog(
 		params,
 		CameraPosition,
-		worldPos,
 		viewDir,
 		fullRayDistance,
+		1.0f,
 		finalInscattering,
 		finalTransmittance);
 
@@ -58,6 +58,22 @@ float4 FogCompositePS(
 	float3 volInscatter = volFog.rgb;
 	float volTransmittance = clamp(volFog.a, 1.0f - params.maxOpacity, 1.0f);
 
+#if FOG_DEBUG == 1
+	return float4(volTransmittance.xxx, 1.0f);
+#elif FOG_DEBUG == 2
+	return float4(volInscatter / (1.0f + volInscatter), 1.0f);
+#elif FOG_DEBUG == 3
+	float debugVisibility = SampleVolumetricShadow(viewRay * fullRayDistance);
+	return float4(debugVisibility, debugVisibility, debugVisibility, 1.0f);
+#elif FOG_DEBUG == 4
+	float3 debugWorld = CameraPosition + viewDir * fullRayDistance;
+	float density = params.density * exp(-clamp(params.heightFalloff * (debugWorld.y - params.height), -30.0f, 30.0f))
+	              + params.groundDensity * exp(-clamp(params.groundFalloff * (debugWorld.y - params.groundHeight), -30.0f, 30.0f))
+	              + SampleFogVolumeDensity(debugWorld);
+	float densityView = saturate(density * 100.0f);
+	return float4(densityView, densityView, densityView, 1.0f);
+#endif
+
 	// If fragment extends beyond the volumetric raymarching range,
 	// extend seamlessly using the analytical closed-form integral
 	if (fullRayDistance > mFogRaymarchMaxDistance)
@@ -65,16 +81,27 @@ float4 FogCompositePS(
 		FogParameters farParams = params;
 		farParams.startDistance = max(params.startDistance, mFogRaymarchMaxDistance);
 
-		float3 farWorldPos = CameraPosition + viewDir * fullRayDistance;
 		float3 farInscatter = 0.0f;
 		float farTransmittance = 1.0f;
+
+		// Preserve coarse shadow/horizon occlusion into the far field, then
+		// fade to unshadowed once the shadow cascades end.
+		float3 seamViewPos = viewRay * mFogRaymarchMaxDistance;
+		float cascadeFade = saturate((mPSSMCascadeZMax - seamViewPos.z) / 40.0f);
+		float farSunVisibility = lerp(1.0f, SampleVolumetricShadowRaw(seamViewPos), cascadeFade);
+#if SKY_VISIBILITY_ENABLE
+		float midDistance = 0.5f * (mFogRaymarchMaxDistance + fullRayDistance);
+		float horizonBlend = saturate((midDistance - mFogRaymarchMaxDistance) / max(mFogFarBlendDistance, 1.0f));
+		float3 seamWorldPos = CameraPosition + viewDir * mFogRaymarchMaxDistance;
+		farSunVisibility *= lerp(1.0f, ComputeSkyVisibilityCheap(seamWorldPos), horizonBlend);
+#endif
 
 		EvaluateAnalyticalFog(
 			farParams,
 			CameraPosition,
-			farWorldPos,
 			viewDir,
 			fullRayDistance,
+			farSunVisibility,
 			farInscatter,
 			farTransmittance);
 

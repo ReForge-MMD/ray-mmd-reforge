@@ -145,6 +145,33 @@ float ComputeSkyVisibility(float3 worldPos, float3 worldNormal)
 	return skyVis;
 }
 
+/**
+ * Single-tap macro visibility for volumetric far-field scattering.
+ * Treats the stored heightfield as a coarse horizon occluder above the sample.
+ *
+ * @param worldPos World-space position of the fog sample.
+ * @return Visibility in [0, 1], 1.0 outside the map coverage.
+ */
+float ComputeSkyVisibilityCheap(float3 worldPos)
+{
+	float2 mapCenter = GetSkyVisMapCenter();
+	float2 offset = worldPos.xz - mapCenter;
+
+	float2 uv;
+	uv.x = offset.x / mSkyVisibilityRange + 0.5f;
+	uv.y = -offset.y / mSkyVisibilityRange + 0.5f;
+
+	if (any(uv < 0.0f) || any(uv > 1.0f))
+		return 1.0f;
+
+	float4 data = tex2Dlod(SkyVisibilityMapSamp, float4(uv, 0.0f, 0.0f));
+	if (data.a < 0.5f)
+		return 1.0f;
+
+	float heightAboveSample = max(data.r - worldPos.y, 0.0f);
+	return saturate(1.0f - heightAboveSample / max(mSkyVisibilityMaxHeight, 1.0f));
+}
+
 #endif // SKY_VISIBILITY_ENABLE
 
 #endif // _SKY_VISIBILITY_FXSUB_

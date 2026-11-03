@@ -12,6 +12,13 @@
 #include "shader/atmospheric.fxsub"
 #include "shader/cloud.fxsub"
 
+// 1x1 moon transmittance through the cloud layer, consumed by volumetric fog.
+shared texture SunOcclusionMap : RENDERCOLORTARGET<
+	int2 Dimensions = { 1, 1 };
+	string Format = "A16B16G16R16F";
+	float4 ClearColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+>;
+
 static const float3 moonScaling = 2800;
 static const float3 moonTranslate = 60000;
 
@@ -210,9 +217,40 @@ float4 CloudsPS(
 	return RenderNightClouds(setting, CameraPosition + float3(0, mEarthPeopleHeight * mUnitDistance, 0), V, SunDirection);
 }
 
+void CloudOcclusionVS(
+	in float4 Position : POSITION,
+	out float4 oPosition : POSITION)
+{
+	oPosition = Position;
+}
+
+float4 CloudOcclusionPS() : COLOR0
+{
+	ScatteringParams setting;
+	setting.cloud = mCloudDensity;
+	setting.cloudTop = 9.6 * mUnitDistance;
+	setting.cloudBottom = 8.0 * mUnitDistance;
+	setting.clouddir = float3(1315.7, 0, -3000) * mCloudSpeed;
+	setting.earthRadius = mEarthRadius * mUnitDistance;
+	setting.earthCenter = float3(0, -setting.earthRadius, 0);
+
+	float3 eye = CameraPosition + float3(0, mEarthPeopleHeight * mUnitDistance, 0);
+	float transmittance = HitCloudsTest(setting, eye, -SunDirection, -SunDirection);
+	return float4(transmittance, transmittance, transmittance, 1.0f);
+}
+
 #define SKYBOX_TEC(name, mmdpass) \
-	technique name<string MMDPass = mmdpass;>\
+	technique name<string MMDPass = mmdpass; \
+		string Script = \
+			"RenderColorTarget0=SunOcclusionMap; Clear=Color; Pass=CloudOcclusion;" \
+			"RenderColorTarget0=; Pass=DrawStars; Pass=DrawMoon; Pass=DrawScattering; Pass=DrawClouds;">\
 	{ \
+		pass CloudOcclusion < string Script = "Draw=Buffer;"; > { \
+			AlphaTestEnable = FALSE; AlphaBlendEnable = FALSE; \
+			ZEnable = FALSE; ZWriteEnable = FALSE; CullMode = NONE; \
+			VertexShader = compile vs_3_0 CloudOcclusionVS(); \
+			PixelShader  = compile ps_3_0 CloudOcclusionPS(); \
+		} \
 		pass DrawStars { \
 			AlphaTestEnable = FALSE; AlphaBlendEnable = FALSE; \
 			VertexShader = compile vs_3_0 StarsVS(); \

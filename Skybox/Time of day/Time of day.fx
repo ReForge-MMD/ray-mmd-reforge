@@ -12,6 +12,13 @@
 #include "shader/atmospheric.fxsub"
 #include "shader/cloud.fxsub"
 
+// 1x1 sun transmittance through the cloud layer, consumed by volumetric fog.
+shared texture SunOcclusionMap : RENDERCOLORTARGET<
+	int2 Dimensions = { 1, 1 };
+	string Format = "A16B16G16R16F";
+	float4 ClearColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+>;
+
 void ScatteringVS(
 	in float4 Position   : POSITION,
 	out float3 oTexcoord0 : TEXCOORD0,
@@ -82,10 +89,46 @@ float4 ScatteringWithCloudsPS(
 	return linear2srgb(insctrColor);
 }
 
+void CloudOcclusionVS(
+	in float4 Position : POSITION,
+	out float4 oPosition : POSITION)
+{
+	oPosition = Position;
+}
+
+float4 CloudOcclusionPS() : COLOR0
+{
+	ScatteringParams setting;
+	setting.cloud = mCloudDensity;
+	setting.cloudTop = 9.6 * mUnitDistance;
+	setting.cloudBottom = 8.0 * mUnitDistance;
+	setting.clouddir = float3(1315.7, 0, -3000) * mCloudSpeed;
+	setting.earthRadius = mEarthRadius * mUnitDistance;
+	setting.earthCenter = float3(0, -setting.earthRadius, 0);
+
+	float3 eye = CameraPosition + float3(0, mEarthPeopleHeight * mUnitDistance, 0);
+	float transmittance = HitCloudsTest(setting, eye, -SunDirection, -SunDirection);
+	return float4(transmittance, transmittance, transmittance, 1.0f);
+}
+
 const float4 BackColor = 0.0;
 
+#define CLOUD_OCCLUSION_PASS \
+	pass CloudOcclusion < string Script = "Draw=Buffer;"; > { \
+		AlphaTestEnable = FALSE; AlphaBlendEnable = FALSE; \
+		ZEnable = FALSE; ZWriteEnable = FALSE; CullMode = NONE; \
+		VertexShader = compile vs_3_0 CloudOcclusionVS(); \
+		PixelShader  = compile ps_3_0 CloudOcclusionPS(); \
+	}
+
+#define CLOUD_OCCLUSION_SCRIPT \
+	"RenderColorTarget0=SunOcclusionMap; Clear=Color; Pass=CloudOcclusion;" \
+	"RenderColorTarget0=;"
+
 technique MainTech<string MMDPass = "object";
+	string Script = CLOUD_OCCLUSION_SCRIPT "Pass=DrawScattering;";
 >{
+	CLOUD_OCCLUSION_PASS
 	pass DrawScattering {
 		AlphaTestEnable = FALSE; AlphaBlendEnable = FALSE;\
 		VertexShader = compile vs_3_0 ScatteringVS();
@@ -93,7 +136,9 @@ technique MainTech<string MMDPass = "object";
 	}
 }
 technique MainTechSS<string MMDPass = "object_ss";
+	string Script = CLOUD_OCCLUSION_SCRIPT "Pass=DrawScattering;";
 >{
+	CLOUD_OCCLUSION_PASS
 	pass DrawScattering {
 		AlphaTestEnable = FALSE; AlphaBlendEnable = FALSE;\
 		VertexShader = compile vs_3_0 ScatteringVS();
