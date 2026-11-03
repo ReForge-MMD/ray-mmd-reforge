@@ -1,0 +1,75 @@
+{
+  "profiles": [
+    {
+      "name": "default",
+      "set": {},
+      "entries": [
+        { "source": "ray.fx", "entry": "VolumetricFogRaymarchPS" },
+        { "source": "ray.fx", "entry": "VolumetricFogBilateralXPS" },
+        { "source": "ray.fx", "entry": "FogCompositePS" },
+        { "source": "ray.fx", "entry": "FogCopyBackPS" },
+        { "source": "ray.fx", "entry": "SSPTPassPS" },
+        { "source": "ray.fx", "entry": "SSPTBlurPS" },
+        { "source": "ray.fx", "entry": "SSPTTemporalPS" },
+        { "source": "ray.fx", "entry": "SSPTFinalCombinePS" },
+        { "source": "ray.fx", "entry": "SSR_TracePS" },
+        { "source": "ray.fx", "entry": "SSR_ResolvePS" },
+        { "source": "ray.fx", "entry": "SSR_FilterBlurPS" },
+        { "source": "ray.fx", "entry": "ScreenSpaceDirOccPassPS" },
+        { "source": "ray.fx", "entry": "ScreenSpaceDirOccBlurPS" },
+        { "source": "ray.fx", "entry": "ShadowMapGenPS" },
+        { "source": "ray.fx", "entry": "ShadingOpacityPS" },
+        { "source": "ray.fx", "entry": "ShadingTransparentPS" },
+        { "source": "ray.fx", "entry": "GlareDetectionPS" },
+        { "source": "ray.fx", "entry": "GlareLightCompPS" },
+        { "source": "ray.fx", "entry": "BloomBlurPS" },
+        { "source": "ray.fx", "entry": "HDRTonemappingPS" },
+        { "source": "ray.fx", "entry": "SMAANeighborhoodBlendingPS" },
+        { "source": "ray.fx", "entry": "EyeDownsamplePS" },
+        { "source": "ray.fx", "entry": "EyeAdapationPS" },
+        { "source": "ray.fx", "entry": "PostProcessSharpenPS" },
+        { "source": "ray.fx", "entry": "ScreenSpaceQuadVS", "profile": "vs_3_0" },
+        { "source": "Skybox/Time of day/Time of day.fx", "entry": "ScatteringWithCloudsPS" },
+        { "source": "Skybox/Time of day/Time of day.fx", "entry": "CloudOcclusionPS" },
+        { "source": "Skybox/Time of night/Time of night.fx", "entry": "CloudsPS" },
+        { "source": "Skybox/Time of night/Time of night.fx", "entry": "CloudOcclusionPS" }
+      ]
+    },
+    {
+      "name": "fog_analytical",
+      "set": { "FOG_ENABLE": "1" },
+      "entries": [
+        { "source": "ray.fx", "entry": "FogCompositePS" },
+        { "source": "ray.fx", "entry": "FogCopyBackPS" }
+      ]
+    },
+    {
+      "name": "fog_fast",
+      "set": { "FOG_QUALITY": "0" },
+      "entries": [
+        { "source": "ray.fx", "entry": "VolumetricFogRaymarchPS" },
+        { "source": "ray.fx", "entry": "FogCompositePS" }
+      ]
+    },
+    {
+      "name": "gi_ssgi",
+      "set": { "GI_ENABLE": "2" },
+      "entries": [
+        { "source": "ray.fx", "entry": "SSGIPassPS" },
+        { "source": "ray.fx", "entry": "SSGIOutlierRejectPS" },
+        { "source": "ray.fx", "entry": "SSGIBlurPS" },
+        { "source": "ray.fx", "entry": "SSGITemporalPS" },
+        { "source": "ray.fx", "entry": "SSGIFinalCombinePS" }
+      ]
+    },
+    {
+      "name": "gi_off",
+      "set": { "GI_ENABLE": "0", "SSR_QUALITY": "0" },
+      "entries": [
+        { "source": "ray.fx", "entry": "FogCompositePS" },
+        { "source": "ray.fx", "entry": "GlareDetectionPS" },
+        { "source": "ray.fx", "entry": "HDRTonemappingPS" }
+      ]
+    }
+  ]
+}

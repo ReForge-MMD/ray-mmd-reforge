@@ -358,3 +358,17 @@ Algorithms implemented in the Screen-Space Path Tracing module, mapped to their 
 
 * (And many more from the original development team...)
 
+Development and verification
+----------------------------
+* `docs/contracts/` — G-buffer, units and direction conventions.
+* `docs/engineering.md` — lint, compile matrix, golden images and frame budgets.
+* `docs/known-limitations.md` — intentional approximations and test gaps.
+* `Tools/ci/Invoke-ShaderLint.ps1` — static contract checks (no GPU required).
+* `Tools/ci/Invoke-ShaderCompile.ps1` — fxc compile matrix with MME annotation shim.
+* `Tools/ci/Invoke-GoldenRun.ps1` — MMD screenshot capture and golden comparison.
+* `Tools/ci/Measure-FrameTime.ps1` — PresentMon median/p95 frame-time sample.
+
+```powershell
+pwsh -NoProfile -File Tools/ci/Invoke-All.ps1
+```
+

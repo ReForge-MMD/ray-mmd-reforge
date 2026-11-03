@@ -1,0 +1,27 @@
+{
+  "notes": [
+    "Measure on a fixed scene, resolution and driver.",
+    "p95 frame time is the gate; median is informational.",
+    "Adjust the budgets after collecting a baseline on the target GPU."
+  ],
+  "profiles": [
+    {
+      "name": "low_1080p_igpu",
+      "resolution": "1920x1080",
+      "targetFps": 30,
+      "maxP95Ms": 33.3
+    },
+    {
+      "name": "balanced_1080p_dgpu",
+      "resolution": "1920x1080",
+      "targetFps": 60,
+      "maxP95Ms": 16.7
+    },
+    {
+      "name": "cinematic_1440p_dgpu",
+      "resolution": "2560x1440",
+      "targetFps": 60,
+      "maxP95Ms": 16.7
+    }
+  ]
+}

@@ -50,3 +50,5 @@ float GetCameraFocalLength(float filmSize = 36.0f)
 {
 	return filmSize * matProject._22 / 2.0f;
 }
+
+#include "contracts.fxsub"

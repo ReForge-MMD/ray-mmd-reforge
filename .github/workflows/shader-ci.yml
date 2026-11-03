@@ -1,0 +1,82 @@
+name: shader-ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      mmd_path:
+        description: Path to MikuMikuDance.exe on the self-hosted runner
+        required: false
+        default: 'C:\MMD\MikuMikuDance.exe'
+      presentmon_path:
+        description: Path to PresentMon.exe on the self-hosted runner
+        required: false
+        default: 'C:\Tools\PresentMon.exe'
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    name: lint-and-compile
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Shader lint
+        shell: pwsh
+        run: pwsh -NoProfile -File Tools/ci/Invoke-ShaderLint.ps1
+
+      - name: Controller lint
+        shell: pwsh
+        run: pwsh -NoProfile -File Tools/ci/Invoke-ControllerLint.ps1
+
+      - name: Shader compile matrix
+        shell: pwsh
+        run: pwsh -NoProfile -File Tools/ci/Invoke-ShaderCompile.ps1
+
+  runtime:
+    name: mmd-golden-and-perf
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, Windows, X64, mmd]
+    needs: static
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Golden scenes
+        shell: pwsh
+        run: |
+          $scenes = 'tests/golden/scenes.json'
+          if (-not (Test-Path -LiteralPath $scenes)) {
+            Write-Output "No $scenes on this runner; skipping golden comparison."
+            exit 0
+          }
+          pwsh -NoProfile -File Tools/ci/Invoke-GoldenRun.ps1 `
+            -MmdPath '${{ inputs.mmd_path }}' `
+            -Scenes $scenes
+
+      - name: Frame-time sample
+        shell: pwsh
+        run: |
+          if (-not (Test-Path -LiteralPath '${{ inputs.presentmon_path }}')) {
+            Write-Output "PresentMon not found; skipping frame-time sample."
+            exit 0
+          }
+          pwsh -NoProfile -File Tools/ci/Measure-FrameTime.ps1 `
+            -PresentMon '${{ inputs.presentmon_path }}' `
+            -ProcessName 'MikuMikuDance' `
+            -DurationSec 30
+
+      - name: Upload captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mmd-captures
+          path: tests/golden/.actual
+          if-no-files-found: ignore

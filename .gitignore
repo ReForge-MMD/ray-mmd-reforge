@@ -47,3 +47,7 @@ Extension/MaterialEditor/editor_config.json
 
 Tools/gen_hizdebug_controller.py
 IDEAS.md
+
+# Test artifacts
+/tests/golden/.actual/
+/tests/perf/.last-presentmon.csv

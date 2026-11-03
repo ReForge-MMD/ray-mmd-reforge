@@ -1,0 +1,32 @@
+[
+  {
+    "name": "character_day",
+    "project": "tests/scenes/character_day.pmm",
+    "golden": "tests/golden/character_day.png",
+    "warmupSeconds": 8
+  },
+  {
+    "name": "glass_water",
+    "project": "tests/scenes/glass_water.pmm",
+    "golden": "tests/golden/glass_water.png",
+    "warmupSeconds": 8
+  },
+  {
+    "name": "gi_room",
+    "project": "tests/scenes/gi_room.pmm",
+    "golden": "tests/golden/gi_room.png",
+    "warmupSeconds": 10
+  },
+  {
+    "name": "fog_night",
+    "project": "tests/scenes/fog_night.pmm",
+    "golden": "tests/golden/fog_night.png",
+    "warmupSeconds": 10
+  },
+  {
+    "name": "skin_closeup",
+    "project": "tests/scenes/skin_closeup.pmm",
+    "golden": "tests/golden/skin_closeup.png",
+    "warmupSeconds": 8
+  }
+]
