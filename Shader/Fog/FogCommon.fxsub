@@ -2,6 +2,28 @@
 #define _SHADER_FOG_COMMON_FXSUB_
 
 #if FOG_ENABLE
+
+// Fallbacks for pre-1.24 ray_advanced.conf files. Keep the shader usable when
+// only the Shader/ tree is updated; new configs define RAY_ADVANCED_FOG_REV.
+#ifndef RAY_ADVANCED_FOG_REV
+static const float mFogBilateralMaxTolerance = 12.0f;
+static const float mFogPhaseMax = 4.0f;
+static const float mFogFarBlendDistance = 100.0f;
+static const float mFogShadowBiasBase = 0.5f;
+static const float mFogShadowBiasScale = 0.004f;
+static const float mFogShadowRamp = 6.0f;
+static const float mFogGodraySeed = 0.0008f;
+static const float mFogSkyTint = 0.35f;
+static const float mFogLocalVolumeDensity0 = 0.0f;
+static const float4 mFogLocalVolume0 = float4(0.0f, 0.0f, 0.0f, 0.0f);
+static const float mFogLocalVolumeDensity1 = 0.0f;
+static const float4 mFogLocalVolume1 = float4(0.0f, 0.0f, 0.0f, 0.0f);
+static const float mFogLocalVolumeDensity2 = 0.0f;
+static const float4 mFogLocalVolume2 = float4(0.0f, 0.0f, 0.0f, 0.0f);
+static const float mFogLocalVolumeDensity3 = 0.0f;
+static const float4 mFogLocalVolume3 = float4(0.0f, 0.0f, 0.0f, 0.0f);
+#endif
+
 // =============================================================================
 // FogController.pmx Morph & Bone Bindings
 // =============================================================================

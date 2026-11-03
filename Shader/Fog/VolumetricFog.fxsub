@@ -3,7 +3,16 @@
 
 #if FOG_ENABLE >= 2
 
-// Number of raymarching steps along camera ray (see FOG_QUALITY in ray.conf)
+// Number of raymarching steps along camera ray (see FOG_QUALITY in ray.conf).
+// Preserve the pre-1.24 behavior when an older ray.conf is used.
+#ifndef FOG_QUALITY
+#	if FOG_ENABLE == 3
+#		define FOG_QUALITY 2
+#	else
+#		define FOG_QUALITY 1
+#	endif
+#endif
+
 #if FOG_QUALITY == 0
 #	define VOLUMETRIC_FOG_STEPS 12
 #elif FOG_QUALITY == 1
