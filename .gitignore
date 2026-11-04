@@ -41,10 +41,6 @@ target/
 **/*.rs.bk
 *.pdb
 
-# Allow distributed compiled editor executable
-!Extension/MaterialEditor/*.exe
-Extension/MaterialEditor/editor_config.json
-
 Tools/gen_hizdebug_controller.py
 IDEAS.md
 

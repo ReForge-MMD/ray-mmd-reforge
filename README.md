@@ -155,7 +155,7 @@ Reforge Exclusive Features (through v1.24.0) :
 * **Materials/Toon Library**: the entire material tree duplicated as ready-made cel-shaded presets with per-category shadow colors — skin, hair (including procedural presets), eyes, cloth, foliage — plus base cel and tone-based templates and a README.
 
 **ReForge Material Editor Suite (New Standalone Desktop Tool)**
-* **Native PBR Material Authoring Tool (`Extension/MaterialEditor/MaterialEditor.exe`)**: high-performance standalone Rust desktop application with zero external runtime dependencies, built specifically for authoring and generating Ray-MMD materials.
+* **Native PBR Material Authoring Tool ([MaterialEditor](https://github.com/ReForge-MMD/MaterialEditor))**: high-performance standalone Rust desktop application with zero external runtime dependencies, built specifically for authoring and generating Ray-MMD materials. Source, builds, and releases live in the separate repository.
 * **Blender-Style Node Graph Canvas**: interactive visual node editor with vector icons for synthesizing physical maps from diffuse textures or procedural generators.
 * **Dual Operating Modes**: Single Material Sandbox with instant 3D raymarched primitive previews (sphere, cube, cylinder, plane, Utah teapot) and PMX Model Studio for full character staging.
 * **Direct 3D Viewport Picking**: select and highlight material subsets by clicking directly on 3D character geometry via color-coded ID-buffering.
