@@ -1,169 +1,351 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Intersection Observer for scroll animations
-    const fadeElements = document.querySelectorAll('.fade-in');
-    
-    const appearOptions = {
-        threshold: 0.1,
-        rootMargin: "0px 0px -50px 0px"
-    };
+    const navToggle = document.querySelector('.nav-toggle');
+    const navLinks = document.getElementById('nav-links');
 
-    const appearOnScroll = new IntersectionObserver(function(entries, observer) {
-        entries.forEach(entry => {
-            if (!entry.isIntersecting) {
-                return;
-            } else {
-                entry.target.classList.add('appear');
-                observer.unobserve(entry.target);
+    if (navToggle && navLinks) {
+        const setOpen = (open) => {
+            navToggle.setAttribute('aria-expanded', String(open));
+            navLinks.classList.toggle('is-open', open);
+        };
+
+        navToggle.addEventListener('click', () => {
+            setOpen(navToggle.getAttribute('aria-expanded') !== 'true');
+        });
+
+        navLinks.querySelectorAll('a').forEach((link) => {
+            link.addEventListener('click', () => setOpen(false));
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                setOpen(false);
             }
         });
-    }, appearOptions);
+    }
 
-    fadeElements.forEach(element => {
-        appearOnScroll.observe(element);
+    const header = document.querySelector('.site-header');
+    let scrollAnimation = 0;
+
+    const stopScrollAnimation = () => {
+        if (scrollAnimation) {
+            window.cancelAnimationFrame(scrollAnimation);
+            scrollAnimation = 0;
+        }
+        document.documentElement.style.scrollBehavior = '';
+    };
+
+    const scrollToTarget = (target) => {
+        const headerOffset = header ? header.offsetHeight + 8 : 0;
+        const top = target.id === 'top'
+            ? 0
+            : Math.max(0, target.getBoundingClientRect().top + window.scrollY - headerOffset);
+        const start = window.scrollY;
+        const distance = top - start;
+
+        if (Math.abs(distance) < 2) {
+            return;
+        }
+
+        const duration = Math.min(1600, Math.max(700, Math.abs(distance) * 0.65));
+        const startedAt = performance.now();
+        const root = document.documentElement;
+        root.style.scrollBehavior = 'auto';
+
+        const step = (now) => {
+            const elapsed = Math.min(1, (now - startedAt) / duration);
+            const eased = elapsed < 0.5
+                ? 4 * elapsed * elapsed * elapsed
+                : 1 - Math.pow(-2 * elapsed + 2, 3) / 2;
+
+            window.scrollTo(0, Math.round(start + distance * eased));
+
+            if (elapsed < 1) {
+                scrollAnimation = window.requestAnimationFrame(step);
+            } else {
+                scrollAnimation = 0;
+                root.style.scrollBehavior = '';
+            }
+        };
+
+        scrollAnimation = window.requestAnimationFrame(step);
+    };
+
+    document.querySelectorAll('a[href^="#"]').forEach((link) => {
+        const hash = link.getAttribute('href');
+        if (hash.length < 2) {
+            return;
+        }
+
+        const target = document.getElementById(hash.slice(1));
+        if (!target) {
+            return;
+        }
+
+        link.addEventListener('click', (event) => {
+            event.preventDefault();
+            stopScrollAnimation();
+            scrollToTarget(target);
+            if (location.protocol !== 'file:') {
+                history.pushState(null, '', hash);
+            }
+        });
     });
 
-    // Navbar scroll effect
-    const navbar = document.querySelector('.navbar');
-    window.addEventListener('scroll', () => {
-        if (window.scrollY > 50) {
-            navbar.style.padding = '1rem 0';
-            navbar.style.background = 'rgba(15, 20, 25, 0.95)';
-        } else {
-            navbar.style.padding = '1.5rem 0';
-            navbar.style.background = 'rgba(15, 20, 25, 0.8)';
+    ['wheel', 'touchstart'].forEach((eventName) => {
+        window.addEventListener(eventName, stopScrollAnimation, { passive: true });
+    });
+
+    document.addEventListener('keydown', (event) => {
+        const scrollKeys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '];
+        if (scrollKeys.includes(event.key)) {
+            stopScrollAnimation();
         }
     });
 
-    // Comparison Sliders Logic
-    const sliders = document.querySelectorAll('.comparison-slider');
-    sliders.forEach(slider => {
-        const input = slider.querySelector('.slider-input');
-        const beforeWrapper = slider.querySelector('.img-before-wrapper');
-        const sliderLine = slider.querySelector('.slider-line');
-        const sliderButton = slider.querySelector('.slider-button');
+    const scrollProgress = document.querySelector('.scroll-progress');
+    const scrubElements = [...document.querySelectorAll('.reveal.scrub')];
+    const sectionLinks = [...document.querySelectorAll('.nav-links a[href^="#"]')];
+    const sections = sectionLinks
+        .map((link) => document.querySelector(link.getAttribute('href')))
+        .filter(Boolean);
 
-        input.addEventListener('input', (e) => {
-            const value = e.target.value;
-            beforeWrapper.style.clipPath = `inset(0 ${100 - value}% 0 0)`;
-            sliderLine.style.left = `${value}%`;
-            sliderButton.style.left = `${value}%`;
-        });
-    });
+    if (scrollProgress || scrubElements.length || sections.length) {
+        let ticking = false;
 
-    // Dropdown toggle logic for Download button
-    const dropdownToggle = document.getElementById('download-dropdown-btn');
-    const dropdownMenu = document.querySelector('.dropdown-menu');
+        const updateScroll = () => {
+            ticking = false;
 
-    if (dropdownToggle && dropdownMenu) {
-        dropdownToggle.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropdownMenu.classList.toggle('show');
-        });
-        
-        document.addEventListener('click', () => {
-            dropdownMenu.classList.remove('show');
-        });
-    }
+            if (scrollProgress) {
+                const max = document.documentElement.scrollHeight - window.innerHeight;
+                const progress = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+                scrollProgress.style.setProperty('--scroll', progress.toFixed(4));
+            }
 
-    // GitHub API Fetch (automatically fetches the latest release tag)
-    const downloadBtn = document.getElementById('download-btn');
-    const downloadStable = document.getElementById('download-stable');
-    
-    if (downloadBtn) {
-        const repo = 'ReForge-MMD/ray-mmd-reforge';
-        
-        fetch(`https://api.github.com/repos/${repo}/releases/latest`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.tag_name) {
-                    // Main button downloads the stable release
-                    downloadBtn.textContent = `Download ${data.tag_name}`;
-                    downloadBtn.href = data.html_url; 
-                    
-                    // Dropdown option explicitly lists stable release
-                    if (downloadStable) {
-                        downloadStable.textContent = `Stable Release (${data.tag_name})`;
-                        downloadStable.href = data.html_url;
-                    }
-                }
-            })
-            .catch(error => {
-                console.error("Failed to fetch release info:", error);
-            });
-    }
+            if (scrubElements.length) {
+                const startLine = window.innerHeight * 0.92;
+                const endLine = window.innerHeight * 0.5;
+                const span = Math.max(1, startLine - endLine);
 
-    // ponytail: minimum changelog logic, unauthenticated GitHub API (limit 60/hr)
-    const stableChangelog = document.getElementById('stable-changelog');
-    if (stableChangelog) {
-        const cacheKey = 'ray_mmd_changelog_cache_v1';
-        const cacheTimeKey = 'ray_mmd_changelog_time_v1';
-        const now = Date.now();
-        const cachedHtml = localStorage.getItem(cacheKey);
-        const cachedTime = localStorage.getItem(cacheTimeKey);
+                scrubElements.forEach((element) => {
+                    const top = element.getBoundingClientRect().top;
+                    const reveal = Math.min(1, Math.max(0, (startLine - top) / span));
+                    element.style.setProperty('--reveal', reveal.toFixed(3));
+                });
+            }
 
-        // Cache valid for 1 hour (3600000 ms)
-        if (cachedHtml && cachedTime && (now - cachedTime < 3600000)) {
-            stableChangelog.innerHTML = cachedHtml;
-        } else {
-            fetch('https://api.github.com/repos/ReForge-MMD/ray-mmd-reforge/releases')
-                .then(res => res.json())
-                .then(async data => {
-                    if (!Array.isArray(data)) throw new Error("API Limit");
-                    const releases = data.slice(0, 3);
-                    let html = '';
-                    for (const release of releases) {
-                        html += `
-                            <div style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
-                                <a href="${release.html_url}" target="_blank" style="color: #A3BE8C; text-decoration: none; font-weight: 600;">${release.name || release.tag_name}</a>
-                                <span style="font-size: 0.85rem; color: #64869e; margin-left: 8px;">${new Date(release.published_at).toLocaleDateString()}</span>
-                                <div style="margin-top: 8px; padding-left: 12px; border-left: 2px solid rgba(163, 190, 140, 0.3);">
-                        `;
-                        try {
-                            const commitsRes = await fetch(`https://api.github.com/repos/ReForge-MMD/ray-mmd-reforge/commits?sha=${release.tag_name}&per_page=3`);
-                            const commits = await commitsRes.json();
-                            if (commits && commits.length) {
-                                html += commits.map(commit => `
-                                    <div style="font-size: 0.85rem; margin-bottom: 4px; display: flex; gap: 6px; align-items: baseline;">
-                                        <a href="${commit.html_url}" target="_blank" style="color: #81A1C1; text-decoration: none; font-family: monospace; flex-shrink: 0;">${commit.sha.substring(0,7)}</a>
-                                        <span style="color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; width: 100%;">${commit.commit.message.split('\\n')[0]}</span>
-                                    </div>
-                                `).join('');
-                                html += `<div style="font-size: 0.85rem; margin-top: 6px;"><a href="https://github.com/ReForge-MMD/ray-mmd-reforge/commits/${release.tag_name}" target="_blank" style="color: #64869e; text-decoration: none; transition: color 0.2s;">View all changes &rarr;</a></div>`;
-                            }
-                        } catch(e) {
-                            html += `<div style="font-size: 0.85rem; color: #64869e;">Failed to load commits.</div>`;
-                        }
-                        html += `</div></div>`;
-                    }
-                    const finalHtml = html || '<p>No releases found.</p>';
-                    stableChangelog.innerHTML = finalHtml;
-                    localStorage.setItem(cacheKey, finalHtml);
-                    localStorage.setItem(cacheTimeKey, now);
-                }).catch(() => {
-                    if (cachedHtml) {
-                        stableChangelog.innerHTML = cachedHtml; // Fallback to stale cache
-                    } else {
-                        stableChangelog.innerHTML = '<p>Failed to load GitHub data (API limit reached).</p>';
+            if (sections.length) {
+                const marker = Math.min(window.innerHeight * 0.4, 360);
+                let current = null;
+                sections.forEach((section) => {
+                    if (section.getBoundingClientRect().top <= marker) {
+                        current = section;
                     }
                 });
+
+                const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+                if (atBottom) {
+                    current = sections[sections.length - 1];
+                }
+
+                sectionLinks.forEach((link) => {
+                    const isActive = current !== null && link.getAttribute('href') === `#${current.id}`;
+                    link.classList.toggle('is-active', isActive);
+                });
+            }
+        };
+
+        const onScroll = () => {
+            if (ticking) {
+                return;
+            }
+            ticking = true;
+            window.requestAnimationFrame(updateScroll);
+        };
+
+        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', onScroll);
+        updateScroll();
+    }
+
+    const revealElements = document.querySelectorAll('.reveal');
+    if (revealElements.length) {
+        if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (!entry.isIntersecting) {
+                        return;
+                    }
+                    entry.target.classList.add('is-visible');
+                    observer.unobserve(entry.target);
+                });
+            }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+            revealElements.forEach((element) => observer.observe(element));
+        } else {
+            revealElements.forEach((element) => element.classList.add('is-visible'));
         }
     }
 
-    const masterChangelog = document.getElementById('master-changelog');
-    if (masterChangelog) {
-        fetch('https://api.github.com/repos/ReForge-MMD/ray-mmd-reforge/commits?sha=master')
-            .then(res => res.json())
-            .then(data => {
-                masterChangelog.innerHTML = data.slice(0, 10).map(commit => `
-                    <div style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem; display: flex; flex-direction: column;">
-                        <div style="display: flex; gap: 6px; align-items: baseline; overflow: hidden;">
-                            <a href="${commit.html_url}" target="_blank" style="color: #81A1C1; text-decoration: none; font-weight: 600; font-family: monospace; flex-shrink: 0;">${commit.sha.substring(0,7)}</a>
-                            <span style="font-size: 0.9rem; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; width: 100%;">${commit.commit.message.split('\\n')[0]}</span>
-                        </div>
-                        <div style="font-size: 0.8rem; color: #64869e; margin-top: 4px;">by ${commit.commit.author.name} on ${new Date(commit.commit.author.date).toLocaleDateString()}</div>
-                    </div>
-                `).join('') || '<p>No commits found.</p>';
-            }).catch(() => masterChangelog.innerHTML = '<p>Failed to load.</p>');
-    }
+    document.querySelectorAll('.compare-media').forEach((media) => {
+        const range = media.querySelector('.compare-range');
+        if (!range) {
+            return;
+        }
+
+        const update = () => {
+            media.style.setProperty('--split', `${range.value}%`);
+        };
+
+        range.addEventListener('input', update);
+        update();
+    });
+
+    const releaseLabel = document.getElementById('release-label');
+    const downloadButton = document.getElementById('download-btn');
+    const repository = 'ReForge-MMD/ray-mmd-reforge';
+    const apiRoot = `https://api.github.com/repos/${repository}`;
+    const dateFormatter = new Intl.DateTimeFormat('en', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+    });
+
+    const create = (tag, className, text) => {
+        const element = document.createElement(tag);
+        if (className) {
+            element.className = className;
+        }
+        if (text !== undefined) {
+            element.textContent = text;
+        }
+        return element;
+    };
+
+    const formatDate = (value) => {
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? '' : dateFormatter.format(date);
+    };
+
+    const showUnavailable = (container, message) => {
+        container.replaceChildren(create('p', 'log-empty', message));
+    };
+
+    const loadLatestRelease = async () => {
+        try {
+            const response = await fetch(`${apiRoot}/releases/latest`, {
+                headers: { Accept: 'application/vnd.github+json' },
+            });
+            if (!response.ok) {
+                throw new Error(`GitHub responded with ${response.status}`);
+            }
+
+            const release = await response.json();
+            if (downloadButton && release.html_url) {
+                downloadButton.href = release.html_url;
+            }
+            if (releaseLabel && release.tag_name) {
+                releaseLabel.textContent = `Stable release ${release.tag_name}`;
+            }
+        } catch {
+            if (releaseLabel) {
+                releaseLabel.textContent = 'Stable release v1.24.0';
+            }
+        }
+    };
+
+    const loadReleases = async () => {
+        const container = document.getElementById('stable-changelog');
+        if (!container) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`${apiRoot}/releases`, {
+                headers: { Accept: 'application/vnd.github+json' },
+            });
+            if (!response.ok) {
+                throw new Error(`GitHub responded with ${response.status}`);
+            }
+
+            const releases = await response.json();
+            if (!Array.isArray(releases) || releases.length === 0) {
+                showUnavailable(container, 'No releases found');
+                return;
+            }
+
+            const items = releases.slice(0, 4).map((release) => {
+                const item = create('article', 'log-item');
+                const head = create('div', 'log-item-head');
+                const title = create('a', 'log-title', release.name || release.tag_name);
+                title.href = release.html_url;
+                title.target = '_blank';
+                title.rel = 'noreferrer';
+
+                const date = create('time', 'log-date', formatDate(release.published_at));
+                date.dateTime = release.published_at;
+
+                head.append(title, date);
+                item.append(head);
+                return item;
+            });
+
+            container.replaceChildren(...items);
+        } catch {
+            showUnavailable(container, 'GitHub data is unavailable');
+        }
+    };
+
+    const loadCommits = async () => {
+        const container = document.getElementById('master-changelog');
+        if (!container) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`${apiRoot}/commits?sha=master&per_page=8`, {
+                headers: { Accept: 'application/vnd.github+json' },
+            });
+            if (!response.ok) {
+                throw new Error(`GitHub responded with ${response.status}`);
+            }
+
+            const commits = await response.json();
+            if (!Array.isArray(commits) || commits.length === 0) {
+                showUnavailable(container, 'No commits found');
+                return;
+            }
+
+            const items = commits.slice(0, 8).map((commit) => {
+                const item = create('article', 'log-item');
+                const row = create('div', 'log-row');
+                const sha = create('a', 'log-sha', commit.sha.slice(0, 7));
+                sha.href = commit.html_url;
+                sha.target = '_blank';
+                sha.rel = 'noreferrer';
+
+                const message = commit.commit.message.split('\n')[0];
+                const text = create('span', 'log-message', message);
+                text.title = message;
+
+                row.append(sha, text);
+
+                const author = commit.commit.author && commit.commit.author.name
+                    ? commit.commit.author.name
+                    : 'unknown';
+                const date = formatDate(commit.commit.author ? commit.commit.author.date : '');
+                const meta = create('div', 'log-meta', date ? `by ${author} on ${date}` : `by ${author}`);
+
+                item.append(row, meta);
+                return item;
+            });
+
+            container.replaceChildren(...items);
+        } catch {
+            showUnavailable(container, 'GitHub data is unavailable');
+        }
+    };
+
+    loadLatestRelease();
+    loadReleases();
+    loadCommits();
 });

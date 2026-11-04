@@ -3,231 +3,295 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Ray-MMD Reforge - Next-generation physically-based rendering for MikuMikuDance">
-    <title>Ray-MMD Reforge</title>
-    
-    <!-- Favicon -->
+    <meta name="description" content="Ray-MMD ReForge, a physically based shader suite and material library for MikuMikuDance.">
+    <meta name="theme-color" content="#07080d">
+    <title>Ray-MMD ReForge</title>
+    <script>document.documentElement.classList.add("js");</script>
     <link rel="icon" type="image/webp" href="./pics/branding/reforge_logo.webp">
-    
-    <!-- Google Fonts: Montserrat -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Phosphor Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    
-    <!-- Styles -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20261104">
 </head>
-<body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <a href="#" class="logo-wrapper">
-                <img src="./pics/branding/reforge_logo.webp" alt="Icon" class="brand-logo">
-                <div class="logo-text">RAYMMD<span>REFORGE</span></div>
+<body id="top">
+    <header class="site-header">
+        <div class="nav-shell">
+            <a href="#top" class="brand" aria-label="Ray-MMD ReForge home">
+                <img src="./pics/branding/reforge_logo.webp" alt="" class="brand-mark" width="32" height="32">
+                <span class="brand-name">Ray-MMD <span>ReForge</span></span>
             </a>
-            <div class="nav-links">
+
+            <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links">
+                <i class="ph ph-list" aria-hidden="true"></i>
+                <span>Menu</span>
+            </button>
+
+            <nav class="nav-links" id="nav-links" aria-label="Primary">
                 <a href="#features">Features</a>
                 <a href="#showcase">Showcase</a>
-                <a href="https://discord.gg/v2GePAA3Jh" target="_blank" class="nav-link-discord"><i class="ph ph-discord-logo"></i> Discord</a>
-                <a href="https://github.com/ReForge-MMD/ray-mmd-reforge" target="_blank" class="btn-primary">GitHub</a>
-            </div>
+                <a href="#changelog">Changelog</a>
+                <a href="https://discord.gg/v2GePAA3Jh" target="_blank" rel="noreferrer" class="nav-discord">
+                    <i class="ph ph-discord-logo" aria-hidden="true"></i>
+                    Discord
+                </a>
+                <a href="https://github.com/ReForge-MMD/ray-mmd-reforge" target="_blank" rel="noreferrer" class="button button-nav">GitHub</a>
+            </nav>
         </div>
-    </nav>
-
-    <header class="hero">
-        <div class="hero-content fade-in">
-            <h1>Heavyweight graphics.<br><span class="highlight-text">Reforged for perfection.</span></h1>
-            <p>A modernized, open-source continuation of the Ray-MMD library. Engineered with next-gen contact-hardening PCSS shadows, SSGI 3.0, vectorized SIMD reflections, calibrated 5x5 skin tones, and Blender 4.0 AgX color science — delivering AAA physical fidelity straight out of the box.</p>
-            <div class="hero-buttons">
-                <div class="download-group">
-                    <a href="https://github.com/ReForge-MMD/ray-mmd-reforge/archive/refs/heads/master.zip" class="btn-primary btn-large" id="download-btn">Download</a>
-                    <button class="btn-primary btn-large dropdown-toggle" id="download-dropdown-btn">
-                        <i class="ph ph-caret-down"></i>
-                    </button>
-                    <div class="dropdown-menu">
-                        <a href="https://github.com/ReForge-MMD/ray-mmd-reforge/releases" id="download-stable">Stable Release</a>
-                        <a href="https://github.com/ReForge-MMD/ray-mmd-reforge/archive/refs/heads/master.zip">Latest Commit (Dev build)</a>
-                    </div>
-                </div>
-                <a href="https://github.com/ReForge-MMD/ray-mmd-reforge" class="btn-secondary btn-large">View Documentation</a>
-                <a href="https://discord.gg/v2GePAA3Jh" target="_blank" class="btn-secondary btn-large btn-discord-hero"><i class="ph ph-discord-logo"></i> Join Discord</a>
-            </div>
-        </div>
-        <!-- Background decorative elements -->
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
+        <div class="scroll-progress" aria-hidden="true"></div>
     </header>
 
-    <section id="features" class="features">
-        <div class="section-title fade-in">
-            <h2>Exclusive Features</h2>
-            <p>The definitive MMD rendering experience, re-architected from the ground up.</p>
-        </div>
-        
-        <div class="feature-grid">
-            <div class="feature-card fade-in">
-                <div class="feature-icon"><i class="ph ph-cloud-moon"></i></div>
-                <h3>Next-Gen PCSS &amp; Contact Shadows</h3>
-                <p>True physical contact-hardening shadows based on solar angular diameter (0.53&deg;), 4-cascade cross-blending, and sub-millimeter Screen-Space Contact Shadows (SSCS) that eliminate Peter-Panning.</p>
+    <main>
+        <section class="hero" aria-labelledby="hero-title">
+            <div class="hero-media" aria-hidden="true">
+                <img src="./pics/hero_rIn_fog_contact_shadows.webp" alt="" width="2560" height="1067" fetchpriority="high">
             </div>
-
-            <div class="feature-card fade-in" style="transition-delay: 0.1s;">
-                <div class="feature-icon"><i class="ph ph-lightning"></i></div>
-                <h3>Vectorized SIMD SSR &amp; SSGI 3.0</h3>
-                <p>Optimized 4-sample SIMD batching for raymarching without warp divergence, progressive multi-bounce indirect lighting, slope-adaptive tolerance, and dedicated reflect-visibility maps.</p>
+            <div class="hero-frame" aria-hidden="true">
+                <span class="frame-corner frame-corner-tl"></span>
+                <span class="frame-corner frame-corner-tr"></span>
+                <span class="frame-corner frame-corner-bl"></span>
+                <span class="frame-corner frame-corner-br"></span>
             </div>
-
-            <div class="feature-card fade-in" style="transition-delay: 0.2s;">
-                <div class="feature-icon"><i class="ph ph-circle-half"></i></div>
-                <h3>Hybrid GTAO / HBSSDO</h3>
-                <p>Horizon-based ambient occlusion and directional occlusion with occlusion-aware bent normals for believable indirect shading without darkening skin contours.</p>
-            </div>
-
-            <div class="feature-card fade-in" style="transition-delay: 0.3s;">
-                <div class="feature-icon"><i class="ph ph-sun-horizon"></i></div>
-                <h3>AgX, Punchy &amp; Khronos PBR Neutral</h3>
-                <p>Official 6th-order Blender 4.0 AgX color science, high-contrast AgX Punchy, and official Khronos PBR Neutral tonemapping for highlight-preserving, unclipped color fidelity.</p>
-            </div>
-
-            <div class="feature-card fade-in" style="transition-delay: 0.4s;">
-                <div class="feature-icon"><i class="ph ph-sparkle"></i></div>
-                <h3>5x5 Calibrated Tonal Skin &amp; UE5 SSS</h3>
-                <p>Calibrated 5x5 Fitzpatrick tonal skin suite for PBR and Toon shading, dual-lobe microfacet specular, Henyey-Greenstein backlit tissue glow, and camera-invariant UV-space diffusion.</p>
-            </div>
-
-            <div class="feature-card fade-in" style="transition-delay: 0.5s;">
-                <div class="feature-icon"><i class="ph ph-leaf"></i></div>
-                <h3>Marschner Hair &amp; Hashed Alpha</h3>
-                <p>Dual-highlight tangent-shifted anisotropic specular (R + TRT), energy-preserving GGX, and Wyman &amp; McGuire band-limited hashed alpha cutout without fringe crawling grain.</p>
-            </div>
-
-            <div class="feature-card fade-in" style="transition-delay: 0.1s;">
-                <div class="feature-icon"><i class="ph ph-eye"></i></div>
-                <h3>Corneal Dome Eyes &amp; Iris Parallax</h3>
-                <p>Automatic convex normal inversion (CONVEX_NORMAL), Snell's law refraction parallax for deep pupil immersion, analytical Jorge Jimenez iris caustics, and dedicated unshadowed highlights.</p>
-            </div>
-
-            <div class="feature-card fade-in" style="transition-delay: 0.2s;">
-                <div class="feature-icon"><i class="ph ph-stack"></i></div>
-                <h3>10-Domain Modular Architecture</h3>
-                <p>Fully reorganized 10-domain shader pipeline with zero broken includes, alongside decoupled PMX controllers (LightingController, CameraController, BloomController, DebugController).</p>
-            </div>
-
-            <div class="feature-card fade-in" style="transition-delay: 0.3s;">
-                <div class="feature-icon"><i class="ph ph-magic-wand"></i></div>
-                <h3>Temporal Anti-Aliasing (TAA)</h3>
-                <p>5-tap Catmull-Rom bicubic history reconstruction, Karis luma weighting, variance clipping, and depth-validated history for a stable, flicker-free image.</p>
-            </div>
-
-            <div class="feature-card fade-in" style="transition-delay: 0.4s;">
-                <div class="feature-icon"><i class="ph ph-aperture"></i></div>
-                <h3>FidelityFX CAS &amp; Cinematic Bokeh</h3>
-                <p>AMD FidelityFX Contrast-Adaptive Sharpening, hexagonal bokeh DOF with physical iris blade controls, anti-firefly Karis bloom, and spectral film halation.</p>
-            </div>
-
-            <div class="feature-card fade-in" style="transition-delay: 0.5s;">
-                <div class="feature-icon"><i class="ph ph-drop"></i></div>
-                <h3>Glass &amp; Chromatic Dispersion</h3>
-                <p>Physical RGB chromatic dispersion refraction, tinted glass presets inheriting MMD diffuse color, and forced-transparency material presets.</p>
-            </div>
-
-            <div class="feature-card fade-in" style="transition-delay: 0.6s;">
-                <div class="feature-icon"><i class="ph ph-cube"></i></div>
-                <h3>Foliage Translucency &amp; Cloth</h3>
-                <p>Energy-conserving Steve McAuley two-sided wrapped transmission for leaves and paper, Charlie sheen cloth BRDF, and vertex wind animation engine.</p>
-            </div>
-        </div>
-    </section>
-
-    <section id="showcase" class="showcase">
-        <div class="section-title fade-in">
-            <h2>Showcase</h2>
-            <p>Experience the bridge between PBR realism and anime stylization.</p>
-        </div>
-        
-        <div class="comparison-container fade-in">
-            <h3 class="comparison-title">SSGI & PCSS</h3>
-            <div class="comparison-slider">
-                <!-- After Image (Reforge) -->
-                <img src="./pics/miku_showcase_gi.png" alt="After (SSGI)" class="img-after">
-                <!-- Before Image Wrapper (Original) -->
-                <div class="img-before-wrapper">
-                    <img src="./pics/miku_showcase_without_gi.png" alt="Before (No SSGI)" class="img-before">
+            <div class="hero-inner">
+                <div class="hero-copy">
+                    <p class="kicker">MMD shader suite for Direct3D 9</p>
+                    <h1 id="hero-title">Physically based rendering for MikuMikuDance</h1>
+                    <p class="hero-lede">Contact-hardening shadows, screen-space GI, AgX color, and a calibrated material library, built for MMD and MME.</p>
+                    <div class="hero-actions">
+                        <a id="download-btn" class="button button-primary" href="https://github.com/ReForge-MMD/ray-mmd-reforge/releases/latest">Download</a>
+                        <a class="button button-secondary" href="https://github.com/ReForge-MMD/ray-mmd-reforge#readme">Documentation</a>
+                    </div>
+                    <p class="hero-meta" aria-live="polite">
+                        <span id="release-label">Stable release v1.24.0</span>
+                        <a id="dev-build" href="https://github.com/ReForge-MMD/ray-mmd-reforge/archive/refs/heads/master.zip">Dev build</a>
+                    </p>
                 </div>
-                <!-- Controls -->
-                <input type="range" min="0" max="100" value="50" class="slider-input">
-                <div class="slider-line"></div>
-                <div class="slider-button"><i class="ph ph-arrows-left-right"></i></div>
             </div>
-        </div>
+        </section>
 
-        <div class="comparison-container fade-in" style="transition-delay: 0.2s;">
-            <h3 class="comparison-title">SSAO / Hybrid HBAO+SSDO</h3>
-            <div class="comparison-slider">
-                <!-- After Image (Reforge) -->
-                <img src="./pics/stf_showcade_hbssdo.png" alt="After (HBSSDO)" class="img-after">
-                <!-- Before Image Wrapper (Original) -->
-                <div class="img-before-wrapper">
-                    <img src="./pics/stf_showcase_orig_ssao.png" alt="Before (Original SSAO)" class="img-before">
+        <section id="features" class="section features" aria-labelledby="features-title">
+            <div class="section-inner">
+                <div class="section-head reveal scrub">
+                    <div>
+                        <p class="kicker">Feature index</p>
+                        <h2 id="features-title">Rendering systems</h2>
+                    </div>
+                    <p class="section-lede">Twelve systems replace the stock MMD lighting path, from shadow contact to the final grade.</p>
                 </div>
-                <!-- Controls -->
-                <input type="range" min="0" max="100" value="50" class="slider-input">
-                <div class="slider-line"></div>
-                <div class="slider-button"><i class="ph ph-arrows-left-right"></i></div>
-            </div>
-        </div>
 
-        <div class="comparison-container fade-in" style="transition-delay: 0.4s;">
-            <h3 class="comparison-title">Normal-Aware Directional GI</h3>
-            <div class="comparison-slider">
-                <!-- After Image (Reforge) -->
-                <img src="./pics/stf_showcase_normals_with_gi.webp" alt="After (Directional GI)" class="img-after">
-                <!-- Before Image Wrapper (Original) -->
-                <div class="img-before-wrapper">
-                    <img src="./pics/stf_showcase_normals_without_gi.webp" alt="Before (No Directional GI)" class="img-before">
+                <ol class="feature-list">
+                    <li class="feature-row is-featured reveal">
+                        <span class="feature-number" aria-hidden="true">01</span>
+                        <div>
+                            <h3>Contact-hardening shadows</h3>
+                            <p>PCSS models the 0.53&deg; solar disk across four cascades, with screen-space contact shadows for the last few centimetres.</p>
+                        </div>
+                    </li>
+                    <li class="feature-row is-featured reveal">
+                        <span class="feature-number" aria-hidden="true">02</span>
+                        <div>
+                            <h3>Screen-space GI and reflections</h3>
+                            <p>SSGI and SSPT gather indirect bounces. SSR adds roughness-aware reflections with visibility maps that keep edges stable.</p>
+                        </div>
+                    </li>
+                    <li class="feature-row reveal">
+                        <span class="feature-number" aria-hidden="true">03</span>
+                        <div>
+                            <h3>Horizon-based occlusion</h3>
+                            <p>GTAO and hybrid HBAO/SSDO use occlusion-aware bent normals, so contact shading stays readable on faces and cloth.</p>
+                        </div>
+                    </li>
+                    <li class="feature-row reveal">
+                        <span class="feature-number" aria-hidden="true">04</span>
+                        <div>
+                            <h3>AgX and Khronos tonemapping</h3>
+                            <p>Blender 4.0 AgX, AgX Punchy, and Khronos PBR Neutral, with highlight roll-off that holds color instead of clipping to white.</p>
+                        </div>
+                    </li>
+                    <li class="feature-row reveal">
+                        <span class="feature-number" aria-hidden="true">05</span>
+                        <div>
+                            <h3>Calibrated skin and UE5 SSS</h3>
+                            <p>A calibrated skin suite with dual-lobe specular, wrapped diffuse, backlit transmission, and UV-space diffusion.</p>
+                        </div>
+                    </li>
+                    <li class="feature-row reveal">
+                        <span class="feature-number" aria-hidden="true">06</span>
+                        <div>
+                            <h3>Hair and hashed alpha</h3>
+                            <p>Marschner R and TRT highlights, energy-preserving GGX, and band-limited hashed alpha without fringe crawl.</p>
+                        </div>
+                    </li>
+                    <li class="feature-row reveal">
+                        <span class="feature-number" aria-hidden="true">07</span>
+                        <div>
+                            <h3>Eyes and iris parallax</h3>
+                            <p>Convex corneal normals, Snell refraction parallax, and an analytical iris caustic for close-up shots.</p>
+                        </div>
+                    </li>
+                    <li class="feature-row reveal">
+                        <span class="feature-number" aria-hidden="true">08</span>
+                        <div>
+                            <h3>Ten-domain shader pipeline</h3>
+                            <p>The Shader tree is split into ten domains, with dedicated PMX controllers for lighting, camera, bloom, and debug.</p>
+                        </div>
+                    </li>
+                    <li class="feature-row reveal">
+                        <span class="feature-number" aria-hidden="true">09</span>
+                        <div>
+                            <h3>Temporal anti-aliasing</h3>
+                            <p>Catmull-Rom history, Karis luma weighting, variance clipping, and depth-validated reprojection.</p>
+                        </div>
+                    </li>
+                    <li class="feature-row reveal">
+                        <span class="feature-number" aria-hidden="true">10</span>
+                        <div>
+                            <h3>CAS, bokeh, and halation</h3>
+                            <p>FidelityFX CAS, hexagonal bokeh with iris blades, Karis bloom, and spectral film halation.</p>
+                        </div>
+                    </li>
+                    <li class="feature-row reveal">
+                        <span class="feature-number" aria-hidden="true">11</span>
+                        <div>
+                            <h3>Glass and dispersion</h3>
+                            <p>Physical RGB dispersion, tinted glass presets, and forced-transparency materials for windows and water.</p>
+                        </div>
+                    </li>
+                    <li class="feature-row reveal">
+                        <span class="feature-number" aria-hidden="true">12</span>
+                        <div>
+                            <h3>Foliage and cloth</h3>
+                            <p>Two-sided wrapped transmission for leaves and paper, Charlie sheen for cloth, and vertex wind animation.</p>
+                        </div>
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <section id="showcase" class="section showcase" aria-labelledby="showcase-title">
+            <div class="section-inner">
+                <div class="section-head reveal scrub">
+                    <div>
+                        <p class="kicker">Render comparisons</p>
+                        <h2 id="showcase-title">Compare the output</h2>
+                    </div>
+                    <p class="section-lede">Drag the divider to compare the original render with ReForge. All frames are 1980 x 1080.</p>
                 </div>
-                <!-- Controls -->
-                <input type="range" min="0" max="100" value="50" class="slider-input">
-                <div class="slider-line"></div>
-                <div class="slider-button"><i class="ph ph-arrows-left-right"></i></div>
-            </div>
-        </div>
-    </section>
 
-    <section id="changelog" class="features" style="padding-top: 0;">
-        <div class="section-title fade-in">
-            <h2>Changelog</h2>
-            <p>Latest updates from Master and Stable branches.</p>
-        </div>
-        
-        <div class="changelog-grid fade-in" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; max-width: 1200px; margin: 0 auto; padding: 0 2rem;">
-            <div class="changelog-column" style="background: var(--card-bg); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); min-width: 0;">
-                <h3><i class="ph ph-tag" style="vertical-align: middle; margin-right: 8px; color: #A3BE8C;"></i>Stable Releases</h3>
-                <div id="stable-changelog" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 1rem; max-height: 350px; overflow-y: auto; padding-right: 8px;">Loading...</div>
-            </div>
-            <div class="changelog-column" style="background: var(--card-bg); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); min-width: 0;">
-                <h3><i class="ph ph-git-commit" style="vertical-align: middle; margin-right: 8px; color: #81A1C1;"></i>Master Commits</h3>
-                <div id="master-changelog" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 1rem; max-height: 350px; overflow-y: auto; padding-right: 8px;">Loading...</div>
-            </div>
-        </div>
-    </section>
+                <div class="showcase-grid">
+                    <figure class="compare compare-wide reveal scrub">
+                        <div class="compare-media">
+                            <img class="compare-after" src="./pics/miku_showcase_gi.png" alt="ReForge render with SSGI and PCSS" width="1980" height="1080" loading="lazy">
+                            <div class="compare-before">
+                                <img src="./pics/miku_showcase_without_gi.png" alt="Original render without SSGI" width="1980" height="1080" loading="lazy">
+                            </div>
+                            <div class="compare-divider" aria-hidden="true">
+                                <span class="compare-handle"><i class="ph ph-arrows-left-right"></i></span>
+                            </div>
+                            <input class="compare-range" type="range" min="0" max="100" value="50" aria-label="Compare the original and ReForge SSGI and PCSS render">
+                        </div>
+                        <figcaption>
+                            <span class="compare-index">01</span>
+                            <span class="compare-title">SSGI and PCSS</span>
+                            <span class="compare-meta">Original / ReForge</span>
+                        </figcaption>
+                    </figure>
 
-    <footer>
-        <div class="footer-content">
-            <div class="logo-wrapper footer-logo-wrapper">
-                <img src="./pics/branding/reforge_logo.webp" alt="Icon" class="brand-logo">
-                <div class="logo-text">RAYMMD<span>REFORGE</span></div>
+                    <figure class="compare reveal scrub">
+                        <div class="compare-media">
+                            <img class="compare-after" src="./pics/stf_showcade_hbssdo.png" alt="ReForge render with hybrid HBAO and SSDO" width="1980" height="1080" loading="lazy">
+                            <div class="compare-before">
+                                <img src="./pics/stf_showcase_orig_ssao.png" alt="Original render with legacy SSAO" width="1980" height="1080" loading="lazy">
+                            </div>
+                            <div class="compare-divider" aria-hidden="true">
+                                <span class="compare-handle"><i class="ph ph-arrows-left-right"></i></span>
+                            </div>
+                            <input class="compare-range" type="range" min="0" max="100" value="50" aria-label="Compare the original SSAO and ReForge hybrid HBAO and SSDO render">
+                        </div>
+                        <figcaption>
+                            <span class="compare-index">02</span>
+                            <span class="compare-title">SSAO and hybrid HBAO/SSDO</span>
+                            <span class="compare-meta">Original / ReForge</span>
+                        </figcaption>
+                    </figure>
+
+                    <figure class="compare reveal scrub">
+                        <div class="compare-media">
+                            <img class="compare-after" src="./pics/stf_showcase_normals_with_gi.webp" alt="ReForge render with normal-aware directional GI" width="1980" height="1080" loading="lazy">
+                            <div class="compare-before">
+                                <img src="./pics/stf_showcase_normals_without_gi.webp" alt="Original render without directional GI" width="1980" height="1080" loading="lazy">
+                            </div>
+                            <div class="compare-divider" aria-hidden="true">
+                                <span class="compare-handle"><i class="ph ph-arrows-left-right"></i></span>
+                            </div>
+                            <input class="compare-range" type="range" min="0" max="100" value="50" aria-label="Compare the original and ReForge normal-aware directional GI render">
+                        </div>
+                        <figcaption>
+                            <span class="compare-index">03</span>
+                            <span class="compare-title">Normal-aware directional GI</span>
+                            <span class="compare-meta">Original / ReForge</span>
+                        </figcaption>
+                    </figure>
+                </div>
             </div>
-            <div class="footer-credits">
-                <p>Reforged with <i class="ph-fill ph-heart" style="color: #bf616a; vertical-align: middle;"></i> by <a href="https://github.com/norz3n" target="_blank">Norz3n</a> &amp; ReForge Contributors.</p>
-                <p>Based on the original <a href="https://github.com/ray-cast/ray-mmd" target="_blank">Ray-MMD</a> by Rui. Join our <a href="https://discord.gg/v2GePAA3Jh" target="_blank">Discord Community</a>.</p>
-                <p class="footer-inspired">Integrations inspired by dendewaLAB &amp; ikeno.</p>
+        </section>
+
+        <section id="changelog" class="section log" aria-labelledby="changelog-title">
+            <div class="section-inner">
+                <div class="section-head reveal scrub">
+                    <div>
+                        <p class="kicker">Release log</p>
+                        <h2 id="changelog-title">Current builds</h2>
+                    </div>
+                    <p class="section-lede">Stable releases and the latest commits from master, read from GitHub.</p>
+                </div>
+
+                <div class="log-grid">
+                    <div class="log-column reveal scrub">
+                        <div class="log-column-head">
+                            <h3>Releases</h3>
+                            <a href="https://github.com/ReForge-MMD/ray-mmd-reforge/releases" target="_blank" rel="noreferrer">All releases</a>
+                        </div>
+                        <div class="log-list" id="stable-changelog" aria-live="polite">
+                            <p class="log-empty">Loading releases</p>
+                        </div>
+                    </div>
+
+                    <div class="log-column reveal scrub">
+                        <div class="log-column-head">
+                            <h3>Master</h3>
+                            <a href="https://github.com/ReForge-MMD/ray-mmd-reforge/commits/master" target="_blank" rel="noreferrer">All commits</a>
+                        </div>
+                        <div class="log-list" id="master-changelog" aria-live="polite">
+                            <p class="log-empty">Loading commits</p>
+                        </div>
+                    </div>
+                </div>
             </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <a href="#top" class="brand" aria-label="Ray-MMD ReForge home">
+                    <img src="./pics/branding/reforge_logo.webp" alt="" class="brand-mark" width="32" height="32">
+                    <span class="brand-name">Ray-MMD <span>ReForge</span></span>
+                </a>
+                <p>Physically based rendering for MikuMikuDance.</p>
+            </div>
+
+            <nav class="footer-links" aria-label="Footer">
+                <a href="https://github.com/ReForge-MMD/ray-mmd-reforge" target="_blank" rel="noreferrer">GitHub</a>
+                <a href="https://github.com/ReForge-MMD/ray-mmd-reforge/releases" target="_blank" rel="noreferrer">Releases</a>
+                <a href="https://github.com/ReForge-MMD/ray-mmd-reforge#readme" target="_blank" rel="noreferrer">Documentation</a>
+                <a href="https://discord.gg/v2GePAA3Jh" target="_blank" rel="noreferrer">Discord</a>
+            </nav>
+
+            <p class="footer-meta">Based on the original Ray-MMD by Rui. ReForge by Norz3n and contributors. Integrations inspired by dendewaLAB and ikeno.</p>
         </div>
     </footer>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20261104"></script>
 </body>
 </html>
