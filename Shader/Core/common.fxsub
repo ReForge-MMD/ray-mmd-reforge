@@ -51,4 +51,37 @@ float GetCameraFocalLength(float filmSize = 36.0f)
 	return filmSize * matProject._22 / 2.0f;
 }
 
-#include "contracts.fxsub"
+// --- contracts.fxsub (inlined) ---
+#ifndef _SHADER_CORE_CONTRACTS_FXSUB_
+#define _SHADER_CORE_CONTRACTS_FXSUB_
+
+// Small, dependency-free helpers for the conventions documented in
+// docs/contracts/. Prefer these over open-coded unit/direction conversions.
+
+// G-buffer depth is view-space Z; raymarch and analytical models use the
+// Euclidean distance along a normalized view ray.
+float ContractRayDistance(float viewZ, float3 viewRay)
+{
+	return viewZ / max(viewRay.z, 1e-4f);
+}
+
+// Gbuffer4.w / Gbuffer8.w pack lightModel + alpha * (255/256).
+float ContractDecodeAlpha(float packedLightModel)
+{
+	return frac(packedLightModel) / (255.0f / 256.0f);
+}
+
+// MMD's SunDirection points from the light toward the scene.
+float3 ContractSunDirection(float3 mmdSunDirection)
+{
+	return -mmdSunDirection;
+}
+
+// Explicit alias for code that needs the MMD light direction.
+float3 ContractLightDirection(float3 mmdSunDirection)
+{
+	return mmdSunDirection;
+}
+
+#endif // _SHADER_CORE_CONTRACTS_FXSUB_
+// --- end contracts.fxsub ---
