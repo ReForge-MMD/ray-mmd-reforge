@@ -1,0 +1,51 @@
+name: Discord Release Notification
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord embed
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          RELEASE_NAME: ${{ github.event.release.name }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          # Truncate body to Discord embed description limit (4096 chars)
+          BODY_TRUNCATED=$(echo "$RELEASE_BODY" | head -c 4000)
+          if [ ${#RELEASE_BODY} -gt 4000 ]; then
+            BODY_TRUNCATED="${BODY_TRUNCATED}..."
+          fi
+
+          PAYLOAD=$(jq -n \
+            --arg content "<@&1556565593631760424>" \
+            --arg title "$RELEASE_NAME" \
+            --arg description "$BODY_TRUNCATED" \
+            --arg url "$RELEASE_URL" \
+            --arg tag "$RELEASE_TAG" \
+            '{
+              content: $content,
+              embeds: [{
+                title: $title,
+                description: $description,
+                url: $url,
+                color: 5793266,
+                footer: {
+                  text: $tag
+                }
+              }],
+              allowed_mentions: {
+                roles: ["1556565593631760424"]
+              }
+            }')
+
+          curl -s -o /dev/null -w "%{http_code}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            "$DISCORD_WEBHOOK" | grep -q "^2" || \
+            (echo "Discord webhook failed" && exit 1)
